@@ -2551,12 +2551,143 @@ class ProductionAssignmentAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         info = self.model._meta.app_label, self.model._meta.model_name
         custom = [
             path(
+                "<int:object_id>/supply/",
+                self.admin_site.admin_view(self.supply_view),
+                name="%s_%s_supply" % info,
+            ),
+            path(
                 "<int:object_id>/create-supply/",
                 self.admin_site.admin_view(self.create_supply_view),
                 name="%s_%s_create_supply" % info,
             ),
         ]
         return custom + super().get_urls()
+
+    def supply_view(self, request, object_id: int):
+        assignment = get_object_or_404(ProductionAssignment, pk=object_id)
+        material_rows = assignment.get_materials_flat_tab_rows()
+        material_deficit_rows = []
+        for row in material_rows:
+            if row["order_qty"] <= Decimal("0"):
+                continue
+            order_line_cost = (
+                (row["order_qty"] * row["unit_cost"]).quantize(Decimal("0.01"))
+                if row["unit_cost"]
+                else Decimal("0.00")
+            )
+            material_deficit_rows.append({**row, "order_line_cost": order_line_cost})
+        component_rows = []
+        for product, qty in assignment.get_component_requirements():
+            component_rows.append(
+                {
+                    "product": product,
+                    "quantity": qty,
+                    "tech_card": TechCard.objects.filter(product=product).order_by("id").first(),
+                }
+            )
+
+        if request.method == "POST":
+            action = request.POST.get("action")
+            if action == "create_supply_assignment":
+                if assignment.supply_assignment_id:
+                    messages.info(
+                        request,
+                        f"Задание снабжения уже создано: #{assignment.supply_assignment_id}.",
+                    )
+                    return HttpResponseRedirect(
+                        reverse(
+                            "admin:core_productionassignment_change",
+                            args=[assignment.supply_assignment_id],
+                        )
+                    )
+                try:
+                    supply_assignment = assignment.create_supply_assignment()
+                except Exception as exc:
+                    messages.error(request, f"Не удалось создать задание снабжения: {exc}")
+                    return HttpResponseRedirect(
+                        reverse("admin:core_productionassignment_supply", args=[assignment.pk])
+                    )
+                messages.success(request, f"Создано задание снабжения #{supply_assignment.pk}.")
+                return HttpResponseRedirect(
+                    reverse("admin:core_productionassignment_change", args=[supply_assignment.pk])
+                )
+
+            if action == "create_supplier_po":
+                from procurement.models import SupplierPurchaseOrder, SupplierPurchaseOrderLine
+
+                supplier_id = request.POST.get("supplier")
+                selected_ids = {
+                    int(value)
+                    for value in request.POST.getlist("material")
+                    if str(value).isdigit()
+                }
+                selected_rows = [
+                    row
+                    for row in material_deficit_rows
+                    if row["material"].pk in selected_ids and row["order_qty"] > Decimal("0")
+                ]
+                if not supplier_id:
+                    messages.error(request, "Выберите поставщика для заказа материалов.")
+                    return HttpResponseRedirect(
+                        reverse("admin:core_productionassignment_supply", args=[assignment.pk])
+                    )
+                if not selected_rows:
+                    messages.error(request, "Выберите материалы с дефицитом для заказа поставщику.")
+                    return HttpResponseRedirect(
+                        reverse("admin:core_productionassignment_supply", args=[assignment.pk])
+                    )
+                try:
+                    supplier = Organization.objects.get(pk=supplier_id, is_supplier=True)
+                except Organization.DoesNotExist:
+                    messages.error(request, "Выбранный поставщик не найден или не отмечен как поставщик.")
+                    return HttpResponseRedirect(
+                        reverse("admin:core_productionassignment_supply", args=[assignment.pk])
+                    )
+
+                purchase_order = SupplierPurchaseOrder.objects.create(
+                    supplier=supplier,
+                    comment=f"Снабжение по производственному заданию #{assignment.pk}: {assignment}",
+                )
+                for row in selected_rows:
+                    SupplierPurchaseOrderLine.objects.create(
+                        purchase_order=purchase_order,
+                        material=row["material"],
+                        quantity=row["order_qty"],
+                        unit_price=row["unit_cost"] or None,
+                    )
+                messages.success(
+                    request,
+                    f"Создан заказ поставщику {purchase_order} на строк: {len(selected_rows)}.",
+                )
+                return HttpResponseRedirect(
+                    reverse("admin:procurement_supplierpurchaseorder_change", args=[purchase_order.pk])
+                )
+
+            messages.error(request, "Неизвестное действие снабжения.")
+            return HttpResponseRedirect(
+                reverse("admin:core_productionassignment_supply", args=[assignment.pk])
+            )
+
+        suppliers = Organization.objects.filter(is_supplier=True).order_by("name")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Снабжение: {assignment}",
+            "opts": self.model._meta,
+            "original": assignment,
+            "assignment": assignment,
+            "material_rows": material_rows,
+            "material_deficit_rows": material_deficit_rows,
+            "component_rows": component_rows,
+            "suppliers": suppliers,
+            "has_supply_assignment": bool(assignment.supply_assignment_id),
+            "supply_open_url": (
+                reverse("admin:core_productionassignment_change", args=[assignment.supply_assignment_id])
+                if assignment.supply_assignment_id
+                else ""
+            ),
+            "change_url": reverse("admin:core_productionassignment_change", args=[assignment.pk]),
+        }
+        return render(request, "admin/core/productionassignment/supply.html", context)
 
     def create_supply_view(self, request, object_id: int):
         if request.method != "POST":
@@ -2667,7 +2798,7 @@ class ProductionAssignmentAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
             context["pa_costs_summary"] = ro.get_costs_summary_for_ui()
             context["pa_products_rows"] = ro.get_products_summary()
             context["pa_supply_create_url"] = reverse(
-                "admin:core_productionassignment_create_supply", args=[ro.pk]
+                "admin:core_productionassignment_supply", args=[ro.pk]
             )
             context["pa_supply_open_url"] = (
                 reverse("admin:core_productionassignment_change", args=[ro.supply_assignment_id])

@@ -7,6 +7,10 @@ body.change-form.model-techcardproxy #content-main {
   max-width: min(100%, 1680px);
 }
 
+body.change-form.model-techcardproxy #content > h1 {
+  display: none;
+}
+
 /*
  * Верхний блок (#tc-ms-page-upper), карточка позиций (#tc-ms-positions-block) с заголовком,
  * внутри тело (#tc-ms-page-lower). Переменные:
@@ -66,6 +70,10 @@ body.change-form.model-techcardproxy .tc-ms-page-upper fieldset.module.tc-ms-mai
   margin-bottom: 0;
 }
 
+body.change-form.model-techcardproxy .tc-ms-page-upper--saved-product .form-row.field-product {
+  display: none !important;
+}
+
 /* Заголовок страницы */
 body.change-form.model-techcardproxy .tc-ms-page-header {
   margin: 0 0 16px;
@@ -80,6 +88,15 @@ body.change-form.model-techcardproxy .tc-ms-page-title {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-title-product {
+  color: #0f172a;
+}
+
+body.change-form.model-techcardproxy .tc-ms-title-product--placeholder {
+  color: #64748b;
+  font-weight: 500;
 }
 
 body.change-form.model-techcardproxy .tc-ms-title-help {

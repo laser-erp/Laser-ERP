@@ -10,6 +10,7 @@ from core.models import (
     MaterialBatch,
     MaterialReservation,
     MaterialStock,
+    Employee,
     Organization,
     Order,
     OrderItem,
@@ -23,6 +24,8 @@ from core.models import (
     ProductionStage,
     TechCard,
     TechCardItem,
+    TechCardLaborLine,
+    TechProcessStage,
     TechOperation,
     TechOperationMaterial,
     TechOperationProduct,
@@ -451,6 +454,15 @@ class ProductionAssignmentSupplyAdminTests(TestCase):
 
         self.finished_product = Product.objects.create(name="Supply Finished", min_stock=Decimal("0"))
         self.component_product = Product.objects.create(name="Supply Component", min_stock=Decimal("0"))
+        self.material = Material.objects.create(
+            name="Supply Material",
+            unit="шт",
+        )
+        self.supplier = Organization.objects.create(
+            name="Supply Supplier",
+            is_supplier=True,
+            is_buyer=False,
+        )
         self.tp = TechProcess.objects.create(name="Supply TP")
         self.main_tc = TechCard.objects.create(
             name="Main TC Supply",
@@ -467,6 +479,16 @@ class ProductionAssignmentSupplyAdminTests(TestCase):
             product=self.component_product,
             quantity=Decimal("2"),
             item_kind=TechCardItem.KIND_COMPONENT,
+        )
+        TechCardItem.objects.create(
+            tech_card=self.main_tc,
+            material=self.material,
+            quantity=Decimal("4"),
+        )
+        MaterialStock.objects.create(
+            warehouse=self.material_wh,
+            material=self.material,
+            quantity=Decimal("5"),
         )
         self.assignment = ProductionAssignment.objects.create(
             product_warehouse=self.product_wh,
@@ -514,6 +536,161 @@ class ProductionAssignmentSupplyAdminTests(TestCase):
             response["Location"],
             reverse("admin:core_productionassignment_change", args=[created.pk]),
         )
+
+    def test_supply_screen_shows_material_deficit_and_components(self):
+        url = reverse("admin:core_productionassignment_supply", args=[self.assignment.pk])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Supply Material")
+        self.assertContains(response, "Supply Component")
+        self.assertEqual(response.context["material_deficit_rows"][0]["order_qty"], Decimal("7"))
+
+    def test_supply_screen_creates_supplier_purchase_order_for_material_deficit(self):
+        from procurement.models import SupplierPurchaseOrder
+
+        url = reverse("admin:core_productionassignment_supply", args=[self.assignment.pk])
+        response = self.client.post(
+            url,
+            {
+                "action": "create_supplier_po",
+                "supplier": str(self.supplier.pk),
+                "material": [str(self.material.pk)],
+            },
+            follow=False,
+        )
+
+        purchase_order = SupplierPurchaseOrder.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            reverse("admin:procurement_supplierpurchaseorder_change", args=[purchase_order.pk]),
+        )
+        self.assertEqual(purchase_order.supplier_id, self.supplier.pk)
+        line = purchase_order.lines.get()
+        self.assertEqual(line.material_id, self.material.pk)
+        self.assertEqual(line.quantity, Decimal("7.0000"))
+
+
+class TechCardAdminFormTests(TestCase):
+    def test_techcard_name_is_hidden_and_filled_from_product(self):
+        from django.forms import HiddenInput
+        from production.admin import TechCardAdminForm
+
+        product = Product.objects.create(name="Табличка Баня из фанеры 3 мм", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Резка табличек")
+        form = TechCardAdminForm(
+            data={
+                "name": "",
+                "product": str(product.pk),
+                "tech_process": str(tech_process.pk),
+                "card_group": "",
+                "allocate_cost": "",
+                "description": "",
+            }
+        )
+
+        self.assertIsInstance(form.fields["name"].widget, HiddenInput)
+        self.assertIn("Техпроцесс — это маршрут изготовления", form.fields["tech_process"].help_text)
+        self.assertIn("общую себестоимость нужно распределить", form.fields["allocate_cost"].help_text)
+        self.assertTrue(form.is_valid(), form.errors.as_text())
+        self.assertEqual(form.cleaned_data["name"], product.name)
+
+    def test_techcard_group_is_not_shown_in_admin_fieldset(self):
+        from production.admin import TechCardAdmin
+
+        main_fields = TechCardAdmin.fieldsets[0][1]["fields"]
+        self.assertNotIn("card_group", main_fields)
+
+    def test_material_picker_search_is_case_insensitive_for_russian_text(self):
+        Material.objects.create(name="Фанера ФК 3 мм шлифованная", unit="лист")
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="material_picker_admin",
+            email="material_picker_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("admin:production_techcardproxy_material_picker_items"),
+            {"group": "all", "q": "фанера", "page": "1", "page_size": "10"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertGreaterEqual(payload["total"], 1)
+        self.assertIn("Фанера ФК 3 мм шлифованная", [row["name"] for row in payload["results"]])
+
+    def test_money_tab_shows_missing_tech_process_stages_as_empty_rows(self):
+        product = Product.objects.create(name="Табличка с этапами", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Маршрут таблички")
+        stage_grave = ProductionStage.objects.create(name="Лазерная гравировка", sequence=1)
+        stage_cut = ProductionStage.objects.create(name="Лазерная резка", sequence=2)
+        TechProcessStage.objects.create(
+            tech_process=tech_process,
+            production_stage=stage_grave,
+            order=1,
+        )
+        TechProcessStage.objects.create(
+            tech_process=tech_process,
+            production_stage=stage_cut,
+            order=2,
+        )
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="money_tab_admin",
+            email="money_tab_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("admin:production_techcardproxy_change", args=[tech_card.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Лазерная гравировка")
+        self.assertContains(response, "Лазерная резка")
+        self.assertEqual(tech_card.labor_lines.count(), 0)
+
+    def test_planned_labor_cost_includes_machine_and_employee_time(self):
+        product = Product.objects.create(name="Табличка с трудом", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Маршрут с трудом")
+        employee = Employee.objects.create(
+            full_name="Мастер лазера",
+            hourly_rate=Decimal("500"),
+        )
+        stage = ProductionStage.objects.create(
+            name="Лазерная гравировка",
+            sequence=1,
+            hourly_rate=Decimal("800"),
+            master=employee,
+        )
+        TechProcessStage.objects.create(
+            tech_process=tech_process,
+            production_stage=stage,
+            order=1,
+        )
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        TechCardLaborLine.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            norm_hours=Decimal("0.0833"),
+            employee_minutes=Decimal("10"),
+        )
+
+        self.assertEqual(tech_card.planned_labor_cost_per_unit(), Decimal("149.97"))
 
 
 class OrderItemAutoPriceTests(TestCase):

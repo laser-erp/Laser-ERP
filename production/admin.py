@@ -1,4 +1,5 @@
 # Регистрация моделей производства в разделе админки «Производство»
+import re
 from types import SimpleNamespace
 # Порядок: Техкарты, Заказы на производство, Техоперации, Производственные задания,
 # Выполнение этапов, Оплата труда, Техпроцессы, Этапы производства
@@ -102,13 +103,35 @@ class TechCardAdminForm(forms.ModelForm):
             "cut_length_meters_per_unit": "Норма реза, м на 1 изд.",
         }
         widgets = {
-            "product": forms.HiddenInput(),
+            "name": forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["name"].required = True
+        self.fields["name"].required = False
+        self.fields["product"].required = True
+        self.fields["product"].help_text = (
+            "Выберите изделие из справочника товаров. Если его ещё нет, сначала создайте товар/изделие."
+        )
         self.fields["tech_process"].required = True
+        self.fields["tech_process"].help_text = (
+            "<strong>Техпроцесс</strong><br>"
+            "Техпроцесс — это маршрут изготовления изделия. "
+            "Внутри техпроцесса задаются этапы, например: лазерная резка, шлифовка, покраска, упаковка."
+        )
+        self.fields["allocate_cost"].help_text = (
+            "<strong>Распределение стоимости</strong><br>"
+            "Используется в сложных техкартах, когда общую себестоимость нужно распределить между несколькими "
+            "выходными изделиями или результатами производства. Для простой таблички, салфетницы или другого "
+            "одного изделия поле можно оставить пустым."
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        product = cleaned_data.get("product")
+        if product:
+            cleaned_data["name"] = product.name
+        return cleaned_data
 
 
 class TechCardLaborLineForm(forms.ModelForm):
@@ -133,12 +156,12 @@ class TechCardLaborLineForm(forms.ModelForm):
         if nf:
             nf.label = ""
             if unit == TechCard.LABOR_NORM_INPUT_MINUTES:
-                nf.help_text = "Минуты; сохраняется как нормо-часы."
+                nf.help_text = "Время станка/этапа в минутах; сохраняется как нормо-часы."
                 if self.instance.pk and self.instance.norm_hours is not None:
                     mins = (self.instance.norm_hours * Decimal("60")).quantize(Decimal("0.0001"))
                     self.initial["norm_hours"] = mins
             else:
-                nf.help_text = "Нормо-часы."
+                nf.help_text = "Время станка/этапа в нормо-часах."
 
     def clean_norm_hours(self):
         v = self.cleaned_data.get("norm_hours")
@@ -299,9 +322,17 @@ class TechCardLaborLineInline(admin.TabularInline):
         "hourly_rate_display",
         "norm_hours",
         "labor_pay_display",
+        "employee_minutes",
+        "employee_hourly_rate_display",
+        "employee_pay_display",
         "overhead_per_unit",
     )
-    readonly_fields = ("hourly_rate_display", "labor_pay_display")
+    readonly_fields = (
+        "hourly_rate_display",
+        "labor_pay_display",
+        "employee_hourly_rate_display",
+        "employee_pay_display",
+    )
     template = "admin/production/techcardproxy/techcardlabor/tabular.html"
     ordering = ("production_stage__name", "pk")
     classes = ["tc-labor-fieldset"]
@@ -309,6 +340,22 @@ class TechCardLaborLineInline(admin.TabularInline):
     def get_formset(self, request, obj=None, **kwargs):
         self._parent_tech_card = obj
         parent_tc = obj
+        missing_stage_ids = []
+        if (
+            obj
+            and obj.pk
+            and obj.tech_process_id
+            and request.method in ("GET", "HEAD")
+        ):
+            existing_stage_ids = set(
+                obj.labor_lines.values_list("production_stage_id", flat=True)
+            )
+            missing_stage_ids = [
+                tps.production_stage_id
+                for tps in obj.tech_process.get_stages_ordered()
+                if tps.production_stage_id not in existing_stage_ids
+            ]
+            kwargs["extra"] = len(missing_stage_ids)
         if parent_tc is None:
             unit = TechCard.LABOR_NORM_INPUT_HOURS
             if request.method == "POST":
@@ -323,7 +370,29 @@ class TechCardLaborLineInline(admin.TabularInline):
                 super().__init__(*a, **kw)
 
         kwargs["form"] = FormWithParent
-        return super().get_formset(request, obj, **kwargs)
+        formset = super().get_formset(request, obj, **kwargs)
+
+        if not missing_stage_ids:
+            return formset
+
+        class FormSetWithMissingStages(formset):
+            def __init__(self, *args, **formset_kwargs):
+                if not formset_kwargs.get("data") and not formset_kwargs.get("files"):
+                    formset_kwargs.setdefault(
+                        "initial",
+                        [
+                            {
+                                "production_stage": stage_id,
+                                "norm_hours": Decimal("0"),
+                                "employee_minutes": Decimal("0"),
+                                "overhead_per_unit": Decimal("0"),
+                            }
+                            for stage_id in missing_stage_ids
+                        ],
+                    )
+                super().__init__(*args, **formset_kwargs)
+
+        return FormSetWithMissingStages
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "production_stage":
@@ -359,11 +428,27 @@ class TechCardLaborLineInline(admin.TabularInline):
         if not obj:
             return "—"
         if obj.production_stage_id and obj.norm_hours is not None:
-            pay = obj.labor_pay_per_unit()
+            pay = obj.machine_pay_per_unit()
             return format_html("{}&nbsp;&#8381;", format(pay, "f"))
         return "—"
 
-    labor_pay_display.short_description = "Оплата труда"
+    labor_pay_display.short_description = "Станок/этап"
+
+    def employee_hourly_rate_display(self, obj):
+        if not obj:
+            return "—"
+        rate = obj.employee_hourly_rate_for_plan()
+        return format_html("{}&nbsp;&#8381;", format(rate.quantize(Decimal("0.01")), "f"))
+
+    employee_hourly_rate_display.short_description = "Ставка сотрудника"
+
+    def employee_pay_display(self, obj):
+        if not obj:
+            return "—"
+        pay = obj.employee_pay_per_unit()
+        return format_html("{}&nbsp;&#8381;", format(pay, "f"))
+
+    employee_pay_display.short_description = "Сотрудник"
 
 
 @admin.register(TechCardProxy)
@@ -381,7 +466,6 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                     "product",
                     "name",
                     "tech_process",
-                    "card_group",
                     "allocate_cost",
                     "description",
                 ),
@@ -400,7 +484,7 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     list_filter = (("product", RelatedOnlyFieldListFilter),)
     search_fields = ("name", "description")
     search_help_text = "Наименование или комментарий"
-    autocomplete_fields = ("tech_process",)
+    autocomplete_fields = ("product", "tech_process")
     inlines = [TechCardLaborLineInline, TechCardItemInline]
     # Оформление формы — Media; techcard_items_tabs.js подключается в tabular.html после TECHCARD_ITEMS_UI.
 
@@ -466,13 +550,32 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 qs = qs.filter(group_id=int(group))
             except (TypeError, ValueError):
                 pass
-        if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(material_type__icontains=q))
         qs = qs.order_by("name")
 
-        total = qs.count()
-        start = (page - 1) * page_size
-        slice_qs = qs[start : start + page_size]
+        if q:
+            tokens = [token.casefold() for token in re.split(r"\s+", q) if token.strip()]
+
+            def material_matches(material):
+                haystack = " ".join(
+                    str(part or "")
+                    for part in (
+                        material.name,
+                        material.material_type,
+                        material.unit,
+                        material.group.name if material.group_id else "",
+                        material.thickness_mm,
+                    )
+                ).casefold()
+                return all(token in haystack for token in tokens)
+
+            rows = [m for m in qs if material_matches(m)]
+            total = len(rows)
+            start = (page - 1) * page_size
+            slice_qs = rows[start : start + page_size]
+        else:
+            total = qs.count()
+            start = (page - 1) * page_size
+            slice_qs = qs[start : start + page_size]
         results = []
         for m in slice_qs:
             results.append(
@@ -541,6 +644,7 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     def _techcard_form_extra_context(self, request, object_id=None):
         """Контекст формы техкарты: карта этапов и выбранная единица нормы (ч/м) для заголовка столбца."""
         extra = {"tech_process_stages_map": self._tech_process_stages_map()}
+        extra["techcard_title_product"] = ""
         if request.method == "POST":
             u = request.POST.get("labor_norm_input_unit")
             extra["labor_norm_input_unit_selected"] = (
@@ -548,6 +652,12 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 if u in (TechCard.LABOR_NORM_INPUT_HOURS, TechCard.LABOR_NORM_INPUT_MINUTES)
                 else TechCard.LABOR_NORM_INPUT_HOURS
             )
+            product_id = request.POST.get("product")
+            if product_id:
+                extra["techcard_title_product"] = (
+                    Product.objects.filter(pk=product_id).values_list("name", flat=True).first()
+                    or ""
+                )
         elif object_id:
             obj = self.get_object(request, object_id)
             extra["labor_norm_input_unit_selected"] = (
@@ -555,8 +665,15 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 if obj
                 else TechCard.LABOR_NORM_INPUT_HOURS
             )
+            extra["techcard_title_product"] = obj.product.name if obj and obj.product_id else ""
         else:
             extra["labor_norm_input_unit_selected"] = TechCard.LABOR_NORM_INPUT_HOURS
+            product_id = request.GET.get("product")
+            if product_id:
+                extra["techcard_title_product"] = (
+                    Product.objects.filter(pk=product_id).values_list("name", flat=True).first()
+                    or ""
+                )
         return extra
 
     def get_changeform_initial_data(self, request):

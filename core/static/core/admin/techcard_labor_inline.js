@@ -164,6 +164,15 @@
     return tr.querySelector('input[name$="-overhead_per_unit"]');
   }
 
+  function rowEmployeeMinutes(tr) {
+    return tr.querySelector('input[name$="-employee_minutes"]');
+  }
+
+  function rowEmployeeRateCell(tr) {
+    var td = tr.querySelector("td.field-employee_hourly_rate_display");
+    return td ? td.querySelector("p") : null;
+  }
+
   function rowRateCell(tr) {
     var td = tr.querySelector("td.field-hourly_rate_display");
     return td ? td.querySelector("p") : null;
@@ -171,6 +180,11 @@
 
   function rowPayCell(tr) {
     var td = tr.querySelector("td.field-labor_pay_display");
+    return td ? td.querySelector("p") : null;
+  }
+
+  function rowEmployeePayCell(tr) {
+    var td = tr.querySelector("td.field-employee_pay_display");
     return td ? td.querySelector("p") : null;
   }
 
@@ -182,6 +196,13 @@
   function formatRate(r) {
     if (r == null || !isFinite(r)) return "—";
     return round2(r).toFixed(2);
+  }
+
+  function parseMoneyText(text) {
+    var raw = String(text || "").replace(/\s+/g, "").replace(",", ".");
+    var cleaned = raw.replace(/[^\d.-]/g, "");
+    var n = parseFloat(cleaned);
+    return isFinite(n) ? n : 0;
   }
 
   function updateRow(tr, rateByStage) {
@@ -201,6 +222,18 @@
         pay.textContent = "—";
       }
     }
+    var empMinutesEl = rowEmployeeMinutes(tr);
+    var empRateEl = rowEmployeeRateCell(tr);
+    var empMinutes = empMinutesEl ? parseFloat(String(empMinutesEl.value).replace(",", ".")) : 0;
+    var empRate = empRateEl ? parseMoneyText(empRateEl.textContent) : 0;
+    var empPay = rowEmployeePayCell(tr);
+    if (empPay) {
+      if (isFinite(empMinutes) && isFinite(empRate)) {
+        empPay.textContent = formatMoney((empMinutes / 60) * empRate);
+      } else {
+        empPay.textContent = "—";
+      }
+    }
   }
 
   function sumTable(table) {
@@ -209,7 +242,9 @@
     if (!tbody) return;
     var rows = tbody.querySelectorAll("tr.form-row");
     var sumNh = 0;
-    var sumPay = 0;
+    var sumMachinePay = 0;
+    var sumEmployeeMinutes = 0;
+    var sumEmployeePay = 0;
     var sumOv = 0;
     rows.forEach(function (tr) {
       if (tr.classList.contains("empty-form")) return;
@@ -221,17 +256,25 @@
       var rate = sid ? rateByStage[sid] : null;
       var nhEl = rowNormHours(tr);
       var ovEl = rowOverhead(tr);
+      var empMinutesEl = rowEmployeeMinutes(tr);
+      var empRateEl = rowEmployeeRateCell(tr);
       var nhRaw = nhEl ? parseFloat(String(nhEl.value).replace(",", ".")) : 0;
       var nhHours = normHoursForPay(nhRaw);
       var ov = ovEl ? parseFloat(String(ovEl.value).replace(",", ".")) : 0;
+      var empMinutes = empMinutesEl ? parseFloat(String(empMinutesEl.value).replace(",", ".")) : 0;
+      var empRate = empRateEl ? parseMoneyText(empRateEl.textContent) : 0;
       if (isFinite(nhRaw)) sumNh += nhRaw;
       if (isFinite(ov)) sumOv += ov;
-      if (rate != null && isFinite(rate) && isFinite(nhHours)) sumPay += nhHours * rate;
+      if (isFinite(empMinutes)) sumEmployeeMinutes += empMinutes;
+      if (rate != null && isFinite(rate) && isFinite(nhHours)) sumMachinePay += nhHours * rate;
+      if (isFinite(empMinutes) && isFinite(empRate)) sumEmployeePay += (empMinutes / 60) * empRate;
     });
     var foot = table.querySelector("tfoot.tc-labor-tfoot");
     if (!foot) return;
     var tnh = foot.querySelector(".tc-labor-total-norm-hours");
-    var tp = foot.querySelector(".tc-labor-total-labor-pay");
+    var tmp = foot.querySelector(".tc-labor-total-machine-pay");
+    var tem = foot.querySelector(".tc-labor-total-employee-minutes");
+    var tep = foot.querySelector(".tc-labor-total-employee-pay");
     var to = foot.querySelector(".tc-labor-total-overhead");
     if (tnh) {
       if (isFinite(sumNh)) {
@@ -242,7 +285,9 @@
         tnh.textContent = "—";
       }
     }
-    if (tp) tp.textContent = formatMoney(sumPay);
+    if (tmp) tmp.textContent = formatMoney(sumMachinePay);
+    if (tem) tem.textContent = String(round2(sumEmployeeMinutes)) + " мин";
+    if (tep) tep.textContent = formatMoney(sumEmployeePay);
     if (to) to.textContent = formatMoney(sumOv);
   }
 

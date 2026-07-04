@@ -1,0 +1,153 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static admin_urls %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/production_assignment_shell.css' %}?v=23">
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{{ change_url }}">{{ assignment|truncatewords:"18" }}</a>
+  &rsaquo; {% translate "Снабжение" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="pa-supply-page">
+  <div class="pa-supply-head">
+    <div>
+      <h1>{% translate "Снабжение" %}</h1>
+      <p class="pa-supply-sub">
+        {% translate "Быстрый запуск закупки материалов и производства полуфабрикатов из производственного задания." %}
+      </p>
+    </div>
+    <a href="{{ change_url }}" class="pa-supply-back">{% translate "Вернуться в задание" %}</a>
+  </div>
+
+  <section class="pa-supply-card">
+    <div class="pa-supply-card-head">
+      <div>
+        <h2>{% translate "Материалы к закупке" %}</h2>
+        <p>{% translate "В список попадают строки, где потребность больше доступного остатка с учётом резервов." %}</p>
+      </div>
+      <span class="pa-supply-badge">{{ material_deficit_rows|length }}</span>
+    </div>
+
+    <form method="post" class="pa-supply-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_supplier_po">
+      <div class="pa-supply-controls">
+        <label>
+          {% translate "Поставщик" %}
+          <select name="supplier" required>
+            <option value="">{% translate "Выберите поставщика" %}</option>
+            {% for supplier in suppliers %}
+              <option value="{{ supplier.pk }}">{{ supplier }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="pa-supply-primary" {% if not material_deficit_rows %}disabled{% endif %}>
+          {% translate "Создать заказ поставщику" %}
+        </button>
+      </div>
+
+      <div class="pa-mat-table-wrap">
+        <table class="pa-mat-table pa-supply-table">
+          <thead>
+            <tr>
+              <th class="pa-supply-check">{% translate "В заказ" %}</th>
+              <th>{% translate "Материал" %}</th>
+              <th class="pa-col-num">{% translate "План" %}</th>
+              <th class="pa-col-num">{% translate "Доступно" %}</th>
+              <th class="pa-col-num">{% translate "Остаток" %}</th>
+              <th class="pa-col-num">{% translate "К заказу" %}</th>
+              <th class="pa-col-num">{% translate "Цена" %}</th>
+              <th class="pa-col-num">{% translate "Сумма" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in material_deficit_rows %}
+              <tr>
+                <td class="pa-supply-check">
+                  <input type="checkbox" name="material" value="{{ row.material.pk }}" checked>
+                </td>
+                <td>{{ row.material }}</td>
+                <td class="pa-col-num">{{ row.planned|floatformat:2 }}</td>
+                <td class="pa-col-num {% if row.available < 0 %}pa-num-negative{% endif %}">{{ row.available|floatformat:2 }}</td>
+                <td class="pa-col-num">{{ row.stock|floatformat:2 }}</td>
+                <td class="pa-col-num pa-supply-qty">{{ row.order_qty|floatformat:2 }}</td>
+                <td class="pa-col-num">{{ row.unit_cost|floatformat:2 }}</td>
+                <td class="pa-col-num">{{ row.order_line_cost|floatformat:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="pa-mat-empty">
+                  {% translate "Дефицита материалов нет: доступного остатка хватает по всем строкам задания." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
+  <section class="pa-supply-card">
+    <div class="pa-supply-card-head">
+      <div>
+        <h2>{% translate "Полуфабрикаты к производству" %}</h2>
+        <p>{% translate "Если в техкарте есть компоненты-изделия, для них можно создать дочернее производственное задание." %}</p>
+      </div>
+      <span class="pa-supply-badge">{{ component_rows|length }}</span>
+    </div>
+
+    <div class="pa-mat-table-wrap">
+      <table class="pa-mat-table pa-supply-table">
+        <thead>
+          <tr>
+            <th>{% translate "Полуфабрикат" %}</th>
+            <th class="pa-col-num">{% translate "Количество" %}</th>
+            <th>{% translate "Техкарта" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in component_rows %}
+            <tr>
+              <td>{{ row.product }}</td>
+              <td class="pa-col-num">{{ row.quantity|floatformat:2 }}</td>
+              <td>
+                {% if row.tech_card %}
+                  {{ row.tech_card }}
+                {% else %}
+                  <span class="pa-num-negative">{% translate "Нет техкарты" %}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" class="pa-mat-empty">
+                {% translate "В составе задания нет полуфабрикатов, которые нужно производить отдельным заданием." %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <form method="post" class="pa-supply-actions">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_supply_assignment">
+      {% if supply_open_url %}
+        <a href="{{ supply_open_url }}" class="pa-supply-primary pa-supply-link">{% translate "Открыть задание снабжения" %}</a>
+      {% else %}
+        <button type="submit" class="pa-supply-primary" {% if not component_rows %}disabled{% endif %}>
+          {% translate "Создать задание снабжения" %}
+        </button>
+      {% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}

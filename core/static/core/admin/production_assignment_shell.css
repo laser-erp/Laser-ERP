@@ -749,3 +749,159 @@
 .pa-inline-slot .inline-group {
   margin-top: 16px;
 }
+
+.pa-supply-page {
+  max-width: 1100px;
+}
+
+.pa-supply-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pa-supply-head h1 {
+  margin: 0 0 4px;
+}
+
+.pa-supply-sub {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.pa-supply-back,
+.pa-supply-link {
+  text-decoration: none !important;
+}
+
+.pa-supply-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151 !important;
+  white-space: nowrap;
+}
+
+.pa-supply-back:hover {
+  background: #f3f4f6;
+}
+
+.pa-supply-card {
+  margin-bottom: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.pa-supply-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.pa-supply-card-head h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.pa-supply-card-head p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.pa-supply-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.pa-supply-form,
+.pa-supply-actions {
+  padding: 14px 16px 16px;
+}
+
+.pa-supply-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pa-supply-controls label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.pa-supply-controls select {
+  min-width: 260px;
+  height: 32px;
+}
+
+.pa-supply-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid #689f38;
+  border-radius: 4px;
+  background: #7cb342;
+  color: #fff !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pa-supply-primary:hover {
+  background: #689f38;
+}
+
+.pa-supply-primary:disabled {
+  border-color: #d1d5db;
+  background: #e5e7eb;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+.pa-supply-table {
+  font-size: 12px;
+}
+
+.pa-supply-check {
+  width: 74px;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.pa-supply-check input {
+  width: 16px;
+  height: 16px;
+}
+
+.pa-supply-qty {
+  font-weight: 700;
+  color: #b45309;
+}

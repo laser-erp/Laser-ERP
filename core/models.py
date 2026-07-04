@@ -1165,18 +1165,14 @@ class TechCard(models.Model):
 
     def planned_labor_cost_per_unit(self) -> Decimal:
         """
-        Оплата труда на 1 изд.: сумма по строкам «Деньги» (нормо-часы × стоимость нормо-часа этапа);
+        Оплата на 1 изд.: сумма по строкам «Деньги»
+        (время станка/этапа + труд сотрудника);
         если строк нет — по нормам времени карточки изделия.
         """
         if self.pk:
             total = Decimal("0")
             for line in self.labor_lines.select_related("production_stage"):
-                st = line.production_stage
-                rate = st.hourly_rate if st else None
-                if rate is None:
-                    rate = Decimal("0")
-                nh = line.norm_hours if line.norm_hours is not None else Decimal("0")
-                total += nh * Decimal(str(rate))
+                total += line.total_pay_per_unit()
             if total > 0 or self.labor_lines.exists():
                 return total.quantize(Decimal("0.01"))
         if not self.product_id:
@@ -1412,7 +1408,21 @@ class TechCardLaborLine(models.Model):
         max_digits=12,
         decimal_places=4,
         default=0,
-        help_text="Норма на 1 шт. по этому этапу, нормо-часы.",
+        help_text=(
+            "Время работы станка/этапа на 1 шт. В эту ставку обычно включают амортизацию, "
+            "электричество и обслуживание оборудования."
+        ),
+    )
+    employee_minutes = models.DecimalField(
+        "Время сотрудника, мин",
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        blank=True,
+        help_text=(
+            "Сколько минут сотрудник занят на 1 шт.: подготовка макета, настройка станка, "
+            "укладка материала, контроль, снятие детали, чистка."
+        ),
     )
     overhead_per_unit = models.DecimalField(
         "Затраты на производство",
@@ -1443,13 +1453,37 @@ class TechCardLaborLine(models.Model):
                     {"production_stage": "Этап не входит в техпроцесс, выбранный в карте."}
                 )
 
-    def labor_pay_per_unit(self) -> Decimal:
+    def machine_pay_per_unit(self) -> Decimal:
         st = self.production_stage
         rate = st.hourly_rate if st else None
         if rate is None:
             rate = Decimal("0")
         nh = self.norm_hours if self.norm_hours is not None else Decimal("0")
         return (nh * Decimal(str(rate))).quantize(Decimal("0.01"))
+
+    def employee_pay_per_unit(self) -> Decimal:
+        minutes = self.employee_minutes if self.employee_minutes is not None else Decimal("0")
+        rate = self.employee_hourly_rate_for_plan()
+        hours = Decimal(str(minutes)) / Decimal("60")
+        return (hours * Decimal(str(rate))).quantize(Decimal("0.01"))
+
+    def employee_hourly_rate_for_plan(self) -> Decimal:
+        stage = self.production_stage
+        if not stage:
+            return Decimal("0")
+        employee = stage.master
+        if not employee:
+            employee = stage.executors.order_by("full_name", "pk").first()
+        if not employee:
+            return Decimal("0")
+        return Decimal(str(employee.hourly_rate or 0))
+
+    def total_pay_per_unit(self) -> Decimal:
+        return (self.machine_pay_per_unit() + self.employee_pay_per_unit()).quantize(Decimal("0.01"))
+
+    def labor_pay_per_unit(self) -> Decimal:
+        """Совместимость со старым названием: теперь это общий итог станок + сотрудник."""
+        return self.total_pay_per_unit()
 
 
 class Organization(models.Model):

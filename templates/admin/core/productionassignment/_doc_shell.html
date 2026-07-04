@@ -8,13 +8,11 @@
         {% if pa_supply_open_url %}
           <a href="{{ pa_supply_open_url }}" class="pa-toolbar-btn pa-toolbar-btn-supply pa-toolbar-btn-action">{% translate "Открыть снабжение" %}</a>
         {% elif pa_supply_create_url %}
-          <button
-            type="submit"
+          <a
+            href="{{ pa_supply_create_url }}"
             class="pa-toolbar-btn pa-toolbar-btn-supply pa-toolbar-btn-action"
-            formmethod="post"
-            formaction="{{ pa_supply_create_url }}"
-            title="{% translate 'Создать задание снабжения на полуфабрикаты из текущего задания' %}"
-          >{% translate "Снабжение" %}</button>
+            title="{% translate 'Открыть экран снабжения по дефициту материалов и полуфабрикатов' %}"
+          >{% translate "Снабжение" %}</a>
         {% else %}
           <button
             type="button"

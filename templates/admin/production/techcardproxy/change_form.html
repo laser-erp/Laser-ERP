@@ -1,24 +1,49 @@
 {% extends "admin/change_form.html" %}
-{% load i18n static admin_modify %}
+{% load i18n static admin_modify admin_urls %}
 
 {% block extrahead %}
 {{ block.super }}
 {% if tech_process_stages_map %}{{ tech_process_stages_map|json_script:"tech-process-stages-data" }}{% endif %}
 {% endblock %}
 
+{% block extrastyle %}{{ block.super }}
+<style>
+  body.change-form.model-techcardproxy #content > h1 {
+    display: none;
+  }
+  body.change-form.model-techcardproxy .tc-ms-page-upper--saved-product .form-row.field-product {
+    display: none !important;
+  }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; {% if has_view_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}
+  &rsaquo; {% translate "Технологическая карта" %}
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
 {% block form_top %}
 <div class="tc-ms-page-header">
   <h1 class="tc-ms-page-title">
     <span class="tc-ms-title-help" title="Карта задаёт состав изделия: продукция и материалы">?</span>
-    Технологическая карта
+    <span>{% translate "Технологическая карта" %}:</span>
+    <span id="tc-ms-title-product" class="tc-ms-title-product" data-placeholder="{% translate 'выберите изделие' %}">
+      {% if techcard_title_product %}{{ techcard_title_product }}{% else %}{% translate "выберите изделие" %}{% endif %}
+    </span>
   </h1>
 </div>
 {{ block.super }}
 {% endblock %}
 
 {% block field_sets %}
-{# Верхний блок: наименование, техпроцесс, группа, распределение стоимости, комментарий (fieldset tc-ms-main) #}
-<div id="tc-ms-page-upper" class="tc-ms-page-block tc-ms-page-upper">
+{# Верхний блок: изделие, техпроцесс, группа, распределение стоимости, комментарий (fieldset tc-ms-main) #}
+<div id="tc-ms-page-upper" class="tc-ms-page-block tc-ms-page-upper{% if original and original.product_id %} tc-ms-page-upper--saved-product{% endif %}">
 {% for fieldset in adminform %}
   {% if "tc-ms-main" in fieldset.classes %}
     {% include "admin/includes/fieldset.html" with heading_level=2 prefix="fieldset" id_prefix=0 id_suffix=forloop.counter0 %}

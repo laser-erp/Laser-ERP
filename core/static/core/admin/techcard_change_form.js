@@ -112,6 +112,52 @@
     activate("product");
   }
 
+  function bindTechcardProductTitle() {
+    var product = document.getElementById("id_product");
+    var name = document.getElementById("id_name");
+    var title = document.getElementById("tc-ms-title-product");
+    if (!product || !title) {
+      return;
+    }
+    var placeholder = title.getAttribute("data-placeholder") || "выберите изделие";
+
+    function selectedText() {
+      var option = product.options && product.selectedIndex >= 0 ? product.options[product.selectedIndex] : null;
+      var text = option ? option.textContent || option.innerText || "" : "";
+      text = String(text || "").trim();
+      if (!product.value || !text || text === "---------" || text === "---------") {
+        return "";
+      }
+      return text;
+    }
+
+    function sync() {
+      var text = selectedText();
+      title.textContent = text || placeholder;
+      title.classList.toggle("tc-ms-title-product--placeholder", !text);
+      if (name && text) {
+        name.value = text;
+      }
+    }
+
+    product.addEventListener("change", sync);
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "id_product") sync();
+    });
+
+    var jq = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
+    if (jq && jq.fn && jq.fn.select2) {
+      jq(product).on(
+        "select2:select select2:clear select2:unselect select2:close change",
+        sync
+      );
+    }
+
+    sync();
+    window.setTimeout(sync, 50);
+    window.setTimeout(sync, 300);
+  }
+
   /**
    * Перед сохранением техкарты: подставить в скрытую таблицу инлайна значения из зеркал и data-*.
    * Иначе в POST не попадают product / quantity — строки «комплектующие» теряются или считаются пустыми.
@@ -385,6 +431,7 @@
   function run() {
     moveLaborInlineRoot();
     moveMaterialsInlineRoot();
+    bindTechcardProductTitle();
     bindTechProcessTabsVisibility();
     bindProductCompositionColumnResize();
     initTabs();
