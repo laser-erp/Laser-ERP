@@ -16,12 +16,20 @@
       Object.keys(raw).forEach(function (tpId) {
         (raw[tpId] || []).forEach(function (row) {
           if (row.id == null) return;
-          var v = row.hourly_rate;
-          var n =
-            v != null && String(v).trim() !== ""
-              ? parseFloat(String(v).replace(",", "."))
+          var machineRaw = row.hourly_rate;
+          var machineN =
+            machineRaw != null && String(machineRaw).trim() !== ""
+              ? parseFloat(String(machineRaw).replace(",", "."))
               : null;
-          out[String(row.id)] = isFinite(n) ? n : null;
+          var employeeRaw = row.employee_hourly_rate;
+          var employeeN =
+            employeeRaw != null && String(employeeRaw).trim() !== ""
+              ? parseFloat(String(employeeRaw).replace(",", "."))
+              : null;
+          out[String(row.id)] = {
+            machine: isFinite(machineN) ? machineN : null,
+            employee: isFinite(employeeN) ? employeeN : null,
+          };
         });
       });
       return out;
@@ -168,11 +176,6 @@
     return tr.querySelector('input[name$="-employee_minutes"]');
   }
 
-  function rowEmployeeRateCell(tr) {
-    var td = tr.querySelector("td.field-employee_hourly_rate_display");
-    return td ? td.querySelector("p") : null;
-  }
-
   function rowRateCell(tr) {
     var td = tr.querySelector("td.field-hourly_rate_display");
     return td ? td.querySelector("p") : null;
@@ -198,17 +201,19 @@
     return round2(r).toFixed(2);
   }
 
-  function parseMoneyText(text) {
-    var raw = String(text || "").replace(/\s+/g, "").replace(",", ".");
-    var cleaned = raw.replace(/[^\d.-]/g, "");
-    var n = parseFloat(cleaned);
-    return isFinite(n) ? n : 0;
+  function stageRates(rateByStage, sid) {
+    if (!sid || !rateByStage) return { machine: null, employee: null };
+    var row = rateByStage[sid];
+    if (row && typeof row === "object") return row;
+    if (typeof row === "number" || row === null) return { machine: row, employee: null };
+    return { machine: null, employee: null };
   }
 
   function updateRow(tr, rateByStage) {
     var sel = rowStageSelect(tr);
     var sid = sel && sel.value ? String(sel.value) : "";
-    var rate = sid && rateByStage ? rateByStage[sid] : null;
+    var rates = stageRates(rateByStage, sid);
+    var rate = rates.machine;
     var rp = rowRateCell(tr);
     if (rp) rp.textContent = formatRate(rate);
     var nhEl = rowNormHours(tr);
@@ -223,12 +228,11 @@
       }
     }
     var empMinutesEl = rowEmployeeMinutes(tr);
-    var empRateEl = rowEmployeeRateCell(tr);
     var empMinutes = empMinutesEl ? parseFloat(String(empMinutesEl.value).replace(",", ".")) : 0;
-    var empRate = empRateEl ? parseMoneyText(empRateEl.textContent) : 0;
+    var empRate = rates.employee;
     var empPay = rowEmployeePayCell(tr);
     if (empPay) {
-      if (isFinite(empMinutes) && isFinite(empRate)) {
+      if (isFinite(empMinutes) && empRate != null && isFinite(empRate)) {
         empPay.textContent = formatMoney((empMinutes / 60) * empRate);
       } else {
         empPay.textContent = "—";
@@ -253,21 +257,23 @@
       updateRow(tr, rateByStage);
       var sel = rowStageSelect(tr);
       var sid = sel && sel.value ? String(sel.value) : "";
-      var rate = sid ? rateByStage[sid] : null;
+      var rates = stageRates(rateByStage, sid);
+      var rate = rates.machine;
       var nhEl = rowNormHours(tr);
       var ovEl = rowOverhead(tr);
       var empMinutesEl = rowEmployeeMinutes(tr);
-      var empRateEl = rowEmployeeRateCell(tr);
       var nhRaw = nhEl ? parseFloat(String(nhEl.value).replace(",", ".")) : 0;
       var nhHours = normHoursForPay(nhRaw);
       var ov = ovEl ? parseFloat(String(ovEl.value).replace(",", ".")) : 0;
       var empMinutes = empMinutesEl ? parseFloat(String(empMinutesEl.value).replace(",", ".")) : 0;
-      var empRate = empRateEl ? parseMoneyText(empRateEl.textContent) : 0;
+      var empRate = rates.employee;
       if (isFinite(nhRaw)) sumNh += nhRaw;
       if (isFinite(ov)) sumOv += ov;
       if (isFinite(empMinutes)) sumEmployeeMinutes += empMinutes;
       if (rate != null && isFinite(rate) && isFinite(nhHours)) sumMachinePay += nhHours * rate;
-      if (isFinite(empMinutes) && isFinite(empRate)) sumEmployeePay += (empMinutes / 60) * empRate;
+      if (isFinite(empMinutes) && empRate != null && isFinite(empRate)) {
+        sumEmployeePay += (empMinutes / 60) * empRate;
+      }
     });
     var foot = table.querySelector("tfoot.tc-labor-tfoot");
     if (!foot) return;

@@ -603,6 +603,12 @@ class TechCardAdminFormTests(TestCase):
         main_fields = TechCardAdmin.fieldsets[0][1]["fields"]
         self.assertNotIn("card_group", main_fields)
 
+    def test_labor_inline_has_no_employee_rate_column(self):
+        from production.admin import TechCardLaborLineInline
+
+        self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.fields)
+        self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.readonly_fields)
+
     def test_material_picker_search_is_case_insensitive_for_russian_text(self):
         Material.objects.create(name="Фанера ФК 3 мм шлифованная", unit="лист")
         User = get_user_model()

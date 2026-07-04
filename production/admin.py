@@ -323,14 +323,12 @@ class TechCardLaborLineInline(admin.TabularInline):
         "norm_hours",
         "labor_pay_display",
         "employee_minutes",
-        "employee_hourly_rate_display",
         "employee_pay_display",
         "overhead_per_unit",
     )
     readonly_fields = (
         "hourly_rate_display",
         "labor_pay_display",
-        "employee_hourly_rate_display",
         "employee_pay_display",
     )
     template = "admin/production/techcardproxy/techcardlabor/tabular.html"
@@ -433,14 +431,6 @@ class TechCardLaborLineInline(admin.TabularInline):
         return "—"
 
     labor_pay_display.short_description = "Станок/этап"
-
-    def employee_hourly_rate_display(self, obj):
-        if not obj:
-            return "—"
-        rate = obj.employee_hourly_rate_for_plan()
-        return format_html("{}&nbsp;&#8381;", format(rate.quantize(Decimal("0.01")), "f"))
-
-    employee_hourly_rate_display.short_description = "Ставка сотрудника"
 
     def employee_pay_display(self, obj):
         if not obj:
@@ -624,18 +614,20 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 
     @staticmethod
     def _tech_process_stages_map():
-        """id техпроцесса (str) → [{id, name, hourly_rate}, …] в порядке этапов (ставка — из этапа)."""
+        """id техпроцесса (str) → [{id, name, hourly_rate, employee_hourly_rate}, …] в порядке этапов."""
         out = {}
         for tp in TechProcess.objects.all():
             rows = []
-            for tps in tp.get_stages_ordered():
+            for tps in tp.get_stages_ordered().select_related("production_stage__master"):
                 st = tps.production_stage
                 hr = st.hourly_rate
+                emp_hr = st.employee_hourly_rate_for_plan()
                 rows.append(
                     {
                         "id": st.pk,
                         "name": st.name,
                         "hourly_rate": "" if hr is None else format(hr, "f"),
+                        "employee_hourly_rate": "" if not emp_hr else format(emp_hr, "f"),
                     }
                 )
             out[str(tp.pk)] = rows

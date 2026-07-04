@@ -1471,12 +1471,7 @@ class TechCardLaborLine(models.Model):
         stage = self.production_stage
         if not stage:
             return Decimal("0")
-        employee = stage.master
-        if not employee:
-            employee = stage.executors.order_by("full_name", "pk").first()
-        if not employee:
-            return Decimal("0")
-        return Decimal(str(employee.hourly_rate or 0))
+        return stage.employee_hourly_rate_for_plan()
 
     def total_pay_per_unit(self) -> Decimal:
         return (self.machine_pay_per_unit() + self.employee_pay_per_unit()).quantize(Decimal("0.01"))
@@ -2751,6 +2746,15 @@ class ProductionStage(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def employee_hourly_rate_for_plan(self) -> Decimal:
+        """Ставка сотрудника для плановой оплаты: мастер этапа или первый исполнитель."""
+        employee = self.master
+        if not employee:
+            employee = self.executors.order_by("full_name", "pk").first()
+        if not employee:
+            return Decimal("0")
+        return Decimal(str(employee.hourly_rate or 0))
 
 
 class ProductionStageCounterpartyService(models.Model):
