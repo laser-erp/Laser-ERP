@@ -1,0 +1,142 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block field_sets %}
+<div class="product-card-layout">
+  <aside class="product-card-sidebar" aria-label="Разделы карточки">
+    <nav class="product-card-sidebar__nav">
+      {% for fieldset in adminform %}
+      {% if fieldset.name != "Цены" and fieldset.name != "Модификации" and fieldset.name != "Упаковка" and fieldset.name != "Остатки и учёт" %}
+      <div class="product-sidebar-accordion-item">
+        <button type="button"
+          class="product-sidebar-row"
+          data-sidebar-mode="accordion"
+          data-product-section="product-section-{{ forloop.counter0 }}"
+          {% if forloop.counter0 == 2 %}data-default-open="true"{% endif %}
+          aria-expanded="false"
+          aria-controls="product-sidebar-panel-{{ forloop.counter0 }}">
+          <span class="product-sidebar-row__grip" aria-hidden="true"></span>
+          <span class="product-sidebar-row__label">{% if fieldset.name %}{{ fieldset.name }}{% else %}Раздел{% endif %}</span>
+          <span class="product-sidebar-row__chevron" aria-hidden="true"></span>
+        </button>
+        {% if forloop.counter0 < 4 %}
+        <div class="product-sidebar-accordion-panel" id="product-sidebar-panel-{{ forloop.counter0 }}" hidden></div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </nav>
+  </aside>
+  <div
+    class="product-card-resizer"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Изменить ширину левой колонки"
+    tabindex="0"
+    title="Потяните, чтобы изменить ширину левого блока"></div>
+  <div class="product-card-main">
+    <div class="product-form-fieldsets-grid product-form-fieldsets-grid--top">
+    {% for fieldset in adminform %}
+      {% if forloop.counter0 == 4 %}
+    </div>
+    <div id="product-extra-tabs-mount" class="product-form-tabs-mount"></div>
+    <div class="product-form-fieldsets-grid product-form-fieldsets-grid--rest">
+      {% endif %}
+      <div class="product-main-section" id="product-section-{{ forloop.counter0 }}">
+      {% include "admin/includes/fieldset.html" with heading_level=2 prefix="fieldset" id_prefix=0 id_suffix=forloop.counter0 %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ operation_types_data|json_script:"product-operation-types-data" }}
+{{ material_avg_unit_prices|json_script:"product-material-avg-prices" }}
+{% if supplier_new_org_url %}<script>window.PRODUCT_SUPPLIER_NEW_ORG_URL = "{{ supplier_new_org_url|escapejs }}";</script>{% endif %}
+<link rel="stylesheet" href="{% static 'core/admin/product_change_form.css' %}?v=60">
+<link rel="stylesheet" href="{% static 'core/admin/product_change_tabs.css' %}?v=1">
+<script src="{% static 'core/admin/product_kind_group_toggle.js' %}?v=1" defer></script>
+<script src="{% static 'core/admin/product_uom_areas.js' %}?v=14" defer></script>
+<script src="{% static 'core/admin/product_change_tabs.js' %}?v=9" defer></script>
+<script src="{% static 'core/admin/product_card_sidebar.js' %}?v=3" defer></script>
+<script src="{% static 'core/admin/product_card_sidebar_resize.js' %}?v=1" defer></script>
+<script src="{% static 'core/admin/product_general_help_icons.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/product_supplier_picker.js' %}?v=4" defer></script>
+<script src="{% static 'core/admin/product_supplier_layout_fix.js' %}?v=6" defer></script>
+<script src="{% static 'core/admin/product_name_desc_width.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/product_prices_tabs.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/product_composed_name.js' %}?v=1" defer></script>
+<script src="{% static 'core/admin/product_gallery_inline_move.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/product_modifications_headers.js' %}?v=4" defer></script>
+{% endblock %}
+
+{# После admin/css/responsive.css — иначе правила из product_change_form.css часто не действуют #}
+{% block responsive %}
+{{ block.super }}
+<style id="product-fs-supplier-last-mile">
+/* #product_form — перебиваем responsive.css и оставляем левый край подписи как у остальных полей */
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  gap: 0.35rem 0.75rem !important;
+  align-items: center !important;
+}
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  width: var(--laser-admin-field-label-width, 11rem) !important;
+  min-width: var(--laser-admin-field-label-width, 11rem) !important;
+  max-width: var(--laser-admin-field-label-width, 11rem) !important;
+  margin: 0 !important;
+  padding: 0 0.5rem 0 0 !important;
+  text-indent: 0 !important;
+  text-align: left !important;
+  float: none !important;
+}
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label),
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+@media (max-width: 767px) {
+  body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+  body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block after_field_sets %}
+<p id="product-uom-area-preview" class="help"></p>
+{{ block.super }}
+{% endblock %}
+
+{% block inline_field_sets %}
+{{ block.super }}
+<div class="module product-barcode-help">
+  <details class="product-barcode-help__details">
+    <summary class="product-barcode-help__summary">
+      <img src="{% static 'admin/img/icon-unknown.svg' %}" width="14" height="14" alt="">
+      Как создавать штрихкоды
+    </summary>
+    <div class="product-barcode-help__body">
+      <ol>
+        <li>Во вкладке <strong>«Штрихкоды»</strong> выберите тип штрихкода (EAN-13, EAN-8, Code 128 или Другой).</li>
+        <li>В поле <strong>«Штрихкод»</strong> введите код вручную или поднесите сканер — он введёт код как с клавиатуры.</li>
+        <li>При необходимости укажите комментарий (например: «основной», «упаковка 6 шт»).</li>
+        <li>Нажмите <strong>«Сохранить»</strong> внизу страницы.</li>
+      </ol>
+      <p class="product-barcode-help__note">
+        Один товар может иметь несколько штрихкодов. Один и тот же код не может быть назначен разным товарам. По штрихкоду можно искать товар в списке и быстро добавлять позиции сканером.
+      </p>
+    </div>
+  </details>
+</div>
+{% endblock %}

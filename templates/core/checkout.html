@@ -1,0 +1,120 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Оформление заказа{% endblock %}
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/checkout_delivery_fields.js' %}?v=1" defer></script>
+{% endblock %}
+{% block content %}
+<h1 class="mb-3">Оформление заказа</h1>
+
+{% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" class="card card-body border-0 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
+
+      <h5 class="mb-3">1. Контакты</h5>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Имя или компания *</label>
+          <input type="text" class="form-control" name="customer_name" required value="{{ form_data.customer_name|default:'' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Телефон *</label>
+          <input type="text" class="form-control" name="phone" required value="{{ form_data.phone|default:'' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Email *</label>
+          <input type="email" class="form-control" name="email" required value="{{ form_data.email|default:'' }}">
+        </div>
+      </div>
+
+      <h5 class="mb-3">2. Доставка</h5>
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="delivery_method" id="delivery_pickup" value="pickup" {% if form_data.delivery_method == "pickup" or not form_data.delivery_method %}checked{% endif %}>
+          <label class="form-check-label" for="delivery_pickup">Самовывоз</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="delivery_method" id="delivery_courier" value="courier" {% if form_data.delivery_method == "courier" %}checked{% endif %}>
+          <label class="form-check-label" for="delivery_courier">Курьер</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="delivery_method" id="delivery_tc" value="transport_company" {% if form_data.delivery_method == "transport_company" %}checked{% endif %}>
+          <label class="form-check-label" for="delivery_tc">Транспортная компания</label>
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <label class="form-label">Адрес (для курьера)</label>
+          <input type="text" class="form-control" name="delivery_address" value="{{ form_data.delivery_address|default:'' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Город (для ТК)</label>
+          <input type="text" class="form-control" name="delivery_city" value="{{ form_data.delivery_city|default:'' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Транспортная компания</label>
+          <input type="text" class="form-control" name="transport_company" value="{{ form_data.transport_company|default:'' }}">
+        </div>
+      </div>
+
+      <h5 class="mb-3">3. Оплата</h5>
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="payment_method" id="payment_online" value="online_card" {% if form_data.payment_method == "online_card" or not form_data.payment_method %}checked{% endif %}>
+          <label class="form-check-label" for="payment_online">Онлайн картой</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="payment_method" id="payment_manager" value="manager" {% if form_data.payment_method == "manager" %}checked{% endif %}>
+          <label class="form-check-label" for="payment_manager">Через менеджера / по счету</label>
+        </div>
+      </div>
+
+      <h5 class="mb-3">4. Комментарий</h5>
+      <div class="mb-3">
+        <textarea name="comment" class="form-control" rows="3" placeholder="Пожелания к заказу">{{ form_data.comment|default:'' }}</textarea>
+      </div>
+
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" value="1" id="agree_terms" name="agree_terms" {% if form_data.agree_terms == "1" %}checked{% endif %} required>
+        <label class="form-check-label" for="agree_terms">
+          Подтверждаю корректность данных заказа и согласен на обработку контактов для связи.
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-success btn-lg">Оформить заказ</button>
+    </form>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card card-body border-0 shadow-sm storefront-summary">
+      <h5 class="mb-3">Ваш заказ</h5>
+      <ul class="list-group list-group-flush mb-3">
+        {% for item in items %}
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <div>
+            <div>{{ item.product.name }}</div>
+            <small class="text-muted">{{ item.quantity }} × {{ item.price }} ₽</small>
+          </div>
+          <strong>{{ item.line_total }} ₽</strong>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="d-flex justify-content-between">
+        <span>Позиций</span><strong>{{ totals.total_qty }}</strong>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Итого</span><strong>{{ totals.total_amount }} ₽</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

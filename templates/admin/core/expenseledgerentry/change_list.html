@@ -1,0 +1,122 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Главная</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Бухгалтерия</a>
+  &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <h1>{{ title }}</h1>
+
+  <form method="get" class="module" style="padding:12px; margin-bottom:12px;">
+    <div style="display:grid; grid-template-columns:repeat(4, minmax(180px,1fr)); gap:8px;">
+      <label>С даты
+        <input type="date" name="date_from" value="{{ filter_values.date_from }}" style="width:100%;">
+      </label>
+      <label>По дату
+        <input type="date" name="date_to" value="{{ filter_values.date_to }}" style="width:100%;">
+      </label>
+      <label>Вид документа
+        <select name="doc_type" style="width:100%;">
+          <option value="">Все</option>
+          {% for code, label in doc_type_choices %}
+          <option value="{{ code }}" {% if filter_values.doc_type == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Статус
+        <select name="status" style="width:100%;">
+          <option value="">Все</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if filter_values.status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Категория расходов
+        <select name="category" style="width:100%;">
+          <option value="">Все</option>
+          {% for code, label in category_choices %}
+          <option value="{{ code }}" {% if filter_values.category == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Контрагент
+        <select name="supplier_id" style="width:100%;">
+          <option value="">Все</option>
+          {% for s in suppliers %}
+          <option value="{{ s.id }}" {% if filter_values.supplier_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Наша организация
+        <select name="our_organization_id" style="width:100%;">
+          <option value="">Все</option>
+          {% for org in our_organizations %}
+          <option value="{{ org.id }}" {% if filter_values.our_organization_id == org.id|stringformat:'s' %}selected{% endif %}>{{ org.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Поиск
+        <input type="text" name="q" value="{{ filter_values.q }}" placeholder="Номер, контрагент, комментарий" style="width:100%;">
+      </label>
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <button type="submit" class="button default">Применить</button>
+      <a href="{{ clear_filters_url }}" class="button">Сбросить фильтры</a>
+      <span style="margin-left:8px;">Быстрые пресеты:</span>
+      {% for item in preset_links %}
+      <a href="{{ item.url }}" class="button{% if item.is_active %} default{% endif %}">{{ item.label }}</a>
+      {% endfor %}
+    </div>
+  </form>
+
+  <div class="module" style="padding:10px 12px; margin-bottom:12px;">
+    Найдено записей: <strong>{{ rows_count }}</strong>
+    <span style="margin-left:16px;">Сумма по выборке: <strong>{{ total_amount }}</strong></span>
+  </div>
+
+  <div class="results">
+    <table id="result_list">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Вид документа</th>
+          <th>Номер</th>
+          <th>Контрагент</th>
+          <th>Наша организация</th>
+          <th>Сумма</th>
+          <th>Категория</th>
+          <th>Статус</th>
+          <th>Основание/комментарий</th>
+          <th>Документ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.date|date:"d.m.Y" }}</td>
+          <td>{{ row.doc_type_label }}</td>
+          <td>{{ row.number }}</td>
+          <td>{{ row.supplier_name }}</td>
+          <td>{{ row.our_organization_name }}</td>
+          <td>{{ row.amount }}</td>
+          <td>{{ row.expense_category }}</td>
+          <td>{{ row.status_label }}</td>
+          <td>{{ row.comment|default:"—" }}</td>
+          <td><a href="{{ row.open_url }}">Открыть документ</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">По текущим фильтрам расходов нет.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

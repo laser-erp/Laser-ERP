@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'catalog' %}" class="btn btn-link px-0 mb-2">← В каталог</a>
+<div class="row g-4">
+  <div class="col-lg-5">
+    {% if product.photo %}
+    <img src="{{ product.photo.url }}" class="img-fluid rounded border" alt="{{ product.name }}">
+    {% else %}
+    <div class="border rounded d-flex align-items-center justify-content-center bg-light" style="height: 320px;">
+      <span class="text-muted">Фото отсутствует</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="col-lg-7">
+    <h1>{{ product.name }}</h1>
+    <p class="text-muted mb-1">Артикул: {{ product.article|default:"—" }}</p>
+    <p class="mb-2">Категория: {{ product.category|default:"—" }}</p>
+    <p class="mb-2"><strong>Срок поставки:</strong> {{ lead_time_text }}</p>
+    <p class="fs-4 fw-semibold mb-3">
+      {% if product.planned_price %}{{ product.planned_price }} ₽{% else %}Цена по запросу{% endif %}
+    </p>
+    <form method="post" action="{% url 'cart' %}" class="d-flex gap-2 align-items-center mb-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <label for="qty" class="mb-0">Количество</label>
+      <input id="qty" type="number" name="quantity" class="form-control" style="max-width: 120px;" value="1" min="1">
+      <button type="submit" class="btn btn-primary">В корзину</button>
+      <button type="submit" class="btn btn-outline-success" name="next" value="checkout">Купить сейчас</button>
+    </form>
+    <h5>Описание</h5>
+    <p>{{ product.description|default:"Описание товара пока не заполнено." }}</p>
+  </div>
+</div>
+{% endblock %}

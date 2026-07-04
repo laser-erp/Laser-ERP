@@ -1,0 +1,11 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  {% if fill_from_tech_card_url %}
+    <li>
+      <a href="{{ fill_from_tech_card_url }}" class="historylink">Заполнить из техкарты</a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

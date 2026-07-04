@@ -1,0 +1,13 @@
+HANDOFF — техкарта / позиции / продукция
+
+Проблема (история)
+- Пустая строка «комплектующие» без product — ошибка по quantity; full_clean пропуск для одноразовых строк.
+- Пропажа сохранённой продукции: в POST не попадали скрытые поля / зеркала на вкладках.
+
+Исправление (актуально)
+- production/admin.py: _post_scalar + getlist для product/material; disposable только при реально пустых FK.
+- TechCardItemInlineForm.full_clean + TechCardItemFormSet.save_new — одноразовые пустые строки не сохраняются.
+- techcard_change_form.js: syncTechcardInlineBeforeSubmit() на submit (capture) — product/item_kind/quantity из DOM.
+- techcard_items_tabs.js: applyPendingToRow — data-product-id и data-material-id на tr.
+
+Кэш: Ctrl+F5; tabular ?v=45 для techcard_items_tabs.js.

@@ -1,0 +1,52 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block form_top %}{{ block.super }}{% if is_popup %}<input type="hidden" name="_redirect_back_url" id="redirect_back_url" value="">{% elif admin_redirect_back_url %}<input type="hidden" name="_redirect_back_url" value="{{ admin_redirect_back_url }}" />{% endif %}{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+{% if is_popup %}
+<script>
+(function(){ var el = document.getElementById('redirect_back_url'); if (el) el.value = document.referrer || ''; })();
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var selectedId = params.get('_selected_id');
+  var selectedModel = params.get('_selected_model');
+  if (!selectedId || !selectedModel) return;
+
+  function applySelection() {
+    var selects = document.querySelectorAll('select');
+    for (var i = 0; i < selects.length; i++) {
+      var sel = selects[i];
+      if (sel.name && sel.querySelector('option[value="' + selectedId + '"]')) {
+        sel.value = selectedId;
+        if (sel.dispatchEvent) {
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        break;
+      }
+    }
+    params.delete('_selected_id');
+    params.delete('_selected_model');
+    var newSearch = params.toString();
+    var newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', newUrl);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applySelection);
+  } else {
+    applySelection();
+  }
+})();
+</script>
+{% endblock %}

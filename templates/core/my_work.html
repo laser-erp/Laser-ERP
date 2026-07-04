@@ -1,0 +1,59 @@
+{% extends "core/base.html" %}
+{% block title %}Моя работа{% endblock %}
+{% block content %}
+<h1 class="mb-4">Моя работа</h1>
+
+{% if not employee %}
+  <p class="text-muted">К вашему пользователю не привязан сотрудник. Обратитесь к администратору, чтобы привязать карточку сотрудника для просмотра трудозатрат и заработка.</p>
+  <p><a href="{% url 'dashboard' %}">На главную</a></p>
+{% else %}
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Всего времени</h5>
+          <p class="card-text display-6">{{ total_minutes|floatformat:0 }} мин</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Заработок (по трудозатратам)</h5>
+          <p class="card-text display-6">{{ total_earnings }} ₽</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h5>Последние записи трудозатрат (до 100)</h5>
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Операция</th>
+        <th>Минут</th>
+        <th>Объект</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.date|date:"d.m.Y H:i" }}</td>
+        <td>{{ log.operation_type }}</td>
+        <td>{{ log.minutes_spent }}</td>
+        <td>
+          {% if log.batch %}Партия #{{ log.batch_id }}{% endif %}
+          {% if log.production_assignment %}Задание #{{ log.production_assignment_id }}{% if log.production_assignment_item %} (этап){% endif %}{% endif %}
+          {% if not log.batch and not log.production_assignment %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="text-center">Записей пока нет</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}

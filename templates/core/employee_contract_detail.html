@@ -1,0 +1,116 @@
+{% extends "core/base.html" %}
+{% block title %}Договор {{ contract.number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Договор {{ contract.number }}</h1>
+  <a href="{% url 'employee_contracts' %}" class="btn btn-outline-secondary">К списку</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="post" class="row g-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save">
+          <div class="col-md-4">
+            <label class="form-label">Номер</label>
+            <input type="text" name="number" class="form-control" value="{{ contract.number }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Дата</label>
+            <input type="date" name="contract_date" class="form-control" value="{{ contract.contract_date|date:'Y-m-d' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Действует до</label>
+            <input type="date" name="valid_until" class="form-control" value="{{ contract.valid_until|date:'Y-m-d' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Тип</label>
+            <select name="contract_type" class="form-select">
+              {% for code, label in contract_types %}
+              <option value="{{ code }}" {% if contract.contract_type == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Статус</label>
+            <select name="status" class="form-select">
+              {% for code, label in contract_statuses %}
+              <option value="{{ code }}" {% if contract.status == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Лимит суммы</label>
+            <input type="text" name="amount_limit" class="form-control" value="{{ contract.amount_limit|default:'' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Наша организация</label>
+            <select name="our_organization" class="form-select">
+              {% for org in organizations %}
+              <option value="{{ org.id }}" {% if contract.our_organization_id == org.id %}selected{% endif %}>{{ org.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Контрагент</label>
+            <select name="counterparty" class="form-select">
+              {% for org in organizations %}
+              <option value="{{ org.id }}" {% if contract.counterparty_id == org.id %}selected{% endif %}>{{ org.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Предмет договора</label>
+            <textarea name="subject" class="form-control" rows="2">{{ contract.subject }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Условия оплаты</label>
+            <textarea name="payment_terms" class="form-control" rows="2">{{ contract.payment_terms }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Условия поставки/оказания</label>
+            <textarea name="delivery_terms" class="form-control" rows="2">{{ contract.delivery_terms }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Комментарий</label>
+            <textarea name="comment" class="form-control" rows="2">{{ contract.comment }}</textarea>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Версии договора</h2>
+        <form method="post" class="mb-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="generate_version">
+          <button type="submit" class="btn btn-sm btn-outline-primary">Сгенерировать версию</button>
+        </form>
+        {% if versions %}
+        <ul class="list-group list-group-flush">
+          {% for v in versions %}
+          <li class="list-group-item px-0">
+            <div class="fw-semibold">v{{ v.version_number }}</div>
+            <div class="small text-muted">{{ v.created_at|date:"d.m.Y H:i" }}</div>
+            {% if v.generated_file %}
+            <a href="{{ v.generated_file.url }}" download>Скачать файл</a>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-muted">Версий пока нет.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

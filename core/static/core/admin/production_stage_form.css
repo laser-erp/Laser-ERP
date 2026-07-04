@@ -1,0 +1,645 @@
+/*
+ * Форма «Этап производства» — оформление из чата Laser ERP:
+ * акцент #2563eb / #3b82f6, фон вкладок #eff6ff (как кнопки «+ Товар» и вкладки техкарты).
+ */
+fieldset.executors-tabs {
+  --ps-accent: #2563eb;
+  --ps-accent-light: #3b82f6;
+  --ps-accent-bg: #eff6ff;
+  --ps-border: #e8e8e8;
+  --ps-hairline: #ccc;
+  position: relative;
+  display: block;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  border-left: 4px solid var(--ps-accent) !important;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+/* Описание блока — без отступа как у wide + aligned */
+form#productionstage_form fieldset.executors-tabs .description,
+form#productionstageproxy_form fieldset.executors-tabs .description {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Строки M2M: убрать колонку подписи (wide = 200px), контент с края контейнера */
+form#productionstage_form fieldset.executors-tabs.wide .form-row.field-executors .flex-container.fieldBox,
+form#productionstageproxy_form fieldset.executors-tabs.wide .form-row.field-executors .flex-container.fieldBox,
+form#productionstage_form fieldset.executors-tabs.wide .form-row.field-counterparty_executors .flex-container.fieldBox,
+form#productionstageproxy_form
+  fieldset.executors-tabs.wide
+  .form-row.field-counterparty_executors
+  .flex-container.fieldBox {
+  position: relative;
+  margin-left: 0 !important;
+}
+
+form#productionstage_form fieldset.executors-tabs.wide .form-row.field-executors .flex-container.fieldBox > label,
+form#productionstageproxy_form fieldset.executors-tabs.wide .form-row.field-executors .flex-container.fieldBox > label,
+form#productionstage_form fieldset.executors-tabs.wide .form-row.field-counterparty_executors .flex-container.fieldBox > label,
+form#productionstageproxy_form
+  fieldset.executors-tabs.wide
+  .form-row.field-counterparty_executors
+  .flex-container.fieldBox
+  > label {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Блок «Склад и затраты» */
+form#productionstage_form fieldset.compact-two-cols,
+form#productionstageproxy_form fieldset.compact-two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+  align-items: start;
+}
+
+form#productionstage_form fieldset.compact-two-cols h2,
+form#productionstage_form fieldset.compact-two-cols .description,
+form#productionstageproxy_form fieldset.compact-two-cols h2,
+form#productionstageproxy_form fieldset.compact-two-cols .description {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+  form#productionstage_form fieldset.compact-two-cols,
+  form#productionstageproxy_form fieldset.compact-two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Вкладки Сотрудники / Контрагенты */
+fieldset.executors-tabs .ps-exec-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  flex-wrap: wrap;
+  margin: 0 0 12px 0;
+  padding: 0;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+fieldset.executors-tabs .ps-tab {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 16px 8px;
+  margin-bottom: -1px;
+  color: #666;
+}
+
+fieldset.executors-tabs .ps-tab:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+fieldset.executors-tabs .ps-tab.active {
+  color: var(--ps-accent);
+  border-bottom-color: var(--ps-accent);
+  background: var(--ps-accent-bg);
+  font-weight: 600;
+}
+
+fieldset.executors-tabs .ps-tab-side {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--body-quiet-color, #666);
+  padding-bottom: 8px;
+}
+
+/* Первая строка: любой сотрудник + мастер */
+fieldset.executors-tabs .ps-executors-first-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+@media (max-width: 900px) {
+  fieldset.executors-tabs .ps-executors-first-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Скрытый стандартный filter_horizontal (две колонки) и Django 6+ selectfilter (один multiple) */
+fieldset.executors-tabs .field-executors .selector,
+fieldset.executors-tabs .field-counterparty_executors .selector {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+fieldset.executors-tabs .field-executors .related-widget-wrapper > select.selectfilter,
+fieldset.executors-tabs
+  .field-counterparty_executors
+  .related-widget-wrapper
+  > select.selectfilter {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+fieldset.executors-tabs .field-executors > div > label:first-of-type,
+fieldset.executors-tabs .field-counterparty_executors > div > label:first-of-type {
+  clip: rect(0, 0, 0, 0);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+}
+
+/* Панель M2M — как карточка поля в админке */
+fieldset.executors-tabs .ps-m2m-custom {
+  margin-top: 6px;
+  margin-left: 0;
+  border: 1px solid var(--ps-border);
+  border-radius: 4px;
+  padding: 12px 16px 12px 0;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+fieldset.executors-tabs .ps-m2m-layout {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+fieldset.executors-tabs .ps-m2m-main {
+  flex: 1;
+  min-width: 0;
+}
+
+fieldset.executors-tabs .ps-m2m-aside {
+  width: 128px;
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #666;
+  padding: 8px 10px;
+  background: var(--ps-accent-bg);
+  border: 1px solid var(--ps-border);
+  border-radius: 4px;
+}
+
+fieldset.executors-tabs .ps-m2m-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 10px;
+  color: #333;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ps-accent-light);
+}
+
+fieldset.executors-tabs .form-row.field-executors {
+  overflow: visible;
+}
+
+/* Синяя линия-акцент над списком выбранных (как в чате) */
+fieldset.executors-tabs .ps-m2m-employees .executors-chosen-list {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top: 2px solid var(--ps-accent-light);
+  border-bottom: none;
+}
+
+fieldset.executors-tabs .ps-chosen-list {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ps-border);
+}
+
+fieldset.executors-tabs .ps-chosen-list-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+fieldset.executors-tabs .ps-second-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+fieldset.executors-tabs .ps-sync-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+}
+
+fieldset.executors-tabs .ps-master-hint {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--ps-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+fieldset.executors-tabs .ps-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+fieldset.executors-tabs .ps-search-row.executors-custom-row {
+  margin-bottom: 20px;
+  overflow: visible;
+}
+
+fieldset.executors-tabs .ps-search-row input[type="search"],
+fieldset.executors-tabs .ps-search-row input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  max-width: 100%;
+  padding: var(--laser-admin-control-padding-y, 1px) var(--laser-admin-control-padding-x, 8px);
+  min-height: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  border: 1px solid var(--ps-hairline);
+  border-radius: 4px;
+  font-size: var(--laser-admin-form-font-size, 0.8125rem);
+  line-height: var(--laser-admin-control-line-height, 1.2);
+  box-sizing: border-box;
+}
+
+fieldset.executors-tabs .ps-btn {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--ps-hairline);
+  background: #f8f8f8;
+  color: #333;
+  cursor: pointer;
+}
+
+fieldset.executors-tabs .ps-btn:hover {
+  background: #eee;
+  border-color: #bbb;
+}
+
+fieldset.executors-tabs .ps-ac-wrap.ps-executors-search-wrap {
+  position: relative;
+  z-index: 10;
+  overflow: visible;
+}
+
+fieldset.executors-tabs .ps-ac-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+fieldset.executors-tabs .ps-ac-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  margin-top: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--ps-accent);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(65, 118, 144, 0.15);
+  z-index: 20050;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+}
+
+fieldset.executors-tabs .ps-ac-results.executors-custom-dropdown {
+  border-width: 1px;
+  max-height: 180px;
+}
+
+fieldset.executors-tabs .ps-ac-results li {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+fieldset.executors-tabs .ps-ac-results li:hover,
+fieldset.executors-tabs .ps-ac-results li.ps-ac-active {
+  background: var(--ps-accent-bg);
+  color: var(--ps-accent);
+}
+
+fieldset.executors-tabs .ps-ac-results .ps-ac-empty {
+  padding: 10px 12px;
+  color: #888;
+  cursor: default;
+}
+
+fieldset.executors-tabs .ps-m2m-locked {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+fieldset.executors-tabs .ps-chosen-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 5px;
+  background: #fafafa;
+  border: 1px solid var(--ps-border);
+  border-radius: 4px;
+  font-size: 13px;
+  border-left: 3px solid var(--ps-accent-light);
+}
+
+fieldset.executors-tabs .ps-chosen-item:hover {
+  background: #fff;
+  border-left-color: var(--ps-accent);
+}
+
+fieldset.executors-tabs .ps-chosen-num-wrap {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+fieldset.executors-tabs .ps-chosen-num {
+  font-weight: 600;
+  color: var(--ps-accent);
+}
+
+fieldset.executors-tabs .ps-chosen-cb {
+  display: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+fieldset.executors-tabs .ps-chosen-item:hover .ps-chosen-num {
+  display: none !important;
+}
+
+fieldset.executors-tabs .ps-chosen-item:hover .ps-chosen-cb {
+  display: inline-block !important;
+}
+
+fieldset.executors-tabs .ps-chosen-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+fieldset.executors-tabs .ps-chosen-master-wrap {
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+fieldset.executors-tabs .ps-chosen-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 5px;
+  background: #fafafa;
+  border: 1px solid var(--ps-border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+fieldset.executors-tabs .ps-chosen-row .ps-chosen-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+fieldset.executors-tabs .ps-chosen-row select {
+  max-width: 220px;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+
+fieldset.executors-tabs .ps-chosen-remove {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: #ba2121;
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 4px;
+}
+
+fieldset.executors-tabs .ps-chosen-remove:hover {
+  background: #ffefef;
+}
+
+fieldset.executors-tabs .executors-chosen-remove {
+  border-radius: 50%;
+  background: #9ca3af !important;
+  color: #fff !important;
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+}
+
+fieldset.executors-tabs .executors-chosen-remove:hover {
+  background: #6b7280 !important;
+  color: #fff !important;
+}
+
+fieldset.executors-tabs .ps-chosen-empty {
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* Боковая панель */
+.ps-side-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 40000;
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.ps-side-panel {
+  width: 360px;
+  max-width: 100%;
+  background: #fff;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  animation: ps-side-in 0.2s ease-out;
+}
+
+@keyframes ps-side-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.ps-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ps-side-head strong {
+  font-weight: 600;
+}
+
+.ps-side-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.ps-side-close:hover {
+  opacity: 1;
+}
+
+.ps-side-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.ps-side-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ps-side-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--ps-border);
+  background: #f8f8f8;
+}
+
+/* Высота полей формы этапа — как в стандартной админке */
+form#productionstage_form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+form#productionstage_form select,
+form#productionstage_form textarea,
+form#productionstageproxy_form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+form#productionstageproxy_form select,
+form#productionstageproxy_form textarea {
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+form#productionstage_form fieldset.compact-two-cols .form-row input,
+form#productionstage_form fieldset.compact-two-cols .form-row select,
+form#productionstageproxy_form fieldset.compact-two-cols .form-row input,
+form#productionstageproxy_form fieldset.compact-two-cols .form-row select {
+  min-height: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  padding: var(--laser-admin-control-padding-y, 1px) var(--laser-admin-control-padding-x, 8px);
+  line-height: var(--laser-admin-control-line-height, 1.2);
+}
+
+form#productionstage_form textarea,
+form#productionstageproxy_form textarea {
+  min-height: 4.5rem;
+}
+
+/* Подсказка «?» у мастера — в тон админки */
+fieldset.executors-tabs .help-icon-tooltip.ps-master-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--ps-accent);
+  background: transparent;
+  color: var(--ps-accent);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: help;
+  -webkit-font-smoothing: antialiased;
+}
+
+form#productionstage_form .form-row.field-master label,
+form#productionstageproxy_form .form-row.field-master label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}

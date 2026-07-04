@@ -1,0 +1,95 @@
+{% load i18n %}
+<fieldset class="module aligned {{ fieldset.classes }}"{% if fieldset.name %} aria-labelledby="{{ prefix }}-{{ id_prefix}}-{{ id_suffix }}-heading"{% endif %}>
+    {% if fieldset.name %}
+        {% if fieldset.is_collapsible %}<details><summary>{% endif %}
+        <h{{ heading_level|default:2 }} id="{{ prefix }}-{{ id_prefix}}-{{ id_suffix }}-heading" class="fieldset-heading">{{ fieldset.name }}</h{{ heading_level|default:2 }}>
+        {% if fieldset.is_collapsible %}</summary>{% endif %}
+    {% endif %}
+    {% if fieldset.description %}
+        <div class="description">{{ fieldset.description|safe }}</div>
+    {% endif %}
+    {% for line in fieldset %}
+        <div class="form-row{% if line.fields|length == 1 and line.errors %} errors{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% endfor %}">
+            {% if line.fields|length == 1 %}{{ line.errors }}{% else %}<div class="flex-container form-multiline">{% endif %}
+            {% for field in line %}
+                {% if field.is_fieldset %}<fieldset{% if field.field.help_text %} aria-describedby="laser_help_{% if fieldset.form.prefix %}{{ fieldset.form.prefix }}_{% endif %}{{ field.field.name }}"{% endif %}>{{ field.label_tag }}{% endif %}
+                {% if field.field.is_hidden %}
+                <div>
+                    {% if not line.fields|length == 1 and not field.is_readonly %}{{ field.errors }}{% endif %}
+                    <div class="flex-container{% if not line.fields|length == 1 %} fieldBox{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}{% if field.is_checkbox %} checkbox-row{% endif %}">
+                        {% if field.is_checkbox %}
+                            {{ field.field }}{% if not field.is_fieldset %}{{ field.label_tag }}{% endif %}
+                        {% else %}
+                            {% if not field.is_fieldset %}{{ field.label_tag }}{% endif %}
+                            {% if field.is_readonly %}
+                                <div class="readonly">{{ field.contents }}</div>
+                            {% else %}
+                                {{ field.field }}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div>
+                    {% if not line.fields|length == 1 and not field.is_readonly %}{{ field.errors }}{% endif %}
+                    {% if field.is_checkbox %}
+                    {# Чекбокс: «?» сразу перед переключателем, затем чекбокс и подпись #}
+                    <div class="laser-field-with-help laser-field-with-help--checkbox">
+                        <div class="laser-field-main-col laser-field-main-col--checkbox">
+                            <div class="flex-container{% if not line.fields|length == 1 %} fieldBox{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% endif %} checkbox-row laser-checkbox-help-row">
+                                <div class="laser-field-help-inline">
+                                    <button type="button" class="laser-help-trigger help-icon-tooltip" aria-expanded="false" aria-controls="laser_help_{% if fieldset.form.prefix %}{{ fieldset.form.prefix }}_{% endif %}{{ field.field.name }}" aria-label="{% translate 'Подсказка по полю' %}">
+                                        <span class="laser-help-trigger-icon" aria-hidden="true">?</span>
+                                    </button>
+                                    <div class="laser-help-panel laser-help-panel--anchored" id="laser_help_{% if fieldset.form.prefix %}{{ fieldset.form.prefix }}_{% endif %}{{ field.field.name }}" hidden role="region" aria-label="{% translate 'Текст подсказки' %}">
+                                        <div class="laser-help-panel-inner{% if not field.field.help_text %} laser-help-panel-inner--empty{% endif %}">
+                                            {% if field.field.help_text %}
+                                                {{ field.field.help_text|safe }}
+                                            {% else %}
+                                                {% translate "Для этого поля подсказка не задана." %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if not field.is_fieldset %}{{ field.label_tag }}{% endif %}{{ field.field }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    {# Обычное поле: «?» | подпись | ввод в одну линию #}
+                    <div class="laser-field-with-help">
+                        <div class="laser-field-help-col">
+                            <button type="button" class="laser-help-trigger help-icon-tooltip" aria-expanded="false" aria-controls="laser_help_{% if fieldset.form.prefix %}{{ fieldset.form.prefix }}_{% endif %}{{ field.field.name }}" aria-label="{% translate 'Подсказка по полю' %}">
+                                <span class="laser-help-trigger-icon" aria-hidden="true">?</span>
+                            </button>
+                            <div class="laser-help-panel" id="laser_help_{% if fieldset.form.prefix %}{{ fieldset.form.prefix }}_{% endif %}{{ field.field.name }}" hidden role="region" aria-label="{% translate 'Текст подсказки' %}">
+                                <div class="laser-help-panel-inner{% if not field.field.help_text %} laser-help-panel-inner--empty{% endif %}">
+                                    {% if field.field.help_text %}
+                                        {{ field.field.help_text|safe }}
+                                    {% else %}
+                                        {% translate "Для этого поля подсказка не задана." %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="laser-field-main-col">
+                            <div class="flex-container{% if not line.fields|length == 1 %} fieldBox{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% endif %}">
+                                {% if not field.is_fieldset %}{{ field.label_tag }}{% endif %}
+                                {% if field.is_readonly %}
+                                    <div class="readonly">{{ field.contents }}</div>
+                                {% else %}
+                                    {{ field.field }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if field.is_fieldset %}</fieldset>{% endif %}
+            {% endfor %}
+            {% if not line.fields|length == 1 %}</div>{% endif %}
+        </div>
+    {% endfor %}
+    {% if fieldset.name and fieldset.is_collapsible %}</details>{% endif %}
+</fieldset>

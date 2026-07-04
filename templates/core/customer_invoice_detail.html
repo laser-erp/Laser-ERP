@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+{% block title %}Счет клиенту {{ invoice.number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Счет на оплату {{ invoice.number }}</h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'customer_invoice_print' invoice.id %}" target="_blank" class="btn btn-outline-primary">
+      Печатная форма
+    </a>
+    {% if invoice.production_request_id %}
+    <a href="{% url 'production_request_detail' invoice.production_request_id %}" class="btn btn-outline-secondary">
+      К запросу
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Реквизиты счета</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Клиент</dt>
+          <dd class="col-sm-8">{{ invoice.customer_name }}</dd>
+
+          <dt class="col-sm-4">Контакты</dt>
+          <dd class="col-sm-8">
+            {{ invoice.customer_email|default:"—" }}
+            {% if invoice.customer_phone %} / {{ invoice.customer_phone }}{% endif %}
+          </dd>
+
+          <dt class="col-sm-4">Дата счета</dt>
+          <dd class="col-sm-8">{{ invoice.issue_date|date:"d.m.Y" }}</dd>
+
+          <dt class="col-sm-4">Оплатить до</dt>
+          <dd class="col-sm-8">{{ invoice.due_date|date:"d.m.Y"|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Сумма</dt>
+          <dd class="col-sm-8"><strong>{{ invoice.amount }}</strong> руб.</dd>
+
+          <dt class="col-sm-4">Назначение</dt>
+          <dd class="col-sm-8">{{ invoice.purpose|default:"—"|linebreaksbr }}</dd>
+
+          <dt class="col-sm-4">Статус</dt>
+          <dd class="col-sm-8">{{ invoice.get_status_display }}</dd>
+
+          <dt class="col-sm-4">Наша организация</dt>
+          <dd class="col-sm-8">{{ invoice.our_organization|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Отправка клиенту</h2>
+        {% if invoice.status == "sent" or invoice.status == "paid" %}
+        <p class="mb-2 text-success">
+          Счёт отправлен клиенту в чат{% if invoice.sent_to_chat_at %}: {{ invoice.sent_to_chat_at|date:"d.m.Y H:i" }}{% endif %}.
+        </p>
+        {% else %}
+        <p class="mb-2 text-muted">
+          Проверьте реквизиты и печатную форму, затем отправьте счёт клиенту в мини-чат.
+        </p>
+        {% endif %}
+
+        {% if can_manage_invoice and invoice.production_request_id %}
+        <form method="post" action="{% url 'customer_invoice_send_to_chat' invoice.id %}" class="mt-2">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="btn btn-sm btn-outline-primary"
+            {% if invoice.status == "sent" or invoice.status == "paid" %}disabled{% endif %}
+          >
+            Отправить клиенту в чат
+          </button>
+        </form>
+        {% endif %}
+
+        <hr>
+        <h2 class="h6 mb-3">Оплата счета</h2>
+        {% if invoice.status == "paid" %}
+        <p class="mb-2 text-success">Оплата подтверждена.</p>
+        {% elif invoice.status == "draft" %}
+        <p class="mb-2 text-muted">Счёт пока в черновике и клиенту ещё не отправлен.</p>
+        {% else %}
+        <p class="mb-2 text-muted">
+          Счёт отправлен клиенту. После поступления денег по выписке отметьте оплату.
+        </p>
+        {% endif %}
+
+        {% if can_manage_invoice %}
+        <form method="post" action="{% url 'customer_invoice_mark_paid' invoice.id %}" class="mt-3">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="btn btn-sm btn-primary"
+            {% if invoice.status == "paid" %}disabled{% endif %}
+          >
+            Отметить как оплаченный
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

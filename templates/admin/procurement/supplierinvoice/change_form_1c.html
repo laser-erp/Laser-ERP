@@ -1,0 +1,931 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  :root {
+    --si-control-height: 26px;
+    --si-layout-max-width: 920px;
+  }
+  .si-shell {
+    max-width: var(--si-layout-max-width);
+    margin: 0 auto;
+  }
+  #content > h2 { display: none; } /* hide standalone object title like "245" */
+  .si-doc-title-meta {
+    margin-left: 8px;
+    font-weight: 700;
+    color: #1f2c3d;
+    white-space: nowrap;
+  }
+  .si-toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 0 0 6px 0; padding: 4px 7px;
+    border: 1px solid #cfd6e1; border-radius: 4px; background: #f3f5f8;
+  }
+  .si-toolbar .button {
+    background: #e9edf3 !important;
+    border: 1px solid #b8c3d4 !important;
+    color: #1f2c3d !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    min-height: 26px !important;
+    height: 26px !important;
+    display: inline-flex !important;
+    align-items: center;
+  }
+  .si-toolbar .button.default {
+    background: #dce4ef !important;
+  }
+  .si-more-wrap { position: relative; }
+  .si-more-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0;
+    min-width: 170px;
+    background: #fff;
+    border: 1px solid #b8c3d4;
+    border-radius: 3px;
+    box-shadow: 0 8px 20px rgba(20, 28, 40, 0.12);
+    z-index: 1000;
+    display: none;
+  }
+  .si-more-menu.is-open { display: block; }
+  .si-more-menu button {
+    width: 100%;
+    display: block;
+    border: 0;
+    background: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+    color: #1f2c3d;
+  }
+  .si-more-menu button:hover { background: #f1f4f8; }
+  #supplierinvoice_form {
+    border: 0;
+    background: #fff;
+    padding: 2px 6px 1px 6px;
+    max-width: var(--si-layout-max-width);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  #supplierinvoice_form fieldset.module { border: 0; margin-bottom: 6px; background: #fff; }
+  #supplierinvoice_form h2 {
+    margin: 0 0 3px 0; padding: 1px 0; background: transparent;
+    font-size: 12px; font-weight: 600; color: #4b5563;
+  }
+  #supplierinvoice_form .aligned .form-row { padding: 2px 0; border-bottom: 0; }
+  #supplierinvoice_form .field-comment { display: none !important; }
+  #supplierinvoice_form .submit-row { display: none !important; } /* hide default Django actions row */
+  #content-main .object-tools { display: none !important; } /* hide right-side history button */
+  #supplierinvoice_form .laser-field-help-col { display: none !important; }
+  #supplierinvoice_form .laser-field-with-help { display: block !important; }
+  #supplierinvoice_form .laser-field-main-col { width: 100%; min-width: 0; }
+  #supplierinvoice_form .laser-field-main-col .flex-container {
+    display: flex !important; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap;
+  }
+  #supplierinvoice_form .laser-field-main-col .flex-container label {
+    min-width: 150px !important; width: 150px !important; float: none !important;
+    white-space: nowrap; margin: 0;
+  }
+  #supplierinvoice_form .laser-field-main-col .flex-container > :not(label) {
+    flex: 1 1 auto; min-width: 0;
+  }
+
+  /* Header row exactly in one line */
+  #supplierinvoice_form fieldset.module.si-doc-header {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+    padding: 1px 0 4px 0; background: #fff;
+  }
+  #supplierinvoice_form fieldset.module.si-doc-header > h2 {
+    grid-column: 1 / -1; margin: 0 0 2px 0; padding: 0;
+  }
+  #supplierinvoice_form fieldset.module.si-doc-header .form-row { margin: 0; padding: 0; }
+  #supplierinvoice_form fieldset.module.si-doc-header .laser-field-main-col .flex-container label {
+    min-width: auto !important; width: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    height: var(--si-control-height);
+  }
+  #supplierinvoice_form fieldset.module.si-doc-header .laser-field-main-col .flex-container > :not(label) {
+    min-width: 120px;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-doc-line {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    min-height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-doc-line > * { align-self: center; }
+  #supplierinvoice_form .si-doc-label {
+    font-size: 12px;
+    color: #3a4657;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-doc-sep {
+    font-size: 12px;
+    color: #4b5563;
+    margin: 0 1px 0 -4px;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+    line-height: calc(var(--si-control-height) - 2px);
+    position: relative;
+    top: 0;
+  }
+  #supplierinvoice_form .si-doc-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    height: var(--si-control-height);
+    flex: 0 0 auto;
+  }
+  #supplierinvoice_form .si-doc-control > * {
+    height: var(--si-control-height);
+    min-height: var(--si-control-height);
+    line-height: calc(var(--si-control-height) - 2px);
+    box-sizing: border-box;
+  }
+  #supplierinvoice_form .si-doc-control .readonly {
+    min-width: 90px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height) !important;
+    min-height: var(--si-control-height) !important;
+    line-height: calc(var(--si-control-height) - 2px) !important;
+  }
+
+  /* Hide Django related-widget icons for 1C style */
+  #supplierinvoice_form .related-widget-wrapper {
+    display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+  }
+  #supplierinvoice_form .related-widget-wrapper-link,
+  #supplierinvoice_form .related-widget-wrapper .change-related,
+  #supplierinvoice_form .related-widget-wrapper .add-related,
+  #supplierinvoice_form .related-widget-wrapper .delete-related,
+  #supplierinvoice_form .related-widget-wrapper .view-related {
+    display: none !important;
+  }
+
+  /* Neutral controls */
+  #supplierinvoice_form input[type="text"],
+  #supplierinvoice_form input[type="number"],
+  #supplierinvoice_form input[type="date"],
+  #supplierinvoice_form input[type="datetime-local"],
+  #supplierinvoice_form input[type="email"],
+  #supplierinvoice_form select,
+  #supplierinvoice_form .vTextField,
+  #supplierinvoice_form .vDateField,
+  #supplierinvoice_form .vForeignKeyRawIdAdminField {
+    border: 1px solid #9ea7b5 !important; box-shadow: none !important; outline: none !important;
+    border-radius: 0 !important; background: #fff !important; color: #1f2937 !important;
+    -webkit-text-fill-color: #1f2937 !important; caret-color: #1f2937 !important;
+    height: var(--si-control-height) !important;
+    min-height: var(--si-control-height) !important;
+    line-height: calc(var(--si-control-height) - 2px) !important;
+    box-sizing: border-box !important;
+  }
+  #supplierinvoice_form textarea {
+    border: 1px solid #9ea7b5 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #1f2937 !important;
+    -webkit-text-fill-color: #1f2937 !important;
+    caret-color: #1f2937 !important;
+    min-height: 88px !important;
+    height: auto !important;
+    line-height: 1.25 !important;
+    box-sizing: border-box !important;
+    resize: vertical;
+  }
+  #supplierinvoice_form .si-purpose-table-wrap {
+    margin-top: 10px;
+    max-width: 100%;
+    overflow-x: auto;
+    background: #fff;
+  }
+  #supplierinvoice_form .si-purpose-table-inner {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #6f7782;
+    box-sizing: border-box;
+    vertical-align: top;
+  }
+  #supplierinvoice_form .si-purpose-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+  }
+  #supplierinvoice_form .si-purpose-table th,
+  #supplierinvoice_form .si-purpose-table td {
+    border: 1px solid #8b94a1;
+    padding: 3px 6px;
+    vertical-align: top;
+    white-space: normal;
+    background: #fff;
+  }
+  #supplierinvoice_form .si-purpose-table th {
+    background: #f6f7f9;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  #supplierinvoice_form .si-purpose-summary {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #1f2937;
+  }
+  #supplierinvoice_form .si-purpose-summary-top {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 6px;
+  }
+  #supplierinvoice_form .si-purpose-totals {
+    min-width: 260px;
+    max-width: 300px;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    margin: 0;
+  }
+  #supplierinvoice_form .si-purpose-totals-line {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin: 2px 0;
+    align-items: baseline;
+  }
+  #supplierinvoice_form .si-purpose-totals-label {
+    text-align: right;
+    font-weight: 600;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+  }
+  #supplierinvoice_form .si-purpose-totals-value {
+    text-align: right;
+    font-weight: 700;
+    min-width: 70px;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+  }
+  #supplierinvoice_form .si-purpose-summary-line {
+    margin: 3px 0;
+    font-size: 12px;
+  }
+  #supplierinvoice_form .si-purpose-summary-words {
+    font-weight: 600;
+  }
+  #supplierinvoice_form input:focus,
+  #supplierinvoice_form select:focus,
+  #supplierinvoice_form textarea:focus { border-color: #7f8896 !important; box-shadow: none !important; }
+  #supplierinvoice_form .select2-container--admin-autocomplete .select2-selection {
+    border: 1px solid #9ea7b5 !important; border-radius: 0 !important; box-shadow: none !important;
+    min-height: var(--si-control-height) !important;
+    height: var(--si-control-height) !important;
+    color: #1f2937 !important; background: #fff !important;
+  }
+  #supplierinvoice_form .select2-container--admin-autocomplete .select2-selection__rendered { color: #1f2937 !important; }
+  #supplierinvoice_form .select2-container--admin-autocomplete .select2-selection__rendered {
+    line-height: calc(var(--si-control-height) - 2px) !important;
+  }
+  #supplierinvoice_form .select2-container--admin-autocomplete .select2-selection__arrow {
+    height: calc(var(--si-control-height) - 2px) !important;
+  }
+  #supplierinvoice_form .si-doc-control .datetimeshortcuts {
+    margin: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+    line-height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-doc-control .datetimeshortcuts a {
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-doc-control--date {
+    gap: 6px;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-width: 210px;
+    white-space: nowrap;
+  }
+  #supplierinvoice_form .si-doc-control--date input {
+    margin: 0 !important;
+    align-self: center;
+    height: var(--si-control-height) !important;
+    line-height: calc(var(--si-control-height) - 2px) !important;
+  }
+  #supplierinvoice_form .si-doc-control--date .datetimeshortcuts {
+    margin-left: 6px !important;
+    gap: 4px;
+    align-self: center;
+    display: inline-flex !important;
+    align-items: center !important;
+    float: none !important;
+    position: static !important;
+    top: auto !important;
+    white-space: nowrap;
+    flex: 0 0 auto !important;
+  }
+  #supplierinvoice_form .si-doc-control--date .datetimeshortcuts a {
+    margin: 0 !important;
+    padding: 0 2px !important;
+    line-height: var(--si-control-height);
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  #supplierinvoice_form .si-doc-control--date .datetimeshortcuts a:first-child {
+    display: none !important; /* скрываем "Сегодня", оставляем только календарь */
+  }
+  #supplierinvoice_form .si-doc-control--date .datetimeshortcuts .date-icon {
+    vertical-align: middle !important;
+    margin: 0 !important;
+    position: relative;
+    top: 0;
+  }
+
+  /* File field as document command row */
+  #supplierinvoice_form .si-file-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  #supplierinvoice_form .si-file-row .si-file-name {
+    max-width: 520px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: #324258;
+  }
+  #supplierinvoice_form .si-file-row .button {
+    background: #e9edf3 !important;
+    border: 1px solid #b8c3d4 !important;
+    color: #1f2c3d !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+  }
+  #supplierinvoice_form fieldset.module.si-counterparty-row .form-row { display: none; }
+  #supplierinvoice_form .si-counterparty-line {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    min-height: var(--si-control-height);
+  }
+  #supplierinvoice_form .si-counterparty-label {
+    font-size: 12px;
+    color: #3a4657;
+    display: inline-flex;
+    align-items: center;
+    height: var(--si-control-height);
+    line-height: var(--si-control-height);
+    margin: 0;
+  }
+  #supplierinvoice_form .si-counterparty-control {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    height: var(--si-control-height);
+    flex: 1 1 0;
+  }
+  #supplierinvoice_form .si-counterparty-control > * {
+    width: 100% !important;
+    margin: 0 !important;
+    align-self: center;
+  }
+  #supplierinvoice_form .si-counterparty-control .related-widget-wrapper,
+  #supplierinvoice_form .si-counterparty-control .select2-container {
+    height: var(--si-control-height) !important;
+    min-height: var(--si-control-height) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  #supplierinvoice_form .si-counterparty-control .select2-container--admin-autocomplete .select2-selection {
+    height: var(--si-control-height) !important;
+    min-height: var(--si-control-height) !important;
+    padding: 0 6px !important;
+    box-sizing: border-box !important;
+  }
+  #supplierinvoice_form .si-counterparty-control .select2-container--admin-autocomplete .select2-selection__rendered {
+    line-height: calc(var(--si-control-height) - 2px) !important;
+  }
+  #supplierinvoice_form .si-counterparty-control .select2-container--admin-autocomplete .select2-selection__arrow {
+    height: calc(var(--si-control-height) - 2px) !important;
+  }
+
+  @media (max-width: 1200px) {
+    #supplierinvoice_form fieldset.module.si-doc-header { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+    #supplierinvoice_form .si-doc-line { flex-wrap: wrap; white-space: normal; }
+    #supplierinvoice_form .si-counterparty-line { flex-wrap: wrap; white-space: normal; }
+  }
+  @media (max-width: 760px) {
+    #supplierinvoice_form fieldset.module.si-doc-header { grid-template-columns: 1fr; }
+    #supplierinvoice_form .laser-field-main-col .flex-container { flex-wrap: wrap; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="si-shell">
+  <div class="si-toolbar">
+    <button type="button" class="button default" id="si-save-close">Провести и закрыть</button>
+    <button type="button" class="button" id="si-save">Записать</button>
+    <div class="si-more-wrap">
+      <button type="button" class="button" id="si-more-btn">Еще ▾</button>
+      <div class="si-more-menu" id="si-more-menu">
+        <button type="button" id="si-more-ocr">OCR и разбор</button>
+        <button type="button" id="si-more-print">Печать</button>
+        <button type="button" id="si-more-history">История</button>
+      </div>
+    </div>
+  </div>
+  {{ block.super }}
+</div>
+<script>
+  (function () {
+    function displayFileName(rawName) {
+      var text = (rawName || "").trim();
+      if (!text) return "";
+      text = text.replace(/\\/g, "/");
+      var base = text.split("/").pop() || text;
+      // Django FileField часто добавляет короткий случайный суффикс: _2vMgqQf.PDF
+      base = base.replace(/_[A-Za-z0-9]{5,12}\.[A-Za-z0-9]{2,5}$/i, "");
+      // Если случайного суффикса нет — просто убираем расширение.
+      base = base.replace(/\.[A-Za-z0-9]{2,5}$/i, "");
+      return base;
+    }
+
+    function submitWithAction(actionName) {
+      var form = document.getElementById("supplierinvoice_form");
+      if (!form) return;
+      var marker = document.createElement("input");
+      marker.type = "hidden";
+      marker.name = actionName;
+      marker.value = "1";
+      form.appendChild(marker);
+      form.submit();
+    }
+    function renderPurposeTablePreview(form) {
+      function parseRuNumber(value) {
+        var raw = (value || "").replace(/\s/g, "").replace(/\u00A0/g, "").replace(",", ".");
+        var n = parseFloat(raw);
+        return isNaN(n) ? null : n;
+      }
+      function extractAmountByLabel(text, labelRegex) {
+        var src = (text || "").replace(/\r/g, "\n");
+        var lines = src.split("\n");
+        for (var i = 0; i < lines.length; i++) {
+          var line = " " + (lines[i] || "") + " ";
+          if (!labelRegex.test(line)) continue;
+          var m = line.match(/(-?\d{1,3}(?:[ \u00A0]?\d{3})*(?:[.,]\d{1,2})|-?\d+(?:[.,]\d{1,2}))/g);
+          if (m && m.length) {
+            return parseRuNumber(m[m.length - 1]);
+          }
+        }
+        return null;
+      }
+      function formatRuMoney(value) {
+        var n = Number(value || 0);
+        var fixed = n.toFixed(2).replace(".", ",");
+        return fixed;
+      }
+      function moneyToWordsRu(value) {
+        var n = Math.abs(Number(value || 0));
+        var rub = Math.floor(n);
+        var kop = Math.round((n - rub) * 100);
+        if (kop === 100) {
+          rub += 1;
+          kop = 0;
+        }
+        var onesM = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
+        var onesF = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
+        var teens = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"];
+        var tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"];
+        var hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"];
+        function morph(num, one, few, many) {
+          var n1 = num % 100;
+          if (n1 >= 11 && n1 <= 19) return many;
+          var n2 = num % 10;
+          if (n2 === 1) return one;
+          if (n2 >= 2 && n2 <= 4) return few;
+          return many;
+        }
+        function triadToWords(num, female) {
+          var out = [];
+          var h = Math.floor(num / 100);
+          var t = Math.floor((num % 100) / 10);
+          var o = num % 10;
+          if (h) out.push(hundreds[h]);
+          if (t === 1) {
+            out.push(teens[o]);
+          } else {
+            if (t > 1) out.push(tens[t]);
+            if (o) out.push((female ? onesF : onesM)[o]);
+          }
+          return out.join(" ");
+        }
+        if (rub === 0) {
+          return "Ноль рублей 00 копеек";
+        }
+        var parts = [];
+        var millions = Math.floor(rub / 1000000);
+        var thousands = Math.floor((rub % 1000000) / 1000);
+        var rest = rub % 1000;
+        if (millions) {
+          parts.push(triadToWords(millions, false));
+          parts.push(morph(millions, "миллион", "миллиона", "миллионов"));
+        }
+        if (thousands) {
+          parts.push(triadToWords(thousands, true));
+          parts.push(morph(thousands, "тысяча", "тысячи", "тысяч"));
+        }
+        if (rest) {
+          parts.push(triadToWords(rest, false));
+        }
+        parts.push(morph(rub, "рубль", "рубля", "рублей"));
+        var kopStr = String(kop).padStart(2, "0");
+        parts.push(kopStr + " " + morph(kop, "копейка", "копейки", "копеек"));
+        var s = parts.join(" ").replace(/\s+/g, " ").trim();
+        return s.charAt(0).toUpperCase() + s.slice(1);
+      }
+
+      if (!form) return;
+      var commentField = form.querySelector("#id_comment");
+      if (!commentField) return;
+      var financeFieldset = null;
+      var sets = form.querySelectorAll("fieldset.module");
+      sets.forEach(function (fs) {
+        var h2 = fs.querySelector("h2");
+        var t = h2 ? (h2.textContent || "").toLowerCase() : "";
+        if (t.indexOf("финанс") >= 0) financeFieldset = fs;
+      });
+      var existing = (financeFieldset || form).querySelector("#si-purpose-table-preview");
+      if (!existing) {
+        existing = document.createElement("div");
+        existing.id = "si-purpose-table-preview";
+        existing.className = "si-purpose-table-wrap";
+        existing.style.display = "none";
+        if (financeFieldset) {
+          financeFieldset.appendChild(existing);
+        } else {
+          commentField.insertAdjacentElement("afterend", existing);
+        }
+      }
+      var raw = (commentField.value || "").replace(/\r/g, "\n");
+      var lines = raw.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+      if (lines.length < 2 || lines[0].indexOf("|") < 0) {
+        existing.style.display = "none";
+        existing.innerHTML = "";
+        return;
+      }
+      var rows = lines
+        .filter(function (ln) { return ln.indexOf("|") >= 0; })
+        .map(function (ln) {
+          return ln.split("|").map(function (cell) { return cell.trim(); });
+        });
+      if (rows.length < 2) {
+        existing.style.display = "none";
+        existing.innerHTML = "";
+        return;
+      }
+      var headerCols = Math.max(2, rows[0].length);
+      rows = rows.map(function (r, idx) {
+        var row = r.slice();
+        if (row.length > headerCols) {
+          // OCR can inject extra "|" inside item name; merge extras back into description column.
+          if (headerCols >= 3) {
+            var tailLen = headerCols - 2;
+            var tailStart = Math.max(2, row.length - tailLen);
+            var mergedName = row.slice(1, tailStart).join(" ").replace(/\s+/g, " ").trim();
+            row = [row[0], mergedName].concat(row.slice(tailStart));
+          } else {
+            row = row.slice(0, headerCols);
+          }
+        }
+        if (idx > 0 && row.length > 0 && row[0] === "" && /^\d+$/.test(row[1] || "")) {
+          row[0] = row[1];
+          row[1] = "";
+        }
+        while (row.length < headerCols) row.push("");
+        return row;
+      });
+      var thead = "<thead><tr>" + rows[0].map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr></thead>";
+      var bodyRows = rows.slice(1).map(function (r) {
+        return "<tr>" + r.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>";
+      }).join("");
+      var bodyOnly = rows.slice(1);
+      var rowCount = bodyOnly.length;
+      var total = 0;
+      bodyOnly.forEach(function (r) {
+        var last = r[r.length - 1] || "";
+        var parsed = parseRuNumber(last);
+        if (parsed !== null) total += parsed;
+      });
+      var ocrRaw = "";
+      var ocrPreview = form.querySelector(".field-ocr_result_preview pre");
+      if (ocrPreview) ocrRaw = ocrPreview.textContent || "";
+      var vatAmount = extractAmountByLabel(ocrRaw, /в\s+том\s+числе\s+ндс/i);
+      var payableAmount = extractAmountByLabel(ocrRaw, /всего\s+к\s+оплате/i);
+      var totalAmount = extractAmountByLabel(ocrRaw, /(?:^|\s)итого[:\s]/i);
+
+      var totalFinal = totalAmount !== null ? totalAmount : total;
+      var payableFinal = payableAmount !== null ? payableAmount : totalFinal;
+      var vatFinal = vatAmount !== null ? vatAmount : 0;
+
+      var totalFixed = formatRuMoney(totalFinal);
+      var payableFixed = formatRuMoney(payableFinal);
+      var vatFixed = formatRuMoney(vatFinal);
+      var words = moneyToWordsRu(payableFinal);
+      existing.innerHTML =
+        '<div class="si-purpose-table-inner">' +
+          '<table class="si-purpose-table">' + thead + "<tbody>" + bodyRows + "</tbody></table>" +
+          '<div class="si-purpose-summary">' +
+            '<div class="si-purpose-summary-top">' +
+              '<div class="si-purpose-totals">' +
+                '<div class="si-purpose-totals-line"><span class="si-purpose-totals-label">Итого:</span><span class="si-purpose-totals-value">' + totalFixed + "</span></div>" +
+                '<div class="si-purpose-totals-line"><span class="si-purpose-totals-label">В том числе НДС:</span><span class="si-purpose-totals-value">' + vatFixed + "</span></div>" +
+                '<div class="si-purpose-totals-line"><span class="si-purpose-totals-label">Всего к оплате:</span><span class="si-purpose-totals-value">' + payableFixed + "</span></div>" +
+              "</div>" +
+            "</div>" +
+            '<div class="si-purpose-summary-line">Всего наименований ' + rowCount + ', на сумму ' + totalFixed + ' руб.</div>' +
+            '<div class="si-purpose-summary-line si-purpose-summary-words">' + words + "</div>" +
+          "</div>" +
+        "</div>";
+      existing.style.display = "";
+    }
+    var saveClose = document.getElementById("si-save-close");
+    var save = document.getElementById("si-save");
+    var moreBtn = document.getElementById("si-more-btn");
+    var moreMenu = document.getElementById("si-more-menu");
+    var moreOcr = document.getElementById("si-more-ocr");
+    var morePrint = document.getElementById("si-more-print");
+    var moreHistory = document.getElementById("si-more-history");
+    saveClose && saveClose.addEventListener("click", function () {
+      var form = document.getElementById("supplierinvoice_form");
+      if (form) {
+        var statusInput = form.querySelector("#id_status");
+        if (statusInput) {
+          statusInput.value = "approved";
+        }
+        var marker = document.createElement("input");
+        marker.type = "hidden";
+        marker.name = "_conduct_close";
+        marker.value = "1";
+        form.appendChild(marker);
+      }
+      submitWithAction("_save");
+    });
+    save && save.addEventListener("click", function () { submitWithAction("_continue"); });
+    moreBtn && moreBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      moreMenu && moreMenu.classList.toggle("is-open");
+    });
+    document.addEventListener("click", function (e) {
+      if (!moreMenu || !moreBtn) return;
+      if (!moreMenu.contains(e.target) && e.target !== moreBtn) {
+        moreMenu.classList.remove("is-open");
+      }
+    });
+    morePrint && morePrint.addEventListener("click", function () {
+      window.print();
+      moreMenu && moreMenu.classList.remove("is-open");
+    });
+    moreHistory && moreHistory.addEventListener("click", function () {
+      var historyAnchor = document.querySelector(".object-tools .historylink");
+      if (historyAnchor) {
+        window.location.href = historyAnchor.getAttribute("href");
+      }
+    });
+
+    var form = document.getElementById("supplierinvoice_form");
+    if (!form) return;
+
+    function bindCategorySubcategoriesHint(categoryControl) {
+      var select = categoryControl ? categoryControl.querySelector("select") : null;
+      if (!select) return;
+      var subcategoriesByCategory = {
+        rent: ["Эксплуатационные услуги"]
+      };
+      function updateHintTitle() {
+        var selected = select.value || "";
+        var subcats = subcategoriesByCategory[selected] || [];
+        if (!subcats.length) {
+          select.removeAttribute("title");
+          return;
+        }
+        select.title = "Подкатегории:\n- " + subcats.join("\n- ");
+      }
+      select.addEventListener("change", updateHintTitle);
+      select.addEventListener("mouseenter", updateHintTitle);
+      select.addEventListener("focus", updateHintTitle);
+      updateHintTitle();
+    }
+
+    renderPurposeTablePreview(form);
+    var commentField = form.querySelector("#id_comment");
+    if (commentField) {
+      commentField.addEventListener("input", function () {
+        renderPurposeTablePreview(form);
+      });
+    }
+    var titleEl = document.querySelector("#content h1");
+    if (titleEl && !titleEl.querySelector(".si-doc-title-meta")) {
+      var titleNumber = "";
+      var titleDate = "";
+      var numberRow = form.querySelector(".field-number .readonly");
+      if (numberRow) {
+        titleNumber = (numberRow.textContent || "").trim();
+      }
+      var dateInput = form.querySelector(".field-invoice_date input");
+      if (dateInput) {
+        titleDate = (dateInput.value || "").trim();
+      }
+      if (titleNumber || titleDate) {
+        var meta = document.createElement("strong");
+        meta.className = "si-doc-title-meta";
+        meta.textContent = "№ " + (titleNumber || "—") + (titleDate ? " от " + titleDate : "");
+        titleEl.appendChild(meta);
+      }
+    }
+    var fieldsets = form.querySelectorAll("fieldset.module");
+    var mainSet = [];
+    var ocrSet = [];
+    function extractFieldFromRow(fs, fieldName, controlClass) {
+      var row = fs.querySelector(".field-" + fieldName);
+      if (!row) return null;
+      var flex = row.querySelector(".laser-field-main-col .flex-container") || row.querySelector(".flex-container");
+      if (!flex) return null;
+      var labelEl = flex.querySelector("label");
+      var control = document.createElement("span");
+      control.className = controlClass;
+      Array.prototype.slice.call(flex.children).forEach(function (child) {
+        if (child !== labelEl) control.appendChild(child);
+      });
+      row.style.display = "none";
+      return control;
+    }
+    function stabilizeDateShortcuts(control) {
+      if (!control) return;
+      var shortcuts = control.querySelector(".datetimeshortcuts");
+      if (!shortcuts) return;
+      shortcuts.dataset.siStable = "1";
+    }
+    fieldsets.forEach(function (fs) {
+      var titleEl = fs.querySelector("h2");
+      var title = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+      if (title.indexOf("документ") >= 0) {
+        fs.classList.add("si-doc-header");
+        var fNumber = extractFieldFromRow(fs, "number", "si-doc-control");
+        var fDate = extractFieldFromRow(fs, "invoice_date", "si-doc-control si-doc-control--date");
+        var fStatus = extractFieldFromRow(fs, "status", "si-doc-control");
+        var fCategory = extractFieldFromRow(fs, "expense_category", "si-doc-control");
+        if (fNumber && fDate && fStatus && fCategory) {
+          bindCategorySubcategoriesHint(fCategory);
+          stabilizeDateShortcuts(fDate);
+          var docLine = document.createElement("div");
+          docLine.className = "si-doc-line";
+
+          var lNum = document.createElement("span");
+          lNum.className = "si-doc-label";
+          lNum.textContent = "Номер:";
+          docLine.appendChild(lNum);
+          docLine.appendChild(fNumber);
+
+          var sep = document.createElement("span");
+          sep.className = "si-doc-sep";
+          sep.textContent = "от";
+          docLine.appendChild(sep);
+          docLine.appendChild(fDate);
+
+          var lStatus = document.createElement("span");
+          lStatus.className = "si-doc-label";
+          lStatus.textContent = "Статус:";
+          docLine.appendChild(lStatus);
+          docLine.appendChild(fStatus);
+
+          var lCat = document.createElement("span");
+          lCat.className = "si-doc-label";
+          lCat.textContent = "Категория расходов:";
+          docLine.appendChild(lCat);
+          docLine.appendChild(fCategory);
+
+          fs.appendChild(docLine);
+        }
+      }
+      if (title.indexOf("контрагент") >= 0) {
+        fs.classList.add("si-counterparty-row");
+        var supplierControl = extractFieldFromRow(fs, "supplier", "si-counterparty-control");
+        var ourOrgControl = extractFieldFromRow(fs, "our_organization", "si-counterparty-control");
+        if (supplierControl && ourOrgControl) {
+          var cpLine = document.createElement("div");
+          cpLine.className = "si-counterparty-line";
+
+          var sLabel = document.createElement("span");
+          sLabel.className = "si-counterparty-label";
+          sLabel.textContent = "Поставщик:";
+          cpLine.appendChild(sLabel);
+          cpLine.appendChild(supplierControl);
+
+          var oLabel = document.createElement("span");
+          oLabel.className = "si-counterparty-label";
+          oLabel.textContent = "Наша организация:";
+          cpLine.appendChild(oLabel);
+          cpLine.appendChild(ourOrgControl);
+
+          fs.appendChild(cpLine);
+        }
+      }
+      if (title.indexOf("ocr") >= 0) {
+        ocrSet.push(fs);
+      } else {
+        mainSet.push(fs);
+      }
+    });
+    var ocrVisible = false;
+    ocrSet.forEach(function (fs) { fs.style.display = "none"; });
+    moreOcr && moreOcr.addEventListener("click", function () {
+      ocrVisible = !ocrVisible;
+      ocrSet.forEach(function (fs) { fs.style.display = ocrVisible ? "" : "none"; });
+      moreOcr.textContent = ocrVisible ? "OCR и разбор (скрыть)" : "OCR и разбор";
+      moreMenu && moreMenu.classList.remove("is-open");
+    });
+
+    var fileFlex = form.querySelector(".field-invoice_file .laser-field-main-col .flex-container");
+    if (fileFlex) {
+      var fileInput = fileFlex.querySelector("input[type='file']");
+      var fileLink = fileFlex.querySelector("a[href]");
+      var hasCustom = fileFlex.querySelector(".si-file-row");
+      if (fileInput && !hasCustom) {
+        fileInput.style.display = "none";
+        var row = document.createElement("div");
+        row.className = "si-file-row";
+
+        var fileName = document.createElement("span");
+        fileName.className = "si-file-name";
+        fileName.textContent = fileLink
+          ? (displayFileName(fileLink.textContent) || "Файл счета")
+          : "Файл не приложен";
+        row.appendChild(fileName);
+
+        if (fileLink) {
+          var openBtn = document.createElement("a");
+          openBtn.className = "button";
+          openBtn.href = fileLink.href;
+          openBtn.target = "_blank";
+          openBtn.textContent = "Открыть";
+          row.appendChild(openBtn);
+        }
+
+        var replaceBtn = document.createElement("button");
+        replaceBtn.type = "button";
+        replaceBtn.className = "button";
+        replaceBtn.textContent = "Изменить файл";
+        replaceBtn.addEventListener("click", function () { fileInput.click(); });
+        row.appendChild(replaceBtn);
+
+        var pickedName = document.createElement("span");
+        pickedName.className = "si-file-name";
+        row.appendChild(pickedName);
+
+        fileInput.addEventListener("change", function () {
+          pickedName.textContent = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : "";
+        });
+
+        Array.prototype.slice.call(fileFlex.children).forEach(function (child) {
+          if (child !== fileInput) {
+            child.style.display = "none";
+          }
+        });
+        fileFlex.appendChild(row);
+      }
+    }
+  })();
+</script>
+{% endblock %}

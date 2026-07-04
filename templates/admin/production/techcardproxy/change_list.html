@@ -1,0 +1,126 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content_title %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/techcard_changelist.css' %}?v=5">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/techcard_changelist.js' %}?v=2" defer></script>
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="techcard-cl-root">
+  <header class="techcard-cl-toolbar" aria-label="Техкарты — панель">
+    <div class="techcard-cl-toolbar-row1">
+      <h1 class="techcard-cl-title">
+        Техкарты
+        <span class="help-icon-tooltip techcard-cl-help" title="Выберите изделие слева, чтобы отфильтровать техкарты. Поиск — по названию и комментарию." aria-label="Подсказка">?</span>
+      </h1>
+      <div class="techcard-cl-actions">
+        <a href="{% url 'admin:production_techcardproxy_add' %}" class="techcard-cl-btn techcard-cl-btn-primary"><span class="techcard-cl-plus">+</span> Техкарта</a>
+        <a href="{% url 'admin:core_productgroup_add' %}" class="techcard-cl-btn techcard-cl-btn-primary"><span class="techcard-cl-plus">+</span> Группа</a>
+        {% if cl.has_filters %}
+        <button type="button" class="techcard-cl-btn" id="techcard-filter-toggle" aria-expanded="false" aria-controls="changelist-filter">Фильтр</button>
+        {% endif %}
+      </div>
+      <div class="techcard-cl-search-wrap">
+        {% block search %}{% search_form cl %}{% endblock %}
+      </div>
+    </div>
+  </header>
+
+  {% if cl.formset and cl.formset.errors %}
+  <p class="errornote">
+    {% blocktranslate count counter=cl.formset.total_error_count %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktranslate %}
+  </p>
+  {{ cl.formset.non_form_errors }}
+  {% endif %}
+
+  <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+    <div class="techcard-cl-layout">
+      <aside class="techcard-cl-sidebar" aria-label="Группы и изделия">
+        {% url 'admin:production_techcardproxy_changelist' as tc_list_url %}
+        <a href="{{ tc_list_url }}{% if tc_sidebar_qs_base %}?{{ tc_sidebar_qs_base }}{% endif %}" class="techcard-sidebar-link techcard-sidebar-all{% if not tc_product_selected %} is-active{% endif %}">Все техкарты</a>
+
+        {% for g in techcard_sidebar.groups %}
+        <details class="techcard-sidebar-group"{% if forloop.first %} open{% endif %}>
+          <summary class="techcard-sidebar-group-title">{{ g.name }}</summary>
+          <ul class="techcard-sidebar-products">
+            {% for p in g.products %}
+            <li>
+              <a href="{{ tc_list_url }}?{% if tc_sidebar_qs_base %}{{ tc_sidebar_qs_base }}&{% endif %}tc_product={{ p.id }}"
+                 class="techcard-sidebar-link techcard-sidebar-product{% if tc_product_selected == p.id|stringformat:'d' %} is-active{% endif %}">
+                <span class="techcard-sidebar-pen" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+                </span>
+                <span class="techcard-sidebar-name">{{ p.name }}</span>
+                {% if p.count > 1 %}<span class="techcard-sidebar-badge">{{ p.count }}</span>{% endif %}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endfor %}
+
+        {% if techcard_sidebar.has_orphans %}
+        <a href="{{ tc_list_url }}?{% if tc_sidebar_qs_base %}{{ tc_sidebar_qs_base }}&{% endif %}tc_product=_none_"
+           class="techcard-sidebar-link techcard-sidebar-orphans{% if tc_product_selected == '_none_' %} is-active{% endif %}">
+          Без изделия
+          <span class="techcard-sidebar-badge">{{ techcard_sidebar.orphan_count }}</span>
+        </a>
+        {% endif %}
+      </aside>
+
+      <div class="techcard-cl-main">
+        <div class="changelist-form-container">
+          {% block filters %}
+            {% if cl.has_filters %}
+            <search id="changelist-filter" class="techcard-cl-filters-panel" aria-labelledby="changelist-filter-header" hidden>
+              <h2 id="changelist-filter-header">{% translate 'Filter' %}</h2>
+              {% if cl.is_facets_optional or cl.has_active_filters %}<div id="changelist-filter-extra-actions">
+                {% if cl.is_facets_optional %}<h3>
+                  {% if cl.add_facets %}<a href="{{ cl.remove_facet_link }}" class="hidelink">{% translate "Hide counts" %}</a>
+                  {% else %}<a href="{{ cl.add_facet_link }}" class="viewlink">{% translate "Show counts" %}</a>{% endif %}
+                </h3>{% endif %}
+                {% if cl.has_active_filters %}<h3>
+                  <a href="{{ cl.clear_all_filters_qs }}">&#10006; {% translate "Clear all filters" %}</a>
+                </h3>{% endif %}
+              </div>{% endif %}
+              {% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+            </search>
+            {% endif %}
+          {% endblock %}
+          <div class="techcard-cl-table-wrap">
+            {% block date_hierarchy %}{% if cl.date_hierarchy %}{% date_hierarchy cl %}{% endif %}{% endblock %}
+
+            <form id="changelist-form" method="post"{% if cl.formset and cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>{% csrf_token %}
+            {% if cl.formset %}
+              <div>{{ cl.formset.management_form }}</div>
+            {% endif %}
+
+            {% block result_list %}
+              {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+              {% result_list cl %}
+              {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+            {% endblock %}
+            {% block pagination %}
+            <div class="changelist-footer">
+            {% pagination cl %}
+            {% if cl.formset and cl.result_count %}<input type="submit" name="_save" class="default" value="{% translate 'Save' %}">{% endif %}
+            </div>
+            {% endblock %}
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

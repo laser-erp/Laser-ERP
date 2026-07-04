@@ -1,0 +1,38 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content_title %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .pa-changelist-add-row { display: flex; flex-direction: row; align-items: flex-end; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .pa-add-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .pa-add-buttons a {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: auto; padding: 5px 12px;
+    background: transparent; color: #000 !important;
+    text-decoration: none !important;
+    font-size: 13px; font-weight: 500; border-radius: 6px;
+    border: 1px solid #cbd5e1; box-sizing: border-box;
+  }
+  .pa-add-buttons a:hover { background: rgba(148, 163, 184, 0.6); color: #000 !important; text-decoration: none !important; }
+  .pa-add-buttons a .btn-plus {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #2563eb; color: #fff !important;
+    font-size: 14px; line-height: 1; font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+
+{% block content %}
+<div class="pa-changelist-add-row">
+  <div class="pa-add-buttons">
+    <a href="{% url 'admin:production_productionassignmentproxy_add' %}"><span class="btn-plus">+</span> Задание</a>
+  </div>
+</div>
+{{ block.super }}
+{% endblock %}

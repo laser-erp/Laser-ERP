@@ -1,0 +1,70 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Главная</a>
+  &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<form method="get" class="mb-4">
+  <label>Задание <input type="number" name="assignment" value="{{ request.GET.assignment }}" placeholder="ID" style="width: 80px;"></label>
+  <label class="ms-3">Этап
+    <select name="stage">
+      <option value="">— все —</option>
+      {% for s in stages %}
+      <option value="{{ s.id }}" {% if request.GET.stage == s.id|stringformat:"d" %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="ms-3">Статус
+    <select name="status">
+      <option value="">— все —</option>
+      <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>Ожидает</option>
+      <option value="in_progress" {% if request.GET.status == "in_progress" %}selected{% endif %}>В работе</option>
+      <option value="completed" {% if request.GET.status == "completed" %}selected{% endif %}>Выполнено</option>
+    </select>
+  </label>
+  <button type="submit" class="ms-3">Показать</button>
+</form>
+
+<table id="result_list" class="table table-striped">
+  <thead>
+    <tr>
+      <th>Задание</th>
+      <th>Этап</th>
+      <th>Техкарта</th>
+      <th>План</th>
+      <th>Факт</th>
+      <th>Брак</th>
+      <th>Статус</th>
+      <th>Начало</th>
+      <th>Окончание</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td><a href="{% url 'admin:core_productionassignment_change' item.assignment_id %}">#{{ item.assignment_id }}</a></td>
+      <td>{{ item.production_stage|default:"—" }}</td>
+      <td>{{ item.tech_card }}</td>
+      <td>{{ item.quantity_planned }}</td>
+      <td>{{ item.quantity_produced }}</td>
+      <td>{{ item.defect_qty|default:0 }}</td>
+      <td>{{ item.get_status_display }}</td>
+      <td>{{ item.started_at|date:"d.m.Y H:i"|default:"—" }}</td>
+      <td>{{ item.completed_at|date:"d.m.Y H:i"|default:"—" }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="9" class="text-center">Нет записей</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

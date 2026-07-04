@@ -1,0 +1,43 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .laser-manual-header {
+    max-width: 980px;
+    margin: 6px auto 14px auto;
+    color: #506174;
+  }
+  .laser-manual-card #content-main > form {
+    max-width: 980px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid #d6dde7;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(34, 44, 58, 0.08);
+    padding: 16px 18px;
+  }
+  .laser-manual-card fieldset.module {
+    border: 1px solid #e4e8ee;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    background: #fcfdff;
+  }
+  .laser-manual-card .submit-row {
+    border-top: 1px solid #e2e7ef;
+    margin-top: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if show_entry_back %}
+<div class="laser-manual-header">
+  <a href="{{ entry_choice_url }}" style="text-decoration:none;">← Вернуться к выбору способа добавления</a>
+</div>
+{% endif %}
+<div class="laser-manual-card">
+  {{ block.super }}
+</div>
+{% endblock %}

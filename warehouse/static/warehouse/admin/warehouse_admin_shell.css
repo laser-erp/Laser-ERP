@@ -1,0 +1,328 @@
+/*
+ * Склад — оформление списков и форм в духе МойСклад (toolbar + таблица).
+ */
+
+/* Подразделы «Склад» — белая полоса как в МойСклад */
+body.app-warehouse .laser-admin-subnav-bar {
+  background: #fff;
+  border-bottom-color: #e8ecf1;
+}
+
+/* ——— Хлебные крошки: компактнее ——— */
+.ms-wh-breadcrumbs {
+  font-size: 12px;
+  padding: 8px 16px;
+  margin: 0 0 0 0;
+  background: #fff;
+  border-bottom: 1px solid #e8ecf1;
+}
+
+/* ——— Панель над таблицей ——— */
+.ms-wh-changelist {
+  --ms-wh-blue: #1867c0;
+  --ms-wh-blue-hover: #1455a3;
+  --ms-wh-border: #e2e8f0;
+  --ms-wh-toolbar-bg: #f1f5f9;
+}
+
+.ms-wh-toolbar {
+  background: var(--ms-wh-toolbar-bg);
+  border: 1px solid var(--ms-wh-border);
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+  padding: 12px 14px 14px;
+  margin-bottom: 0;
+}
+
+.ms-wh-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  justify-content: space-between;
+}
+
+.ms-wh-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ms-wh-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.ms-wh-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ms-wh-refresh:hover {
+  background: #f8fafc;
+  color: var(--ms-wh-blue);
+  border-color: #94a3b8;
+}
+
+.ms-wh-toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.ms-wh-object-tools-inline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ms-wh-object-tools-inline li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ms-wh-btn-add {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  height: auto !important;
+  padding: 8px 14px !important;
+  border-radius: 4px !important;
+  background: var(--ms-wh-blue) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.ms-wh-btn-add:hover,
+.ms-wh-btn-add:focus {
+  background: var(--ms-wh-blue-hover) !important;
+  color: #fff !important;
+}
+
+.ms-wh-btn-add-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.ms-wh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155 !important;
+  text-decoration: none !important;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.ms-wh-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.ms-wh-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ms-wh-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ms-wh-search {
+  min-width: 180px;
+  flex: 1 1 200px;
+  max-width: 360px;
+}
+
+.ms-wh-search #toolbar {
+  margin: 0;
+  padding: 0;
+}
+
+.ms-wh-search #changelist-search {
+  margin: 0;
+}
+
+.ms-wh-search #changelist-search > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ms-wh-search label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ms-wh-search input[type="text"]#searchbar {
+  flex: 1 1 140px;
+  min-width: 120px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.ms-wh-search input[type="submit"] {
+  padding: 7px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.ms-wh-search input[type="submit"]:hover {
+  background: #f8fafc;
+}
+
+.ms-wh-search .small.quiet {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Модуль таблицы — единая рамка с toolbar */
+.ms-wh-changelist .ms-wh-module {
+  border: 1px solid var(--ms-wh-border);
+  border-radius: 0 0 4px 4px;
+  margin-top: 0 !important;
+}
+
+.ms-wh-changelist .ms-wh-module.filtered {
+  border-radius: 0;
+}
+
+.ms-wh-changelist-main-col > .ms-wh-date-hierarchy-wrap {
+  margin: 8px 0;
+}
+
+/* Таблица результата */
+.ms-wh-changelist #result_list {
+  overflow-x: auto;
+}
+
+.ms-wh-changelist #result_list table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.ms-wh-changelist #result_list thead th {
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ms-wh-border);
+  vertical-align: bottom;
+}
+
+.ms-wh-changelist #result_list tbody td,
+.ms-wh-changelist #result_list tbody th {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #eef2f6;
+  vertical-align: middle;
+}
+
+.ms-wh-changelist #result_list tbody tr:hover {
+  background: #f8fafc;
+}
+
+.ms-wh-changelist #result_list tbody a {
+  color: var(--ms-wh-blue) !important;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.ms-wh-changelist #result_list tbody a:hover {
+  text-decoration: underline;
+}
+
+/* Числовые колонки часто выравнивают вправо — оставляем как в админке */
+
+.ms-wh-changelist .changelist-footer {
+  padding: 10px 12px;
+  background: #fafbfc;
+  border-top: 1px solid var(--ms-wh-border);
+  font-size: 13px;
+  color: #475569;
+}
+
+/* Действия над списком */
+.ms-wh-changelist .actions {
+  margin: 10px 12px;
+  padding: 8px 0;
+}
+
+/* Форма редактирования в разделе Склад */
+body.app-warehouse.change-form #content-main {
+  background: #fff;
+  border: 1px solid var(--ms-wh-border);
+  border-radius: 4px;
+  padding: 16px 20px 24px;
+  box-sizing: border-box;
+}
+
+/* Индекс приложения Склад */
+body.app-warehouse .module table {
+  border-collapse: collapse;
+}
+
+body.app-warehouse .module th,
+body.app-warehouse .module td {
+  border-bottom: 1px solid #eef2f6;
+}

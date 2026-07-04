@@ -1,0 +1,25 @@
+<p class="file-upload">{% if widget.is_initial %}Текущий файл: <a href="{{ widget.value.url }}">{{ widget.value }}</a>{% if not widget.required %}
+<span class="clearable-file-input">
+<input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"{% if widget.attrs.disabled %} disabled{% endif %}{% if widget.attrs.checked %} checked{% endif %}>
+<label for="{{ widget.checkbox_id }}">Очистить</label></span>{% endif %}<br>
+Изменить:{% endif %}
+<span class="file-input-wrap">
+<label for="{{ widget.attrs.id }}" class="file-upload-label">Выберите файл</label>
+<span class="file-upload-status" data-input-name="{{ widget.name }}">Файл не выбран</span>
+<input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %} class="file-upload-input">
+</span>
+</p>
+<script>
+(function() {
+  var inps = document.querySelectorAll('input[name="{{ widget.name }}"][type="file"]');
+  var inp = inps[inps.length - 1];
+  if (!inp) return;
+  var wrap = inp.closest('.file-input-wrap');
+  var status = wrap ? wrap.querySelector('.file-upload-status') : null;
+  function updateStatus() {
+    if (status) status.textContent = inp.files && inp.files.length ? inp.files[0].name : 'Файл не выбран';
+  }
+  inp.addEventListener('change', updateStatus);
+  updateStatus();
+})();
+</script>

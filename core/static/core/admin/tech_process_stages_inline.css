@@ -1,0 +1,73 @@
+/* Техпроцесс — инлайн этапов: ручка, этап + карандаш, «Следующий этап» */
+.tech-process-stages-inline .tp-col-handle {
+  width: 2.25rem;
+  text-align: center;
+  color: var(--body-quiet-color, #666);
+  font-size: 0.75rem;
+}
+
+.tech-process-stages-inline .tp-inline-original {
+  vertical-align: middle;
+  text-align: center;
+  width: 2.25rem;
+}
+
+.tech-process-stages-inline .tp-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  cursor: grab;
+  user-select: none;
+  border-radius: 4px;
+  line-height: 1;
+  color: var(--body-quiet-color, #666);
+  font-size: 1rem;
+  letter-spacing: -0.12em;
+}
+
+.tech-process-stages-inline .tp-drag-handle:active {
+  cursor: grabbing;
+}
+
+.tech-process-stages-inline .tp-drag-handle:hover,
+.tech-process-stages-inline .tp-drag-handle:focus-visible {
+  background: var(--darkened-bg, rgba(0, 0, 0, 0.06));
+  outline: none;
+}
+
+.tech-process-stages-inline tr.tp-row-dragging {
+  opacity: 0.85;
+  background: var(--selected-bg, #e8e8e8);
+}
+
+.tech-process-stages-inline .tp-stage-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tech-process-stages-inline .tp-stage-cell .select2-container {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.tech-process-stages-inline .tp-stage-edit {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.tech-process-stages-inline .tp-stage-edit:hover {
+  opacity: 1;
+}
+
+.tech-process-stages-inline .field-next_stage_hint p {
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.35;
+  color: var(--body-fg, #333);
+}

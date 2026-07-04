@@ -1,0 +1,156 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Laser ERP{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/compact_icons.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'core/admin/laser_admin_theme.css' %}?v=8">
+<link rel="stylesheet" href="{% static 'core/admin/admin_app_list_horizontal.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'core/admin/admin_add_draft.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'core/admin/admin_field_help.css' %}?v=13">
+<link rel="stylesheet" href="{% static 'core/admin/admin_autosize_fields.css' %}?v=6">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/admin_autosize_fields.js' %}?v=5" defer></script>
+<script src="{% static 'core/admin/column_resize.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/admin_add_draft.js' %}?v=3" defer></script>
+<script src="{% static 'core/admin/admin_field_help.js' %}?v=4" defer></script>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">Laser ERP — {% translate 'Administration' %}</a></div>
+{% endblock %}
+
+{% block nav-global %}
+{% if user.is_staff %}
+{% with path=request.path GET=request.GET %}
+
+{# ——— Первая строка: основные разделы (как МойСклад) ——— #}
+<div class="laser-admin-nav-bar laser-admin-nav-primary" role="navigation" aria-label="Основные разделы">
+  <a href="{% url 'admin:index' %}" class="laser-topnav-item{% if request.resolver_match.namespace == 'admin' and request.resolver_match.url_name == 'index' %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="0.5"/><rect x="14" y="3" width="7" height="5" rx="0.5"/><rect x="14" y="12" width="7" height="9" rx="0.5"/><rect x="3" y="16" width="7" height="5" rx="0.5"/></svg>
+    </span>
+    <span class="laser-topnav-label">Показатели</span>
+  </a>
+
+  <a href="{% url 'admin:core_product_changelist' %}?product_kind=goods" class="laser-topnav-item{% if 'admin/core/servicegroup' not in path %}{% if 'admin/core/productgroup' in path or 'admin/core/pricelist' in path or 'admin/core/product' in path and GET.product_kind != 'service' and GET.product_kind != 'material' %} laser-nav-active{% endif %}{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    </span>
+    <span class="laser-topnav-label">Товары</span>
+  </a>
+
+  <a href="{% url 'admin:core_product_changelist' %}?product_kind=service" class="laser-topnav-item{% if 'admin/core/servicegroup' in path or 'admin/core/product' in path and GET.product_kind == 'service' %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </span>
+    <span class="laser-topnav-label">Услуги</span>
+  </a>
+
+  <a href="{% url 'admin:core_organization_changelist' %}" class="laser-topnav-item{% if 'admin/core/organization' in path %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="10" x2="9" y2="14"/><line x1="15" y1="10" x2="15" y2="14"/></svg>
+    </span>
+    <span class="laser-topnav-label">Контрагенты</span>
+  </a>
+
+  <a href="{% url 'admin:procurement_goodsreceipt_changelist' %}" class="laser-topnav-item{% if 'admin/procurement' in path %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l3 1.73"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><circle cx="7.5" cy="18.5" r="1.5"/><path d="M9 18h8"/></svg>
+    </span>
+    <span class="laser-topnav-label">Закупки</span>
+  </a>
+
+  <a href="{% url 'admin:core_order_changelist' %}" class="laser-topnav-item{% if 'admin/core/order' in path %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    </span>
+    <span class="laser-topnav-label">Продажи</span>
+  </a>
+
+  <a href="{% url 'admin:warehouse_materialstockproxy_changelist' %}" class="laser-topnav-item{% if 'admin/warehouse' in path %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    </span>
+    <span class="laser-topnav-label">Склад</span>
+  </a>
+
+  <a href="{% url 'admin:production_techcardproxy_changelist' %}" class="laser-topnav-item{% if '/production/' in path %} laser-nav-active{% endif %}">
+    <span class="laser-topnav-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20V10l10-5 10 5v10"/><path d="M7 20v-5h4v5"/><path d="M17 20v-5h-4v5"/><path d="M7 15h10"/></svg>
+    </span>
+    <span class="laser-topnav-label">Производство</span>
+  </a>
+</div>
+
+{# ——— Вторая строка: товары / услуги / справочники (без «Без группы» — оно только в боковом меню списка) ——— #}
+{% if 'admin/core/product' in path or 'admin/core/productgroup' in path or 'admin/core/servicegroup' in path or 'admin/core/pricelist' in path %}
+<div class="laser-admin-subnav-bar" role="navigation" aria-label="Товары и справочники">
+  <a href="{% url 'admin:core_product_changelist' %}" class="{% if 'admin/core/product' in path %}laser-subnav-active{% endif %}">Товары и услуги</a>
+  <a href="{% url 'admin:core_productgroup_changelist' %}" class="{% if 'admin/core/productgroup' in path %}laser-subnav-active{% endif %}">Группы товаров</a>
+  <a href="{% url 'admin:core_servicegroup_changelist' %}" class="{% if 'admin/core/servicegroup' in path %}laser-subnav-active{% endif %}">Группы услуг</a>
+  <a href="{% url 'admin:core_pricelist_changelist' %}" class="{% if 'admin/core/pricelist' in path %}laser-subnav-active{% endif %}">Прайс-листы</a>
+</div>
+{% endif %}
+
+{# ——— Вторая строка: закупки ——— #}
+{% if 'admin/procurement' in path %}
+<div class="laser-admin-subnav-bar" role="navigation" aria-label="Закупки">
+  <a href="{% url 'admin:procurement_supplierpurchaseorder_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_supplierpurchaseorder_changelist' %}laser-subnav-active{% endif %}">Заказы поставщикам</a>
+  <a href="{% url 'admin:procurement_supplierinvoice_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_supplierinvoice_changelist' %}laser-subnav-active{% endif %}">Счета поставщиков</a>
+  <a href="{% url 'admin:procurement_goodsreceipt_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_goodsreceipt_changelist' %}laser-subnav-active{% endif %}">Приёмка</a>
+  <a href="{% url 'admin:procurement_supplierreturn_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_supplierreturn_changelist' %}laser-subnav-active{% endif %}">Возвраты поставщикам</a>
+  <a href="{% url 'admin:procurement_receivedvatinvoice_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_receivedvatinvoice_changelist' %}laser-subnav-active{% endif %}">Счета-фактуры полученные</a>
+  <a href="{% url 'admin:procurement_purchasemanagementproduct_changelist' %}" class="{% if request.resolver_match.url_name == 'procurement_purchasemanagementproduct_changelist' %}laser-subnav-active{% endif %}">Управление закупками</a>
+</div>
+{% endif %}
+
+{# ——— Вторая строка: продажи ——— #}
+{% if 'admin/core/order' in path %}
+<div class="laser-admin-subnav-bar" role="navigation" aria-label="Продажи">
+  <a href="{% url 'admin:core_order_changelist' %}" class="laser-subnav-active">Заказы покупателей</a>
+</div>
+{% endif %}
+
+{# ——— Вторая строка: склад ——— #}
+{% if 'admin/warehouse' in path %}
+<div class="laser-admin-subnav-bar" role="navigation" aria-label="Склад">
+  <a href="{% url 'admin:warehouse_warehouseproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_warehouseproxy_changelist' %}laser-subnav-active{% endif %}">Склады</a>
+  <a href="{% url 'admin:warehouse_materialstockproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_materialstockproxy_changelist' %}laser-subnav-active{% endif %}">Остатки материалов</a>
+  <a href="{% url 'admin:warehouse_productstockproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_productstockproxy_changelist' %}laser-subnav-active{% endif %}">Остатки продукции</a>
+  <a href="{% url 'admin:warehouse_materialbatchproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_materialbatchproxy_changelist' %}laser-subnav-active{% endif %}">Движения по материалам</a>
+</div>
+{% endif %}
+
+{# ——— Вторая строка: производство ——— #}
+{% if '/production/' in path %}
+<div class="laser-admin-subnav-bar" role="navigation" aria-label="Производство">
+  <a href="{% url 'admin:production_techcardproxy_changelist' %}" class="{% if 'admin/production/techcardproxy' in path %}laser-subnav-active{% endif %}">Техкарты</a>
+  <a href="{% url 'admin:production_productionorderproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_productionorderproxy_changelist' %}laser-subnav-active{% endif %}">Заказы на производство</a>
+  <a href="{% url 'admin:production_productionbatchproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_productionbatchproxy_changelist' %}laser-subnav-active{% endif %}">Производственные партии</a>
+  <a href="{% url 'admin:production_techoperationproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_techoperationproxy_changelist' %}laser-subnav-active{% endif %}">Техоперации</a>
+  <a href="{% url 'admin:production_productionassignmentproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_productionassignmentproxy_changelist' %}laser-subnav-active{% endif %}">Производственные задания</a>
+  <a href="{% url 'admin:production_productionassignmentitemproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_productionassignmentitemproxy_changelist' %}laser-subnav-active{% endif %}">Выполнение этапов</a>
+  <a href="{% url 'admin:production_labortimelogproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_labortimelogproxy_changelist' %}laser-subnav-active{% endif %}">Оплата труда</a>
+  <a href="{% url 'admin:production_techprocessproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_techprocessproxy_changelist' %}laser-subnav-active{% endif %}">Техпроцессы</a>
+  <a href="{% url 'admin:production_productionstageproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'production_productionstageproxy_changelist' %}laser-subnav-active{% endif %}">Этапы производства</a>
+  <a href="{% url 'production:status' %}" class="{% if 'production/status' in path %}laser-subnav-active{% endif %}">Статус производства</a>
+  <a href="{% url 'production:stage_register' %}" class="{% if 'production/stage-register' in path %}laser-subnav-active{% endif %}">Реестр этапов</a>
+</div>
+{% endif %}
+
+{% endwith %}
+{% endif %}
+{% endblock %}
+
+{# Левая панель Django — только на главной (Показатели), навигация в остальных разделах по двум строкам сверху #}
+{% block nav-sidebar %}
+{% if request.resolver_match and request.resolver_match.namespace == 'admin' and request.resolver_match.url_name == 'index' %}
+  {{ block.super }}
+{% endif %}
+{% endblock %}

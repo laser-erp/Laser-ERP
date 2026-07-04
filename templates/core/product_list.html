@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+{% block title %}Изделия{% endblock %}
+{% block content %}
+<h1 class="mb-4">Изделия</h1>
+<table class="table table-striped table-hover">
+  <thead>
+    <tr>
+      <th>Название</th>
+      <th>Категория</th>
+      <th>Материалы (план)</th>
+      <th>Труд (план)</th>
+      <th>Себестоимость (план)</th>
+      <th>Цена продажи (план)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td>{{ p.category }}</td>
+      <td>{{ p.planned_material_cost }} ₽</td>
+      <td>{{ p.planned_labor_cost }} ₽</td>
+      <td>{{ p.planned_total_cost }} ₽</td>
+      <td>
+        {% if p.planned_price %}
+          {{ p.planned_price }} ₽
+        {% else %}
+          —
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" class="text-center">Изделий пока нет</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,299 @@
+{% load i18n static admin_urls %}
+<div class="pa-doc-shell">
+  <header class="pa-doc-head">
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="pa-doc-close" title="{% translate 'Закрыть' %}" aria-label="{% translate 'Закрыть' %}">&times;</a>
+    <div class="pa-doc-toolbar" role="toolbar" aria-label="{% translate 'Действия с документом' %}">
+      <div id="pa-submit-slot" class="pa-submit-slot"></div>
+      <div class="pa-toolbar-side">
+        {% if pa_supply_open_url %}
+          <a href="{{ pa_supply_open_url }}" class="pa-toolbar-btn pa-toolbar-btn-supply pa-toolbar-btn-action">{% translate "Открыть снабжение" %}</a>
+        {% elif pa_supply_create_url %}
+          <button
+            type="submit"
+            class="pa-toolbar-btn pa-toolbar-btn-supply pa-toolbar-btn-action"
+            formmethod="post"
+            formaction="{{ pa_supply_create_url }}"
+            title="{% translate 'Создать задание снабжения на полуфабрикаты из текущего задания' %}"
+          >{% translate "Снабжение" %}</button>
+        {% else %}
+          <button
+            type="button"
+            class="pa-toolbar-btn pa-toolbar-btn-supply"
+            disabled
+            title="{% translate 'Сначала сохраните производственное задание, затем создайте снабжение.' %}"
+          >{% translate "Снабжение" %}</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="pa-doc-head-main">
+      <div class="pa-doc-title-block">
+        <div class="pa-name-slot" id="pa-name-slot"></div>
+        <p class="pa-doc-code">{% translate "Код" %}: {% if pa_doc_code %}{{ pa_doc_code }}{% else %}—{% endif %}</p>
+      </div>
+      <div class="pa-head-right">
+        <div class="pa-doc-flags">
+          <div id="pa-reserve-slot" class="pa-reserve-slot pa-flag-item" aria-label="{% translate 'Резерв материалов' %}"></div>
+          <div class="pa-flag-item pa-flag-expectation">
+            <span
+              class="pa-q-help"
+              tabindex="0"
+              role="img"
+              aria-label="{% translate 'Справка: Ожидание' %}"
+              title="{% translate 'Чтобы продукция, которая ещё не произведена, отображалась в отчётах «Остатки» и «Управление закупками», поставьте флажок «Ожидание» вверху. Это помогает планировать продажи. Когда продукция готова, «Ожидание» снимается.' %}"
+            >?</span>
+            <div id="pa-expectation-field-wrap" class="pa-expectation-field-wrap"></div>
+          </div>
+        </div>
+        <nav class="pa-view-tabs" role="tablist" aria-label="{% translate 'Вид задания' %}">
+          <button type="button" class="pa-view-tab" role="tab" aria-selected="false" data-pa-tab="products">{% translate "По продукции" %}</button>
+          <button type="button" class="pa-view-tab active" role="tab" aria-selected="true" data-pa-tab="materials">{% translate "По материалам" %}</button>
+          <button type="button" class="pa-view-tab" role="tab" aria-selected="false" data-pa-tab="execution">{% translate "Выполнение" %}</button>
+          <button type="button" class="pa-view-tab" role="tab" aria-selected="false" data-pa-tab="costs">{% translate "По расходам" %}</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="pa-howto-wrap">
+    <details class="pa-howto" {% if add %}open{% endif %}>
+      <summary class="pa-howto-summary">{% translate "Создание задания и сохранение" %}</summary>
+      <div class="pa-howto-body">
+        <p>{% translate "Если все верно, нажмите на кнопку «Сохранить» вверху." %}</p>
+        <p>{% translate "Производственное задание можно создать на основании техкарты." %}</p>
+        <p>{% translate "Также производственное задание можно создать на основе одного или нескольких заказов покупателей." %}</p>
+        <p><strong>{% translate "Чтобы создать производственное задание на основе одного заказа покупателя:" %}</strong></p>
+        <ol class="pa-howto-steps">
+          <li>{% translate "Перейдите в раздел «Продажи» → «Заказы покупателей»." %}</li>
+          <li>{% translate "Нажмите на кнопку «+Заказ». Откроется новый документ." %}</li>
+          <li>{% translate "Заполните данные о заказе — организация, контрагент, валюта документа и т. д. Добавьте продукцию, которую нужно произвести." %}</li>
+          <li>{% translate "При необходимости сохраните заказ покупателя (кнопка «Сохранить» вверху документа)." %}</li>
+          <li>{% translate "Нажмите на кнопку «Создать документ» и выберите «Сбор заказа»." %}</li>
+          <li>{% translate "В «Сборе заказа» при необходимости проверьте строки (количества, склад)." %}</li>
+          <li>{% translate "Нажмите на кнопку «Операция» и выберите «Заполнить все как Производственное задание»." %}</li>
+          <li>{% translate "Нажмите на кнопку «Создать»." %}</li>
+        </ol>
+        <p><strong>{% translate "Чтобы создать производственное задание на основе нескольких заказов покупателей:" %}</strong></p>
+        <ol class="pa-howto-steps">
+          <li>{% translate "Перейдите в раздел «Продажи» → «Заказы покупателей»." %}</li>
+          <li>{% translate "Отметьте нужные заказы покупателей в списке." %}</li>
+          <li>{% translate "Нажмите на кнопку «Создать документ» и выберите «Сбор заказа»." %}</li>
+          <li>{% translate "Создайте «Сбор заказа» так же, как в предыдущем случае (см. п. 5–8)." %}</li>
+        </ol>
+        <p><strong>{% translate "С производственными заданиями можно работать:" %}</strong></p>
+        <ul class="pa-howto-bullets">
+          <li>{% translate "распечатывать;" %}</li>
+          <li>{% translate "отправлять по почте;" %}</li>
+          <li>{% translate "добавлять дополнительные поля и статусы;" %}</li>
+          <li>{% translate "создавать сценарии." %}</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+
+  <div class="pa-tab-panel" data-pa-panel="materials" role="tabpanel">
+    <div class="pa-mat-intro pa-mat-intro-compact">
+      <p><strong>{% translate "Данные учёта" %}</strong> — {% translate "ниже таблица по техкартам позиций: план материалов, остаток и резерв на выбранном складе, доступно, оценка суммы, рекомендация к заказу. Труд — на вкладке «По расходам»." %}</p>
+      <p class="pa-mat-intro-reserve">{% translate "Чтобы зарезервировать материалы под это задание, включите флажок «Резерв материалов» вверху (рядом с вкладками). После сохранения резерв создаётся по потребности техкарт. При нескольких заданиях резерв помогает планировать снабжение." %}</p>
+      <details class="pa-mat-help-details" {% if add %}open{% endif %}>
+        <summary class="pa-mat-help-summary">{% translate "Справка: снабжение и сценарий как в МойСклад" %}</summary>
+      <div class="pa-mat-intro-supply">
+        <p class="pa-mat-intro-supply-title"><strong>{% translate "Снабжение" %}</strong></p>
+        <p>{% translate "При подготовке производственного задания может оказаться, что каких-то материалов нет в наличии — их нужно заказать у поставщика, произвести как полуфабрикат или переместить с другого склада. Быстро создать заказ поставщику, производственное задание на полуфабрикат или перемещение можно прямо из исходного производственного задания с помощью снабжения." %}</p>
+        <p>{% translate "В том же документе «Производственное задание» перейдите на вкладку «По материалам». Если в колонке «Доступно» количество меньше, чем в колонке «Остаток», нужно заказать ещё материалов." %}</p>
+        <p>{% translate "Нажмите вверху на кнопку «Снабжение». Откроется экран заказа материалов." %}</p>
+        <p>{% translate "Для каждого товара выберите «Способ снабжения»: заказ поставщику, заказ на производство, производственное задание или перемещение. Можно указать операцию сразу для всех товаров в списке: нажмите на заголовок колонки «Способ снабжения» и выберите нужный вариант." %}</p>
+        <p>{% translate "Для каждого способа снабжения укажите «Источник»: поставщика, техкарту или склад. Если в карточке товара поставщик уже указан, он будет выбран автоматически. Один и тот же товар можно заказывать у поставщиков, производить или перемещать. Если выбран способ «Перемещение», склад можно указать сразу для всех строк: нажмите на заголовок колонки «Источник» и выберите нужный склад." %}</p>
+        <p>{% translate "Укажите количество материалов, которое нужно заказать или переместить. Оно подставляется автоматически, если источник выбран автоматически; значение можно ввести вручную. Чтобы изменить способ расчёта, нажмите на заголовок колонки «Количество» и выберите вариант:" %}</p>
+        <ul class="pa-mat-intro-supply-modes">
+          <li>{% translate "«С учётом остатка» — по фактическому наличию на складе." %}</li>
+          <li>{% translate "«С учётом доступно» — фактические остатки с вычетом зарезервированного и с учётом ожидаемых поступлений." %}</li>
+          <li>{% translate "«Без учёта остатка» — заказывается столько, сколько указано в колонке «Кол-во в задании»." %}</li>
+        </ul>
+        <p>{% translate "Нажмите на кнопку «Создать»." %}</p>
+        <p>{% translate "Документы появляются в разделах «Закупки» → «Заказы поставщикам» и «Производство» → «Производственные задания». Операция может занять некоторое время." %}</p>
+        <p>{% translate "Статус и результаты операции отображаются в разделе «Меню пользователя» → «Настройки» → «Импорт»." %}</p>
+        <p>
+          {% translate "Примеры того, как можно организовать процесс снабжения, смотрите в статье" %}
+          <a href="https://support.moysklad.ru/hc/ru/%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE/%D0%BF%D1%80%D0%BE%D1%86%D0%B5%D1%81%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0/%D1%81%D0%BD%D0%B0%D0%B1%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5_%D0%B8_%D1%83%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5_%D0%B7%D0%B0%D0%BF%D0%B0%D1%81%D0%B0%D0%BC%D0%B8_%D0%BD%D0%B0_%D0%BD%D0%B5%D0%B1%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%BC_%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B5" target="_blank" rel="noopener noreferrer">{% translate "Снабжение и управление запасами на небольшом производстве" %}</a>.
+        </p>
+      </div>
+      </details>
+    </div>
+    <h3 class="pa-mat-data-heading" id="pa-materials-table">{% translate "Материалы" %}</h3>
+    <p class="pa-mat-data-sub">{% translate "Сводка по материалам из всех техкарт позиций задания; остатки и резерв — по складу материалов из реквизитов." %}</p>
+    <div class="pa-mat-toolbar">
+      <input type="text" class="pa-mat-search" readonly placeholder="{% translate 'Добавить позицию — введите наименование, код, штрихкод или артикул' %}" aria-disabled="true">
+      <button type="button" class="pa-mat-btn" disabled>{% translate "Добавить из справочника" %}</button>
+      <button type="button" class="pa-mat-btn" disabled title="{% translate 'Импорт из файла — в разработке' %}">{% translate "Импортировать" %}</button>
+    </div>
+    <div class="pa-mat-table-wrap">
+      <table class="pa-mat-table pa-mat-table-wide">
+        <thead>
+          <tr>
+            <th>{% translate "Материал" %}</th>
+            <th class="pa-col-num">{% translate "Запланировано" %}</th>
+            <th class="pa-col-num">{% translate "Использовано" %}</th>
+            <th class="pa-col-num">{% translate "Отклонение" %}</th>
+            <th class="pa-col-num">{% translate "Резерв" %}</th>
+            <th class="pa-col-num">{% translate "Себест. ед." %}</th>
+            <th class="pa-col-num">{% translate "Сумма" %}</th>
+            <th class="pa-col-num">{% translate "Доступно" %}</th>
+            <th class="pa-col-num">{% translate "Остаток" %}</th>
+            <th class="pa-col-num">{% translate "Заказать" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in pa_materials_flat_rows %}
+          <tr>
+            <td>{{ row.material }}</td>
+            <td class="pa-col-num">{{ row.planned|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.used|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.deviation|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.reserved|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.unit_cost|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.line_cost|floatformat:2 }}</td>
+            <td class="pa-col-num {% if row.available < 0 %}pa-num-negative{% endif %}">{{ row.available|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.stock|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ row.order_qty|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="pa-mat-empty">
+              {% if add %}{% translate "Сохраните задание, добавьте позиции (техкарты) и укажите склад материалов — тогда здесь появятся строки таблицы." %}
+              {% else %}{% translate "Нет строк: проверьте позиции задания, материалы в техкартах и выбранный склад материалов в реквизитах." %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="pa-mat-total">
+            <td colspan="6" class="pa-mat-total-label">{% translate "Итого материалы (оценка)" %}</td>
+            <td class="pa-col-num">{{ pa_costs_summary.materials|floatformat:2 }}</td>
+            <td colspan="3" class="pa-mat-foot-note">{% translate "Оплата труда — вкладка «По расходам»." %}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="pa-tab-panel" data-pa-panel="execution" role="tabpanel" hidden>
+    <div class="pa-exec-intro">
+      <p class="pa-exec-intro-title"><strong>{% translate "Выполнение" %}</strong></p>
+      <p class="pa-exec-lead">{% translate "Интерактивная таблица этапов (как в МойСклад) — в планах. Сейчас: подсказки ниже; дату начала производства задайте в блоке реквизитов." %}</p>
+      <details class="pa-exec-help-details">
+        <summary class="pa-exec-help-summary">{% translate "Справка по выполнению (как в МойСклад)" %}</summary>
+      <p>{% translate "В том же документе «Производственное задание» перейдите на вкладку «Выполнение»." %}</p>
+      <p>{% translate "Нажмите на кнопку «Начать производство». Дата начала производства будет зафиксирована, и можно будет отмечать выполнение производственных этапов." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Начать производство" %}</strong></p>
+      <p>{% translate "В столбце «Завершить до» для каждого этапа укажите срок выполнения. Для этого нажмите в пустом поле на календарь и выберите нужную дату. Нажмите на кнопку «Сохранить» вверху." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Исполнители" %}</strong></p>
+      <p>{% translate "Для каждого этапа укажите исполнителя. Выбрать можно только тех сотрудников, которые имеют доступ в МойСклад. Исполнителей можно назначать заранее. Для выполнения одного этапа можно назначить одного или нескольких исполнителей:" %}</p>
+      <ul class="pa-exec-performers-list">
+        <li>{% translate "Если весь объём производства на этапе нужно выполнить одному исполнителю, выберите его в графе «Исполнитель» и нажмите на кнопку «Сохранить»." %}</li>
+        <li>{% translate "Если необходимо распределить весь объём производства между несколькими исполнителями, в конце строки этапа нажмите три точки и выберите «Распределить задание». В открывшемся окне укажите объём производства, который нужно выполнить каждому исполнителю, или нажмите «Распределить поровну», чтобы распределить объём между всеми исполнителями поровну. Нажмите «Применить»." %}</li>
+      </ul>
+      <p class="pa-exec-subtitle"><strong>{% translate "К выполнению" %}</strong></p>
+      <p>{% translate "В столбце «К выполнению» укажите количество продукции или операций, которые нужно произвести на каждом этапе. Исполнитель не может произвести больше продукции, чем указано в настройках этапа. Количество продукции, указанное в производственном задании, можно произвести сразу или частями. Например, всего запланировано произвести 10 единиц продукции, но материалов на складе хватит только на 6: можно сначала произвести и отгрузить 6 единиц, а затем — ещё 4. По умолчанию в столбце указывается количество продукции, запланированное в производственном задании." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Отметка выполнения этапа" %}</strong></p>
+      <p>{% translate "Чтобы отметить этап как выполненный, нажмите на стрелку (→) рядом с названием этапа. Будут списаны материалы со склада и затраты, установленные в техкарте для этого этапа." %}</p>
+      <p>{% translate "Чтобы отметить этап как выполненный во всём производственном задании, в конце строки этапа нажмите на три точки и выберите «Выполнить этап во всех техкартах». Если исполнители во всех техкартах не указаны заранее, исполнителем назначается сотрудник-исполнитель из данного этапа." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Отмена этапа и брак" %}</strong></p>
+      <p>{% translate "Если при выполнении этапа что-то пошло не так, его выполнение можно отменить. Для этого в конце строки этапа нажмите на три точки и выберите «Отменить выполнение этапа»." %}</p>
+      <p>{% translate "Если при выполнении этапа появилась бракованная продукция, её необходимо учесть. Для этого в конце строки этапа нажмите на три точки и выберите «Указать брак». В открывшемся документе укажите объём брака и нажмите «Сохранить»." %}</p>
+      <p>
+        {% translate "Чтобы указанный объём брака отображался во вкладке «Выполнение», в настройках таблицы включите отображение колонки «Брак»." %}
+        {% translate "Подробнее см." %}
+        <a href="https://support.moysklad.ru/hc/ru/%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE/%D1%83%D1%87%D0%B5%D1%82%20%D0%B2%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B5/%D1%83%D1%87%D0%B5%D1%82_%D0%B1%D1%80%D0%B0%D0%BA%D0%B0" target="_blank" rel="noopener noreferrer">{% translate "Учёт брака в производственном задании" %}</a>.
+      </p>
+      <p>{% translate "Нельзя создать документ брака для финального или останавливающего этапа." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Последнее изменение" %}</strong></p>
+      <p>{% translate "В столбце «Последнее изменение» будет зафиксирована дата выполнения этапа. Кликните на дату, чтобы перейти в документ «Выполнение этапа» и узнать подробности. Документы по всем выполненным этапам собраны в «Реестре выполнения этапов»." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Дополнительные материалы" %}</strong></p>
+      <p>{% translate "Если для выполнения производственного задания нужно добавить дополнительные материалы, это можно сделать, пока не выполнен последний этап производства. Кликните на дату, чтобы перейти в документ «Выполнение этапа», и в разделе «Материалы» добавьте необходимые материалы." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Выполнить все этапы" %}</strong></p>
+      <p>{% translate "Если нет необходимости детально контролировать выполнение каждого этапа или производственный цикл короткий, можно отметить выполнение сразу всех этапов. Нажмите на кнопку «Изменить» вверху, выберите «Выполнить все этапы», укажите дату выполнения и сохраните изменения." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Готовая продукция после последнего этапа" %}</strong></p>
+      <p>{% translate "Если у готовой продукции есть особенности — например, нужно распределить выпуск по модификациям или учесть брак, — после выполнения последнего этапа нажмите на дату его выполнения. В документе «Выполнение этапа» добавьте нужные позиции или измените их количество. Сохраните изменения." %}</p>
+      <p>{% translate "Нажмите на кнопку «Сохранить» вверху." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Остановка производства" %}</strong></p>
+      <p>{% translate "Если в рамках производственного задания произвели только часть запланированной продукции и оставшаяся часть задания выполнена не будет, производство можно остановить. Для этого:" %}</p>
+      <ol class="pa-exec-steps-list">
+        <li>{% translate "В производственном задании на вкладке «Продукция» (в этой форме — «По продукции») удалите техкарты, производство по которым не началось." %}</li>
+        <li>{% translate "На вкладке «Выполнение» на всех этапах установите единое количество объёма производства." %}</li>
+        <li>{% translate "Нажмите на кнопку «Изменить» вверху и выберите «Завершить производство»." %}</li>
+      </ol>
+      <p>{% translate "Когда финальный этап будет отмечен как выполненный, готовая продукция будет оприходована на склад продукции." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Себестоимость" %}</strong></p>
+      <p>
+        {% translate "Себестоимость изготовленной продукции равна сумме себестоимости израсходованных материалов и затрат на производство и оплату труда, указанных в техкарте." %}
+        {% translate "Подробнее см." %}
+        <a href="https://support.moysklad.ru/hc/ru/%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE/%D0%BF%D1%80%D0%BE%D1%86%D0%B5%D1%81%D1%81%20%D0%BF%D1%80%D0%BE%D0%B8%D0%B7%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%B0/%D0%BE%D1%82%D1%87%D0%B5%D1%82_%D0%BF%D0%BB%D0%B0%D0%BD%D0%BE%D0%B2%D0%B0%D1%8F_%D1%81%D0%B5%D0%B1%D0%B5%D1%81%D1%82%D0%BE%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C" target="_blank" rel="noopener noreferrer">{% translate "Отчёт «Плановая себестоимость»" %}</a>.
+      </p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Учёт времени" %}</strong></p>
+      <p>{% translate "После того как будут отмечены все этапы для всех позиций продукции, в разделе «Учёт времени» будет установлено время завершения производства." %}</p>
+      <p class="pa-exec-subtitle"><strong>{% translate "Документ «Выполнение этапа»" %}</strong></p>
+      <p>{% translate "С документом «Выполнение этапа» можно работать:" %}</p>
+      <ul class="pa-exec-performers-list">
+        <li>{% translate "редактировать (в том числе массово);" %}</li>
+        <li>{% translate "распечатывать;" %}</li>
+        <li>{% translate "добавлять дополнительные поля;" %}</li>
+        <li>{% translate "создавать сценарии." %}</li>
+      </ul>
+      </details>
+      <p class="pa-exec-note">{% translate "В этой админке: дату начала задайте полем «Дата начала» в блоке «Реквизиты, даты, комментарий»; кнопка «Начать производство» соответствует сервисам вроде МойСклад." %}</p>
+    </div>
+  </div>
+
+  <div class="pa-tab-panel" data-pa-panel="products" role="tabpanel" hidden>
+    <div class="pa-products-body">
+      <p class="pa-products-hint">{% translate "План и выпуск по изделиям (по техкартам позиций задания)." %}</p>
+      {% if pa_products_rows %}
+      <table class="pa-mat-table pa-products-table">
+        <thead>
+          <tr>
+            <th>{% translate "Изделие" %}</th>
+            <th class="pa-col-num">{% translate "План" %}</th>
+            <th class="pa-col-num">{% translate "Выпуск" %}</th>
+            <th class="pa-col-num">{% translate "Брак" %}</th>
+            <th class="pa-col-num">{% translate "Годная" %}</th>
+            <th class="pa-col-num">{% translate "Оценка затрат (₽)" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in pa_products_rows %}
+          <tr>
+            <td>{{ r.product }}</td>
+            <td class="pa-col-num">{{ r.planned|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ r.produced|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ r.defect|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ r.good|floatformat:2 }}</td>
+            <td class="pa-col-num">{{ r.cost_estimate|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="pa-mat-empty">{% translate "Нет данных: добавьте позиции задания ниже." %}</p>
+      {% endif %}
+      <div class="pa-products-instructions">
+        <p>{% translate "Если в задании несколько техкарт, по умолчанию они выполняются в том порядке, в котором добавлены. Поле «Порядок выполнения» задаёт последовательность; этот порядок используется в веб-приложении (например, в реестре этапов)." %}</p>
+        <p>{% translate "«Объём производства» — сколько раз произвести продукцию по одной техкарте. Объём можно изменить для уже начатых позиций; нельзя установить значение меньше, чем уже выпущено по этой строке." %}</p>
+        <p>{% translate "Чтобы изменить список продукции, состав изделия в техкарте или суммы затрат по этапам, откройте техкарту по ссылке в колонке «Состав и затраты», внесите правки и нажмите «Сохранить»." %}</p>
+      </div>
+      <div class="pa-inline-slot" id="pa-inline-items-slot"></div>
+    </div>
+  </div>
+
+  <div class="pa-tab-panel" data-pa-panel="costs" role="tabpanel" hidden>
+    <table class="pa-mat-table pa-costs-table">
+      <tbody>
+        <tr><th scope="row">{% translate "Материалы (оценка)" %}</th><td class="pa-col-num">{{ pa_costs_summary.materials|floatformat:2 }} ₽</td></tr>
+        <tr><th scope="row">{% translate "Оплата труда (по учёту времени)" %}</th><td class="pa-col-num">{{ pa_costs_summary.labor|floatformat:2 }} ₽</td></tr>
+        <tr><th scope="row">{% translate "Рез по метрам (план по техкартам)" %}</th><td class="pa-col-num">{{ pa_costs_summary.cut|floatformat:2 }} ₽</td></tr>
+        <tr class="pa-mat-total"><th scope="row">{% translate "Итого" %}</th><td class="pa-col-num"><strong>{{ pa_costs_summary.total|floatformat:2 }} ₽</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="pa-costs-note">{% translate "Материалы — по средней цене поступлений; труд — по учёту времени; рез — план: норма м на изделие в техкарте × ₽/м этапа." %}</p>
+  </div>
+</div>

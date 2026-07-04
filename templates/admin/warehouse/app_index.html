@@ -1,0 +1,11 @@
+{% extends "admin/app_index.html" %}
+{% load static %}
+
+{% block title %}Склад | Laser ERP{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'warehouse/admin/warehouse_admin_shell.css' %}?v=1">
+{% endblock %}

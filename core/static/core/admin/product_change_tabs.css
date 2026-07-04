@@ -1,0 +1,74 @@
+/**
+ * Карточка товара/услуги: вкладки (материалы, нормы времени, …) — стиль как у «Исполнители» на этапе.
+ */
+.product-extra-tabs {
+  --pet-accent: #2563eb;
+  --pet-accent-light: #3b82f6;
+  --pet-accent-bg: #eff6ff;
+  --pet-border: #e8e8e8;
+  margin: 0 0 1rem;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  border-left: 4px solid var(--pet-accent);
+  padding-left: 0.75rem;
+}
+
+.product-extra-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  border-bottom: 1px solid var(--pet-border);
+}
+
+.product-extra-tab {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.5rem 0.85rem 0.4rem;
+  margin-bottom: -1px;
+  color: #666;
+  font-family: inherit;
+}
+
+.product-extra-tab:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.product-extra-tab.active {
+  color: var(--pet-accent);
+  border-bottom-color: var(--pet-accent);
+  background: var(--pet-accent-bg);
+  font-weight: 600;
+}
+
+.product-extra-tabs-panels {
+  position: relative;
+}
+
+.product-extra-tab-panel {
+  display: none;
+  padding: 0;
+  margin: 0;
+}
+
+.product-extra-tab-panel.active {
+  display: block;
+}
+
+/* Содержимое вкладки: fieldset без лишней «рамки модуля» снаружи */
+.product-extra-tab-panel > fieldset.module {
+  margin-bottom: 0;
+}
+
+.product-extra-tab-panel .product-barcode-help {
+  margin-bottom: 0.65rem;
+}

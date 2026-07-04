@@ -1,0 +1,263 @@
+/**
+ * Админка: ширина однострочных полей по тексту (field-sizing: content + JS в ch), max — колонка.
+ * Единая компактная высота: инпуты, select, Select2, readonly; выпадающий список Select2 — в том же кегле/плотности.
+ */
+
+:root {
+  --laser-admin-autosize-min-ch: 4.5ch;
+  --laser-admin-input-max-width: 100%;
+  --laser-admin-form-font-size: 0.8125rem;
+  --laser-admin-form-line-height: 1.35;
+  /* Однострочные контролы: строка формы (подписи/хелп) */
+  --laser-admin-control-height: 20px;
+  --laser-admin-control-padding-y: 1px;
+  --laser-admin-control-padding-x: 8px;
+  /* Внутри инпута/select — чуть плотнее, чтобы влезало в 20px */
+  --laser-admin-control-line-height: 1.2;
+}
+
+/* Типографика строк формы (как compact-uom), заголовки секций не трогаем */
+body.change-form #content-main fieldset.module.aligned .form-row,
+body.add-form #content-main fieldset.module.aligned .form-row {
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-form-line-height);
+}
+
+/* ——— Текстовые и числовые инпуты (стандартные виджеты Django) ——— */
+body.change-form #content-main input.vTextField,
+body.add-form #content-main input.vTextField,
+body.change-form #content-main input.vIntegerField,
+body.add-form #content-main input.vIntegerField,
+body.change-form #content-main input.vBigIntegerField,
+body.add-form #content-main input.vBigIntegerField,
+body.change-form #content-main input.vForeignKeyRawIdAdminField,
+body.add-form #content-main input.vForeignKeyRawIdAdminField,
+body.change-form #content-main input.vDateField,
+body.add-form #content-main input.vDateField,
+body.change-form #content-main input.vTimeField,
+body.add-form #content-main input.vTimeField,
+body.change-form #content-main input.vDateTimeField,
+body.add-form #content-main input.vDateTimeField,
+body.change-form #content-main input.vUUIDField,
+body.add-form #content-main input.vUUIDField,
+body.change-form #content-main input[type="text"],
+body.add-form #content-main input[type="text"],
+body.change-form #content-main input[type="search"],
+body.add-form #content-main input[type="search"],
+body.change-form #content-main input[type="number"],
+body.add-form #content-main input[type="number"],
+body.change-form #content-main input[type="email"],
+body.add-form #content-main input[type="email"],
+body.change-form #content-main input[type="password"],
+body.add-form #content-main input[type="password"],
+body.change-form #content-main input[type="url"],
+body.add-form #content-main input[type="url"] {
+  box-sizing: border-box;
+  width: auto;
+  min-width: var(--laser-admin-autosize-min-ch);
+  max-width: var(--laser-admin-input-max-width);
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+  font-family: inherit;
+  color: var(--body-fg, #1e293b);
+  field-sizing: content;
+  vertical-align: middle;
+}
+
+/* ——— Списки (одиночный выбор) ——— */
+body.change-form #content-main select:not([multiple]),
+body.add-form #content-main select:not([multiple]) {
+  box-sizing: border-box;
+  width: auto;
+  min-width: var(--laser-admin-autosize-min-ch);
+  max-width: var(--laser-admin-input-max-width);
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+  font-family: inherit;
+  color: var(--body-fg, #1e293b);
+  field-sizing: content;
+  vertical-align: middle;
+}
+
+/* ——— Autocomplete (Select2) в формах ——— */
+body.change-form #content-main .select2-container--admin-autocomplete,
+body.add-form #content-main .select2-container--admin-autocomplete {
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-form-line-height);
+  width: auto !important;
+  max-width: var(--laser-admin-input-max-width);
+  min-width: min(100%, 12rem) !important;
+  vertical-align: middle;
+}
+
+/* Скрытый native select — чтобы Select2 не брал ширину «в несколько px» при расчёте */
+body.change-form #content-main .related-widget-wrapper select.admin-autocomplete,
+body.add-form #content-main .related-widget-wrapper select.admin-autocomplete {
+  min-width: 12rem;
+  max-width: 100%;
+}
+
+body.change-form #content-main .select2-container--admin-autocomplete .select2-selection--single,
+body.add-form #content-main .select2-container--admin-autocomplete .select2-selection--single {
+  box-sizing: border-box;
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+}
+
+body.change-form #content-main .select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered,
+body.add-form #content-main .select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered {
+  padding-left: 4px;
+  padding-right: 24px;
+  line-height: var(--laser-admin-control-line-height);
+}
+
+body.change-form #content-main .select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow,
+body.add-form #content-main .select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow {
+  height: auto;
+  min-height: 100%;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.change-form #content-main .select2-container--admin-autocomplete .select2-selection--multiple,
+body.add-form #content-main .select2-container--admin-autocomplete .select2-selection--multiple {
+  box-sizing: border-box;
+  min-height: var(--laser-admin-control-height);
+}
+
+/* Инлайн этапов техпроцесса — ширина задаётся flex в tech_process_stages_inline.css */
+body.change-form #content-main .tech-process-stages-inline .select2-container--admin-autocomplete,
+body.add-form #content-main .tech-process-stages-inline .select2-container--admin-autocomplete {
+  max-width: none;
+}
+
+/* Техкарта: широкое поле техпроцесса (techcard_change_form.css) */
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  .select2-container--admin-autocomplete,
+body.add-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  .select2-container--admin-autocomplete {
+  max-width: 100%;
+}
+
+/* Readonly в карточках — тот же кегль и отступы, что у инпутов */
+body.change-form #content-main fieldset.module.aligned .readonly,
+body.add-form #content-main fieldset.module.aligned .readonly {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  width: auto;
+  max-width: var(--laser-admin-input-max-width);
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  margin: 0;
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--body-fg, #1e293b);
+  background: var(--darkened-bg, #f8f8f8);
+  border: 1px solid var(--hairline-color, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) inset;
+  vertical-align: middle;
+}
+
+/* ——— Многострочные: растут по высоте, ширина — в пределах колонки ——— */
+body.change-form #content-main textarea,
+body.add-form #content-main textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: min(100%, 12ch);
+  min-height: 4.5em;
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-form-line-height);
+  font-family: inherit;
+  color: var(--body-fg, #1e293b);
+  field-sizing: content;
+}
+
+/* ——— Список изменений: поиск и фильтры ——— */
+body.change-list #toolbar #searchbar,
+body.change-list #changelist-search input[type="text"],
+body.change-list #changelist-search input[type="search"],
+body.change-list #changelist-filter input[type="text"],
+body.change-list #changelist-filter select:not([multiple]) {
+  box-sizing: border-box;
+  width: auto;
+  min-width: var(--laser-admin-autosize-min-ch);
+  max-width: var(--laser-admin-input-max-width);
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+  font-family: inherit;
+  field-sizing: content;
+  vertical-align: middle;
+}
+
+/* ——— Страница входа ——— */
+body.login #content-main input[type="text"],
+body.login #content-main input[type="email"],
+body.login #content-main input[type="password"] {
+  box-sizing: border-box;
+  width: auto;
+  min-width: 12ch;
+  max-width: var(--laser-admin-input-max-width);
+  min-height: var(--laser-admin-control-height);
+  height: var(--laser-admin-control-height);
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+  font-family: inherit;
+  field-sizing: content;
+  vertical-align: middle;
+}
+
+/* Выпадающий список Select2: строки и поле поиска — как однострочное поле */
+.select2-container--admin-autocomplete .select2-results__option {
+  padding: 2px var(--laser-admin-control-padding-x);
+  min-height: var(--laser-admin-control-height);
+  line-height: var(--laser-admin-control-line-height);
+  font-size: var(--laser-admin-form-font-size);
+}
+
+.select2-container--admin-autocomplete .select2-search--dropdown .select2-search__field {
+  box-sizing: border-box;
+  min-height: var(--laser-admin-control-height);
+  padding: var(--laser-admin-control-padding-y) var(--laser-admin-control-padding-x);
+  font-size: var(--laser-admin-form-font-size);
+  line-height: var(--laser-admin-control-line-height);
+}
+
+/* Скрытые поля не трогаем */
+body.change-form #content-main input[type="checkbox"],
+body.change-form #content-main input[type="radio"],
+body.change-form #content-main input[type="file"],
+body.add-form #content-main input[type="checkbox"],
+body.add-form #content-main input[type="radio"],
+body.add-form #content-main input[type="file"] {
+  field-sizing: fixed;
+  width: auto;
+  max-width: none;
+}

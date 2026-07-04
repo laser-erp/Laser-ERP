@@ -1,0 +1,1545 @@
+/**
+ * Компактная сетка блока «Единицы и габариты» в карточке товара (admin).
+ * Единая типографика: один размер и line-height для подписей, полей, «?» и readonly.
+ */
+
+/*
+ * Двухколоночный каркас: слева — навигация, регулируемый разделитель, справа — форма.
+ * Ширина левой колонки: --product-sidebar-width (см. product_card_sidebar_resize.js).
+ */
+body.change-form.model-product form#product_form .product-card-layout,
+body.add-form.model-product form#product_form .product-card-layout {
+  --product-sidebar-width: 22rem;
+  display: grid;
+  grid-template-columns: var(--product-sidebar-width) 6px minmax(0, 1fr);
+  gap: 0;
+  column-gap: 0;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-card-resizer,
+body.add-form.model-product .product-card-resizer {
+  position: relative;
+  z-index: 3;
+  width: 6px;
+  margin: 0;
+  padding: 0;
+  align-self: stretch;
+  min-height: 8rem;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+body.change-form.model-product .product-card-resizer::before,
+body.add-form.model-product .product-card-resizer::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 3px;
+  border-radius: 2px;
+  background: var(--hairline-color, #e2e8f0);
+  transition: background 0.12s ease;
+}
+
+body.change-form.model-product .product-card-resizer:hover::before,
+body.add-form.model-product .product-card-resizer:hover::before,
+body.change-form.model-product .product-card-resizer:focus-visible::before,
+body.add-form.model-product .product-card-resizer:focus-visible::before,
+body.change-form.model-product .product-card-resizer.is-dragging::before,
+body.add-form.model-product .product-card-resizer.is-dragging::before {
+  background: #64748b;
+}
+
+body.change-form.model-product .product-card-resizer:focus-visible,
+body.add-form.model-product .product-card-resizer:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 1px;
+}
+
+body.product-card-resize-active {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.change-form.model-product .product-card-sidebar,
+body.add-form.model-product .product-card-sidebar {
+  position: sticky;
+  top: 0.5rem;
+  align-self: start;
+  max-height: calc(100vh - 5.5rem);
+  overflow-y: auto;
+  z-index: 2;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--body-bg, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+body.change-form.model-product .product-card-sidebar__nav,
+body.add-form.model-product .product-card-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0.2rem 0;
+}
+
+body.change-form.model-product .product-sidebar-accordion-item,
+body.add-form.model-product .product-sidebar-accordion-item {
+  border-bottom: 1px solid var(--hairline-color, #e8e8e8);
+}
+
+body.change-form.model-product .product-sidebar-accordion-item:last-child,
+body.add-form.model-product .product-sidebar-accordion-item:last-child {
+  border-bottom: none;
+}
+
+body.change-form.model-product .product-sidebar-row,
+body.add-form.model-product .product-sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-radius: 0;
+}
+
+body.change-form.model-product .product-sidebar-accordion-panel,
+body.add-form.model-product .product-sidebar-accordion-panel {
+  padding: 0 0.5rem 0.65rem 0.65rem;
+  max-height: min(70vh, 42rem);
+  overflow: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.65);
+}
+
+body.change-form.model-product .product-sidebar-accordion-panel .product-main-section,
+body.add-form.model-product .product-sidebar-accordion-panel .product-main-section {
+  margin: 0;
+  padding-top: 0.35rem;
+}
+
+/* Заголовок fieldset дублирует строку в сайдбаре — скрываем h2 внутри панели */
+body.change-form.model-product .product-sidebar-accordion-panel fieldset > h2.fieldset-heading,
+body.add-form.model-product .product-sidebar-accordion-panel fieldset > h2.fieldset-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body.change-form.model-product .product-sidebar-row:hover,
+body.add-form.model-product .product-sidebar-row:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+body.change-form.model-product .product-sidebar-row.is-active,
+body.add-form.model-product .product-sidebar-row.is-active {
+  background: rgba(37, 99, 235, 0.09);
+  font-weight: 600;
+}
+
+body.change-form.model-product .product-sidebar-row__grip,
+body.add-form.model-product .product-sidebar-row__grip {
+  flex: 0 0 12px;
+  width: 12px;
+  height: 16px;
+  opacity: 0.55;
+  background-image: radial-gradient(circle, #64748b 1px, transparent 1.2px);
+  background-size: 4px 5px;
+  background-position: 0 0;
+}
+
+body.change-form.model-product .product-sidebar-row__label,
+body.add-form.model-product .product-sidebar-row__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+body.change-form.model-product .product-sidebar-row__chevron,
+body.add-form.model-product .product-sidebar-row__chevron {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-left: 2px;
+  border-right: 2px solid #94a3b8;
+  border-bottom: 2px solid #94a3b8;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+body.change-form.model-product .product-sidebar-row[aria-expanded="true"] .product-sidebar-row__chevron,
+body.add-form.model-product .product-sidebar-row[aria-expanded="true"] .product-sidebar-row__chevron {
+  transform: rotate(45deg);
+}
+
+body.change-form.model-product .product-card-main,
+body.add-form.model-product .product-card-main {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  body.change-form.model-product form#product_form .product-card-layout,
+  body.add-form.model-product form#product_form .product-card-layout {
+    grid-template-columns: 1fr;
+  }
+
+  body.change-form.model-product .product-card-resizer,
+  body.add-form.model-product .product-card-resizer {
+    display: none;
+  }
+
+  body.change-form.model-product .product-card-sidebar,
+  body.add-form.model-product .product-card-sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+}
+
+/*
+ * Верх карточки (.product-form-fieldsets-grid--top): слева «Основное» на две строки, справа «Единицы»;
+ * ряд 3 — «Общие данные», ряд 4 — «Изображения» на всю ширину. «Цены» — во вкладке справа.
+ * Далее — #product-extra-tabs-mount и .product-form-fieldsets-grid--rest.
+ */
+body.change-form.model-product .product-form-fieldsets-grid--top,
+body.add-form.model-product .product-form-fieldsets-grid--top {
+  display: grid;
+  grid-template-columns: minmax(0, 28rem) minmax(14rem, 22rem);
+  grid-template-rows: auto auto auto auto;
+  gap: 0.75rem 1rem;
+  align-items: start;
+  margin-bottom: 0.35rem;
+  /* Select2 (поставщик и др.) не обрезать выпадающий список */
+  overflow: visible;
+}
+
+body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main,
+body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main {
+  overflow: visible;
+}
+
+body.change-form.model-product .form-row.field-product_group select,
+body.add-form.model-product .form-row.field-product_group select {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-form-fieldsets-grid--rest,
+body.add-form.model-product .product-form-fieldsets-grid--rest {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-form-fieldsets-grid--top.product-form-fieldsets-grid--empty,
+body.add-form.model-product .product-form-fieldsets-grid--top.product-form-fieldsets-grid--empty,
+body.change-form.model-product .product-form-fieldsets-grid--rest.product-form-fieldsets-grid--empty,
+body.add-form.model-product .product-form-fieldsets-grid--rest.product-form-fieldsets-grid--empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Вкладки под верхним блоком, на всю ширину #content-main */
+body.change-form.model-product .product-form-tabs-mount,
+body.add-form.model-product .product-form-tabs-mount {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 0.75rem;
+}
+
+body.change-form.model-product .product-form-tabs-mount .product-extra-tabs,
+body.add-form.model-product .product-form-tabs-mount .product-extra-tabs {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* «Общие данные»: две колонки — слева «?» и подпись, справа ввод; по нижнему краю (для textarea — сверху) */
+body.change-form.model-product fieldset.module.product-fs-general,
+body.add-form.model-product fieldset.module.product-fs-general {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+body.change-form.model-product fieldset.product-fs-general > h2,
+body.add-form.model-product fieldset.product-fs-general > h2 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--body-quiet-color, #64748b);
+  margin: 0 0 0.4rem;
+  padding: 0;
+  border: none;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row,
+body.add-form.model-product fieldset.product-fs-general .form-row {
+  padding: 0.12rem 0;
+}
+
+/* Подгруппы «Общие данные» — тонкие разделители, как в макете (4 блока полей) */
+body.change-form.model-product fieldset.product-fs-general .form-row.field-article,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-article,
+body.change-form.model-product fieldset.product-fs-general .form-row.field-unit,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-unit,
+body.change-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent {
+  border-top: 1px solid var(--hairline-color, #e2e8f0);
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-description,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-description {
+  padding-top: 0.08rem;
+}
+
+/* НДС — узкое поле ввода, как в макете */
+body.change-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label),
+body.add-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  max-width: 9rem;
+  justify-self: start;
+  width: 100%;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent input,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-vat_rate_percent input {
+  max-width: 9rem;
+}
+
+/* Вес / объём — выравнивание числа по правому краю поля, как в макете */
+body.change-form.model-product fieldset.product-fs-general .form-row.field-weight_kg input,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-weight_kg input,
+body.change-form.model-product fieldset.product-fs-general .form-row.field-volume input,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-volume input {
+  text-align: right;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row .laser-field-with-help,
+body.add-form.model-product fieldset.product-fs-general .form-row .laser-field-with-help {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Контрагент (поле supplier): «?» → подпись → поле в одну горизонтальную строку (без переноса блоков) */
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-with-help,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-with-help {
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+  align-items: center !important;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-help-col,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-help-col {
+  order: 0;
+  flex-shrink: 0;
+  align-self: center !important;
+  align-items: center !important;
+  padding-bottom: 0 !important;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-main-col,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .laser-field-main-col {
+  order: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-with-help,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-with-help {
+  align-items: flex-start;
+}
+
+body.change-form.model-product fieldset.product-fs-general .laser-field-help-col,
+body.add-form.model-product fieldset.product-fs-general .laser-field-help-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.25rem;
+  padding-bottom: 0.125rem;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-help-col,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-help-col {
+  align-items: flex-start;
+  padding-top: 0.25rem;
+  padding-bottom: 0;
+}
+
+body.change-form.model-product fieldset.product-fs-general .laser-field-main-col,
+body.add-form.model-product fieldset.product-fs-general .laser-field-main-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: visible;
+}
+
+body.change-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: grid;
+  /* Первая колонка — строго по переменной (как в admin_field_help), без minmax — иначе подписи плывут между строками */
+  grid-template-columns: var(--laser-admin-field-label-width, 11rem) minmax(0, 1fr);
+  column-gap: 0.35rem;
+  align-items: end;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product fieldset.product-fs-general .form-row.field-description .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  align-items: start;
+}
+
+body.change-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  display: block;
+  float: none;
+  grid-column: 1;
+  justify-self: stretch;
+  align-self: end;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-weight: 500;
+  text-align: left;
+  color: var(--body-quiet-color, #64748b);
+  box-sizing: border-box;
+}
+
+body.change-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label),
+body.add-form.model-product fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
+}
+
+/*
+ * Жёсткое перекрытие: admin_field_help.css (flex + фикс. width/padding у label) и
+ * django forms.css (.aligned label { width/min-width: 160px; padding: 4px 10px 0 0 }).
+ * Без этого подпись «Контрагент» и др. могут оставаться со старыми отступами/шириной.
+ */
+body.change-form.model-product fieldset.module.aligned.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product fieldset.module.aligned.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: grid !important;
+  grid-template-columns: var(--laser-admin-field-label-width, 11rem) minmax(0, 1fr) !important;
+  column-gap: 0.35rem !important;
+  flex-direction: unset !important;
+  flex-wrap: unset !important;
+  align-items: end !important;
+}
+
+body.change-form.model-product fieldset.module.aligned.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-product fieldset.module.aligned.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  display: block !important;
+  float: none !important;
+  grid-column: 1 !important;
+  justify-self: stretch !important;
+  align-self: end !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  flex: none !important;
+  font-size: 0.75rem !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  color: var(--body-quiet-color, #64748b) !important;
+}
+
+body.change-form.model-product fieldset.product-fs-general input,
+body.add-form.model-product fieldset.product-fs-general input,
+body.change-form.model-product fieldset.product-fs-general select,
+body.add-form.model-product fieldset.product-fs-general select,
+body.change-form.model-product fieldset.product-fs-general textarea,
+body.add-form.model-product fieldset.product-fs-general textarea {
+  font-size: 0.8125rem;
+}
+
+/* «Наименование»: подпись (А) слева, поле ввода (Б) справа — явно, как в общей логике формы */
+body.change-form.model-product fieldset.product-form-col-main .form-row.field-name .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product fieldset.product-form-col-main .form-row.field-name .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Слева: «Основное» на две строки — напротив «Единицы» (правая колонка целиком) */
+body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main,
+body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  max-width: 100%;
+  align-self: start;
+}
+
+/* Справа: «Единицы и габариты» на высоту двух строк слева */
+body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-uom,
+body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-uom {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  max-width: 100%;
+}
+
+/* «Общие данные»: под двумя колонками, на всю ширину */
+body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-general,
+body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-general {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* «Изображения»: под «Общие данные», на всю ширину верхней сетки */
+body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-images,
+body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-images {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product fieldset.module.product-fs-images,
+body.add-form.model-product fieldset.module.product-fs-images {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+body.change-form.model-product fieldset.product-fs-images > h2,
+body.add-form.model-product fieldset.product-fs-images > h2 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--body-quiet-color, #64748b);
+  margin: 0 0 0.4rem;
+  padding: 0;
+  border: none;
+}
+
+/* «Общие данные» в левой панели аккордеона: поля не выходят за правый край сайдбара */
+body.change-form.model-product .product-sidebar-accordion-panel fieldset.product-fs-general,
+body.add-form.model-product .product-sidebar-accordion-panel fieldset.product-fs-general {
+  padding-right: 5px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-sidebar-accordion-panel fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product .product-sidebar-accordion-panel fieldset.product-fs-general .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-sidebar-accordion-panel #gallery_images-group,
+body.add-form.model-product .product-sidebar-accordion-panel #gallery_images-group {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-sidebar-accordion-panel #gallery_images-group .tabular,
+body.add-form.model-product .product-sidebar-accordion-panel #gallery_images-group .tabular {
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+body.change-form.model-product .product-form-fieldsets-grid--rest > .product-main-section > fieldset.product-form-full,
+body.add-form.model-product .product-form-fieldsets-grid--rest > .product-main-section > fieldset.product-form-full {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* «Цены» во вкладке справа — на всю ширину панели */
+body.change-form.model-product .product-extra-tab-panel fieldset.product-form-col-prices,
+body.add-form.model-product .product-extra-tab-panel fieldset.product-form-col-prices {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  body.change-form.model-product .product-form-fieldsets-grid--top,
+  body.add-form.model-product .product-form-fieldsets-grid--top {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main,
+  body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-main,
+  body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-uom,
+  body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-form-col-uom,
+  body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-general,
+  body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-general,
+  body.change-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-images,
+  body.add-form.model-product .product-form-fieldsets-grid--top > .product-main-section > fieldset.product-fs-images {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* Минималистичный блок цен */
+body.change-form.model-product fieldset.module.product-form-col-prices,
+body.add-form.model-product fieldset.module.product-form-col-prices {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+body.change-form.model-product fieldset.product-form-col-prices > h2,
+body.add-form.model-product fieldset.product-form-col-prices > h2 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--body-quiet-color, #64748b);
+  margin: 0 0 0.4rem;
+  padding: 0;
+  border: none;
+}
+
+body.change-form.model-product fieldset.product-form-col-prices .form-row,
+body.add-form.model-product fieldset.product-form-col-prices .form-row {
+  padding: 0.12rem 0;
+}
+
+body.change-form.model-product fieldset.product-form-col-prices .form-row label,
+body.add-form.model-product fieldset.product-form-col-prices .form-row label {
+  font-size: 0.75rem;
+  color: var(--body-quiet-color, #64748b);
+}
+
+body.change-form.model-product fieldset.product-form-col-prices input,
+body.add-form.model-product fieldset.product-form-col-prices input {
+  font-size: 0.8125rem;
+}
+
+/* Подвкладки «Цены» / «Стоимость» внутри блока цен */
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subtabs-bar,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subtabs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border-bottom: 1px solid var(--hairline-color, #e2e8f0);
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab {
+  cursor: pointer;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.35rem 0.55rem 0.3rem;
+  margin-bottom: -1px;
+  color: var(--body-quiet-color, #64748b);
+  font-family: inherit;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab:hover,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab:hover {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab.active,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subtab.active {
+  color: #0f172a;
+  border-bottom-color: #64748b;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanels,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanels {
+  margin: 0;
+  padding: 0;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanel,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanel {
+  display: none;
+  margin: 0;
+  padding: 0;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanel.active,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-subpanel.active {
+  display: block;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-row,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-row {
+  padding: 0.12rem 0;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-inner,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-inner {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  width: 100%;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-label,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-label {
+  font-size: 0.75rem;
+  color: var(--body-quiet-color, #64748b);
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-value,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--body-fg, #1e293b);
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-hint,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.6875rem;
+  color: #b45309;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-formula,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-calc-formula {
+  margin: 0.2rem 0 0;
+  font-size: 0.6875rem;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-apply-btns,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-apply-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+body.change-form.model-product fieldset.product-prices-tabs-host .product-prices-apply-btn,
+body.add-form.model-product fieldset.product-prices-tabs-host .product-prices-apply-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* «Единицы и габариты» — как блок «Цены»: та же рамка, фон, заголовок, отступы строк, кегль подписей и полей */
+body.change-form.model-product fieldset.module.product-form-col-uom,
+body.add-form.model-product fieldset.module.product-form-col-uom {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+body.change-form.model-product fieldset.product-form-col-uom > h2,
+body.add-form.model-product fieldset.product-form-col-uom > h2 {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--body-quiet-color, #64748b);
+  margin: 0 0 0.4rem;
+  padding: 0;
+  border: none;
+}
+
+body.change-form.model-product fieldset.product-form-col-uom .form-row,
+body.add-form.model-product fieldset.product-form-col-uom .form-row {
+  padding: 0.12rem 0;
+}
+
+body.change-form.model-product fieldset.product-form-col-uom .form-row label,
+body.add-form.model-product fieldset.product-form-col-uom .form-row label {
+  font-size: 0.75rem;
+  color: var(--body-quiet-color, #64748b);
+}
+
+body.change-form.model-product fieldset.product-form-col-uom input,
+body.add-form.model-product fieldset.product-form-col-uom input {
+  font-size: 0.8125rem;
+}
+
+/* «Описание»: ширина задаётся скриптом как у «Наименование»; до загрузки JS — не на всю строку */
+body.change-form.model-product textarea#id_description {
+  width: auto;
+  max-width: 100%;
+  field-sizing: content;
+  min-height: 3.25em;
+}
+
+#product-uom-area-preview {
+  max-width: min(100%, 28rem);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-family: inherit;
+  margin: 0 0 0.5rem !important;
+}
+
+body.change-form.model-product fieldset.module.compact-uom.product-form-col-uom,
+body.add-form.model-product fieldset.module.compact-uom.product-form-col-uom {
+  margin-bottom: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-family: inherit;
+}
+
+fieldset.module.compact-uom > .form-row {
+  padding: 0.12rem 0;
+  overflow: visible;
+}
+
+body.change-form.model-product fieldset.module.compact-uom.product-form-col-uom .description,
+body.add-form.model-product fieldset.module.compact-uom.product-form-col-uom .description {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-family: inherit;
+  margin: 0 0 0.5rem;
+  max-width: 48rem;
+  color: var(--body-quiet-color, #64748b);
+}
+
+/* Всплывающие подсказки «?» — тот же кегль, что у полей */
+fieldset.module.compact-uom .laser-help-panel {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-family: inherit;
+}
+
+/*
+ * «Единицы и габариты»: два столбца рядом (grid-auto-flow: column).
+ * Слева 4 поля: длина м, длина/ширина/толщина мм; справа 3: пл. м², см², мм².
+ */
+fieldset.module.compact-uom .form-row .form-multiline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: repeat(4, auto);
+  grid-auto-flow: column;
+  column-gap: 1.25rem;
+  row-gap: 0.5rem;
+  align-items: center;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline > div {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* «?» | подпись (А) слева | ввод (Б) справа — одна строка, как в остальной форме */
+fieldset.module.compact-uom .form-row .form-multiline > div > .laser-field-with-help:not(.laser-field-with-help--checkbox) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline .laser-field-help-col {
+  align-self: center;
+  padding-top: 0;
+  flex-shrink: 0;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline .laser-field-main-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/*
+ * В узкой правой колонке flex + label 11rem даёт перенос «подпись над полем».
+ * Сетка: колонка А = по ширине текста, колонка Б = остаток — всегда одна строка.
+ */
+fieldset.module.compact-uom .form-row .form-multiline .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  display: block;
+  float: none;
+  grid-column: 1;
+  width: auto;
+  min-width: 0;
+  max-width: min(11rem, 100%);
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-family: inherit;
+  margin: 0;
+  padding: 0 0.25rem 0 0;
+  font-weight: 500;
+  text-align: left;
+  color: var(--body-quiet-color, #64748b);
+}
+
+fieldset.module.compact-uom .form-row .form-multiline .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
+}
+
+/* Одиночные строки без multiline (если останутся) */
+fieldset.module.compact-uom .form-row .fieldBox label {
+  display: block;
+  float: none;
+  width: max-content;
+  max-width: var(--laser-admin-field-label-width, 11rem);
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-family: inherit;
+  margin: 0;
+  padding: 0 0.125rem 0 0;
+  font-weight: 500;
+  text-align: left;
+  color: var(--body-quiet-color, #64748b);
+}
+
+fieldset.module.compact-uom .form-row:not(:has(.form-multiline)) .fieldBox .flex-container:not(.checkbox-row) {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.125rem;
+}
+
+fieldset.module.compact-uom .form-row:not(:has(.form-multiline)) .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  gap: 0.35rem 0.125rem;
+}
+
+fieldset.module.compact-uom .form-row:not(:has(.form-multiline)) .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  width: max-content;
+  max-width: var(--laser-admin-field-label-width, 11rem);
+  min-width: 0;
+  flex: 0 0 auto;
+  padding: 0 0.125rem 0 0;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline > div > .laser-field-with-help:not(.laser-field-with-help--checkbox),
+fieldset.module.compact-uom > .form-row:not(:has(.form-multiline)) > div > .laser-field-with-help:not(.laser-field-with-help--checkbox) {
+  gap: 0.25rem;
+}
+
+/* Ввод: высота и отступы как в admin_autosize_fields.css */
+fieldset.module.compact-uom input.vTextField,
+fieldset.module.compact-uom input[type="text"],
+fieldset.module.compact-uom input[type="number"] {
+  width: auto;
+  min-width: 4.5ch;
+  max-width: var(--laser-admin-input-max-width, 100%);
+  box-sizing: border-box;
+  min-height: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  padding: var(--laser-admin-control-padding-y, 1px) var(--laser-admin-control-padding-x, 8px);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-family: inherit;
+  color: var(--body-fg, #1e293b);
+  field-sizing: content;
+  vertical-align: middle;
+}
+
+/* В сетке «Единицы»: ввод (Б) справа от подписи, растягивается в оставшейся ширине ячейки */
+fieldset.module.compact-uom .form-row .form-multiline input.vTextField,
+fieldset.module.compact-uom .form-row .form-multiline input[type="text"],
+fieldset.module.compact-uom .form-row .form-multiline input[type="number"] {
+  width: auto;
+  min-width: 4.5ch;
+  max-width: 100%;
+  field-sizing: content;
+}
+
+/* Единица измерения часто короткая */
+fieldset.module.compact-uom .field-unit input.vTextField,
+fieldset.module.compact-uom .field-unit input[type="text"] {
+  max-width: var(--laser-admin-input-max-width, 100%);
+}
+
+/* Вычисляемые площади — та же высота, что у полей ввода */
+fieldset.module.compact-uom .readonly {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: auto;
+  max-width: var(--laser-admin-input-max-width, 100%);
+  min-height: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  margin: 0;
+  padding: var(--laser-admin-control-padding-y, 1px) var(--laser-admin-control-padding-x, 8px);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--body-fg, #1e293b);
+  background: var(--darkened-bg, #f8f8f8);
+  border: 1px solid var(--hairline-color, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) inset;
+  vertical-align: middle;
+}
+
+fieldset.module.compact-uom .form-row .form-multiline .readonly {
+  display: inline-flex;
+  width: auto;
+  min-width: 4.5ch;
+  max-width: 100%;
+}
+
+/* Иконка «?» в том же масштабе, что текст блока */
+fieldset.module.compact-uom .laser-help-trigger.help-icon-tooltip,
+fieldset.module.compact-uom button.laser-help-trigger {
+  font-size: 0.75rem;
+}
+
+fieldset.module.compact-uom .laser-help-trigger-icon {
+  font-size: 0.75rem;
+  font-weight: 300;
+}
+
+/* Узкая ширина: один столбец — сначала габариты, затем вес/площади/объём */
+@media (max-width: 720px) {
+  fieldset.module.compact-uom .form-row .form-multiline {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    column-gap: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  fieldset.module.compact-uom input.vTextField,
+  fieldset.module.compact-uom input[type="text"],
+  fieldset.module.compact-uom input[type="number"] {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Шаг 1 — общее уплотнение карточки товара/услуги (все fieldset + строки формы)
+   -------------------------------------------------------------------------- */
+body.change-form.model-product #content-main form > p,
+body.change-form.model-product #content-main > form > fieldset.module {
+  margin-bottom: 0.65rem;
+}
+
+body.change-form.model-product fieldset.module {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+body.change-form.model-product fieldset.module > h2.fieldset-heading,
+body.change-form.model-product fieldset.module details > summary .fieldset-heading,
+body.change-form.model-product fieldset.module .inline-heading {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+  padding: 0;
+}
+
+body.change-form.model-product fieldset.module details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+body.change-form.model-product fieldset.module details > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.change-form.model-product fieldset.module .aligned .form-row {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+body.change-form.model-product fieldset.module .description {
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+body.change-form.model-product .submit-row {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+}
+
+/* Шаг 3 — свёрнутая справка под «Единицы и габариты» */
+fieldset.module.compact-uom .description .product-uom-desc-lead {
+  margin: 0 0 0.35rem;
+}
+
+fieldset.module.compact-uom .product-uom-desc-details {
+  margin: 0;
+}
+
+fieldset.module.compact-uom .product-uom-desc-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--body-quiet-color, #666);
+  margin-bottom: 0;
+}
+
+fieldset.module.compact-uom .product-uom-desc-body {
+  margin: 0.4rem 0 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--hairline-color, #e0e0e0);
+  color: var(--body-quiet-color, #666);
+}
+
+fieldset.module.compact-uom .product-uom-desc-body p {
+  margin: 0 0 0.35rem;
+}
+
+fieldset.module.compact-uom .product-uom-desc-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Блок «Как создавать штрихкоды» перед инлайнами */
+body.change-form.model-product .product-barcode-help {
+  margin-bottom: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--darkened-bg, #f8f9fa);
+  border: 1px solid var(--hairline-color, #e0e0e0);
+  border-radius: 4px;
+}
+
+body.change-form.model-product .product-barcode-help__details {
+  margin: 0;
+}
+
+body.change-form.model-product .product-barcode-help__summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+body.change-form.model-product .product-barcode-help__summary::-webkit-details-marker {
+  display: none;
+}
+
+body.change-form.model-product .product-barcode-help__body {
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--hairline-color, #e0e0e0);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+body.change-form.model-product .product-barcode-help__body ol {
+  margin: 0 0 0 1.1em;
+  padding: 0;
+}
+
+body.change-form.model-product .product-barcode-help__note {
+  margin: 0.45rem 0 0;
+  color: var(--body-quiet-color, #666);
+}
+
+/* --------------------------------------------------------------------------
+   Шаг 4 — компактные табличные инлайны (класс compact-inline на inline)
+   -------------------------------------------------------------------------- */
+body.change-form.model-product fieldset.module.compact-inline {
+  margin-bottom: 0.55rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+body.change-form.model-product fieldset.module.compact-inline .inline-heading {
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+body.change-form.model-product fieldset.module.compact-inline .tabular table {
+  margin-bottom: 0.25rem;
+}
+
+body.change-form.model-product fieldset.module.compact-inline .tabular th,
+body.change-form.model-product fieldset.module.compact-inline .tabular td {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+}
+
+body.change-form.model-product fieldset.module.compact-inline .tabular thead th {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+body.change-form.model-product fieldset.module.compact-inline .tabular .vTextField,
+body.change-form.model-product fieldset.module.compact-inline .tabular input[type="text"],
+body.change-form.model-product fieldset.module.compact-inline .tabular input[type="number"],
+body.change-form.model-product fieldset.module.compact-inline .tabular select {
+  padding: var(--laser-admin-control-padding-y, 1px) var(--laser-admin-control-padding-x, 8px);
+  font-size: var(--laser-admin-form-font-size, 0.8125rem);
+  min-height: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  line-height: var(--laser-admin-control-line-height, 1.2);
+}
+
+body.change-form.model-product fieldset.module.compact-inline .add-row td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+/* --------------------------------------------------------------------------
+   Модификации: делаем таблицу читаемой при большом числе вариантов
+   -------------------------------------------------------------------------- */
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular {
+  overflow-x: auto;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular table {
+  min-width: 900px;
+}
+
+body.change-form.model-product .product-mods-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+body.change-form.model-product .product-mods-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+body.change-form.model-product .product-mods-filter--toggle {
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+body.change-form.model-product .product-mods-filter select {
+  min-width: 72px;
+  height: 22px;
+  font-size: 0.78rem;
+  padding: 1px 6px;
+}
+
+body.change-form.model-product
+  fieldset.product-extra-inline--modifications
+  .tabular
+  tr.product-mod-row-inactive {
+  opacity: 0.55;
+  background: #f8fafc !important;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular th,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular th.original,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.original {
+  display: none !important;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular th.drag,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.drag,
+body.add-form.model-product fieldset.product-extra-inline--modifications .tabular th.drag,
+body.add-form.model-product fieldset.product-extra-inline--modifications .tabular td.drag {
+  display: none !important;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular thead th:first-child,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular tbody td:first-child,
+body.add-form.model-product fieldset.product-extra-inline--modifications .tabular thead th:first-child,
+body.add-form.model-product fieldset.product-extra-inline--modifications .tabular tbody td:first-child {
+  display: none !important;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-sort_order,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-name_display,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-thickness_display,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-grade_display,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-sanding_display,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-abrasive_display,
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-planned_price {
+  min-width: 6.5rem;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-name_display {
+  min-width: 17rem;
+  max-width: 22rem;
+  white-space: normal;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular td.field-is_active {
+  min-width: 5.5rem;
+  text-align: center;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .tabular tr.form-row:nth-child(even) {
+  background: #fafcff;
+}
+
+/* В модификациях убираем локальные "?" у каждой ячейки/заголовка */
+body.change-form.model-product fieldset.product-extra-inline--modifications .laser-help-trigger,
+body.change-form.model-product fieldset.product-extra-inline--modifications .help-icon-tooltip,
+body.change-form.model-product fieldset.product-extra-inline--modifications .laser-help-trigger-icon,
+body.change-form.model-product fieldset.product-extra-inline--modifications .laser-field-help-col,
+body.change-form.model-product fieldset.product-extra-inline--modifications .help {
+  display: none !important;
+}
+
+body.change-form.model-product fieldset.product-extra-inline--modifications .laser-field-main-col {
+  padding-left: 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Контрагент (supplier): «?» как у других полей; ссылки «изменить/добавить» скрыты; «+» — ссылка на создание контрагента.
+   Перебиваем admin_field_help.css (flex + фикс. width у label) — иначе подпись и Select2 не в одной линии с колонкой.
+   Первая колонка 13rem: «Контрагент:» + сетка, не flex-конфликт.
+   -------------------------------------------------------------------------- */
+body.change-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: grid !important;
+  grid-template-columns: 13rem minmax(0, 1fr) !important;
+  column-gap: 0.5rem !important;
+  row-gap: 0 !important;
+  align-items: center !important;
+  align-content: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  flex: none !important;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+}
+
+body.change-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  font-size: 0.75rem !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  color: var(--body-quiet-color, #64748b) !important;
+  display: block !important;
+  float: none !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  align-self: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 0.5rem 0 0 !important;
+  flex: none !important;
+  box-sizing: border-box !important;
+}
+
+body.change-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > .related-widget-wrapper,
+body.add-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > .related-widget-wrapper {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  align-self: center !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 0.35rem;
+}
+
+/* Узкие экраны: та же сетка, колонка подписи гибкая */
+@media (max-width: 600px) {
+  body.change-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+  body.add-form.model-product fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+    display: grid !important;
+    grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) !important;
+    flex-direction: unset !important;
+    align-items: center !important;
+  }
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .related-widget-wrapper-link,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .related-widget-wrapper-link {
+  display: none !important;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .related-widget-wrapper,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .related-widget-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .select2-container,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .select2-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+  max-width: 100%;
+}
+
+body.change-form.model-product fieldset.product-fs-general .form-row.field-supplier .select2-selection--single,
+body.add-form.model-product fieldset.product-fs-general .form-row.field-supplier .select2-selection--single {
+  padding-right: 1.5rem !important;
+}
+
+/* «+» в потоке flex рядом с Select2 — вертикально по центру строки поиска (не absolute внутри обёртки) */
+body.change-form.model-product .product-supplier-plus-btn,
+body.add-form.model-product .product-supplier-plus-btn {
+  position: static;
+  flex: 0 0 auto;
+  align-self: center;
+  z-index: 2;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+body.change-form.model-product .product-supplier-plus-btn:hover,
+body.add-form.model-product .product-supplier-plus-btn:hover {
+  background: rgba(37, 99, 235, 0.22);
+}
+
+body.change-form.model-product a.product-supplier-plus-btn,
+body.add-form.model-product a.product-supplier-plus-btn {
+  text-decoration: none;
+}
+
+/*
+ * Поставщик: выравниваем по левому краю точно как остальные подписи в «Общие данные».
+ * Перебиваем responsive.css (label 1rem и display: unset/column на flex-container).
+ */
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 0.35rem 0.75rem !important;
+}
+
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  width: var(--laser-admin-field-label-width, 11rem) !important;
+  min-width: var(--laser-admin-field-label-width, 11rem) !important;
+  max-width: var(--laser-admin-field-label-width, 11rem) !important;
+  margin: 0 !important;
+  padding: 0 0.5rem 0 0 !important;
+  text-indent: 0 !important;
+  text-align: left !important;
+  float: none !important;
+}
+
+body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label),
+body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 767px) {
+  body.change-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row),
+  body.add-form.model-product #product_form fieldset.module.aligned.product-fs-general .form-row.field-supplier .laser-field-main-col > .flex-container:not(.checkbox-row) {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+  }
+}

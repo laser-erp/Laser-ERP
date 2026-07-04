@@ -1,0 +1,27 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html>
+  <head><title>{% translate 'Popup closing…' %}</title></head>
+  <body>
+    {# Если открыто в той же вкладке (нет opener) — редирект на исходную страницу с подстановкой выбранного значения #}
+    <script id="django-admin-popup-response-constants" data-popup-response="{{ popup_response_data|escape }}" data-redirect-back-url="{{ redirect_back_url|default:''|escapejs }}">
+(function() {
+  if (window.opener) return;
+  var scriptTag = document.getElementById('django-admin-popup-response-constants');
+  var dataStr = scriptTag && scriptTag.getAttribute('data-popup-response');
+  if (!dataStr) return;
+  try {
+    var data = JSON.parse(dataStr);
+    var ref = scriptTag.getAttribute('data-redirect-back-url') || document.referrer;
+    if (ref) {
+      var sep = ref.indexOf('?') >= 0 ? '&' : '?';
+      var url = ref + sep + '_selected_id=' + encodeURIComponent(data.value) + '&_selected_model=' + encodeURIComponent(data.model || '');
+      window.location.replace(url);
+      return;
+    }
+  } catch (e) {}
+})();
+    </script>
+    <script src="{% static 'admin/js/popup_response.js' %}"></script>
+  </body>
+</html>

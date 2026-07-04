@@ -1,0 +1,64 @@
+{% extends "core/base.html" %}
+{% block title %}Заказ #{{ order.id }}{% endblock %}
+{% block content %}
+<a href="{% url 'account_orders' %}" class="btn btn-link px-0 mb-2">← Назад к моим заказам</a>
+<form method="post" action="{% url 'account_repeat_order' order.id %}" class="d-inline ms-2">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-sm btn-outline-success mb-2">Повторить заказ</button>
+</form>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card card-body border-0 shadow-sm">
+      <h1 class="h4 mb-3">Заказ №{{ order.id }}</h1>
+      <div class="row g-2 mb-3">
+        <div class="col-md-6"><strong>Дата:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</div>
+        <div class="col-md-6"><strong>Статус:</strong> {{ order.get_status_display }}</div>
+        <div class="col-md-6"><strong>Оплата:</strong> {{ payment_label }}</div>
+        <div class="col-md-6"><strong>Доставка:</strong> {{ delivery_label }}</div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Цена</th>
+              <th>Кол-во</th>
+              <th>Сумма</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in line_items %}
+            <tr>
+              <td>{{ row.item.product.name }}</td>
+              <td>{{ row.item.planned_price|default:"0.00" }} ₽</td>
+              <td>{{ row.item.quantity }}</td>
+              <td>{{ row.line_total }} ₽</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-body border-0 shadow-sm storefront-summary">
+      <h5 class="mb-3">Итог заказа</h5>
+      <div class="d-flex justify-content-between mb-3">
+        <span>Сумма</span><strong>{{ order_total }} ₽</strong>
+      </div>
+      {% if meta.delivery_address %}
+      <p class="mb-1"><strong>Адрес:</strong> {{ meta.delivery_address }}</p>
+      {% endif %}
+      {% if meta.delivery_city %}
+      <p class="mb-1"><strong>Город:</strong> {{ meta.delivery_city }}</p>
+      {% endif %}
+      {% if meta.transport_company %}
+      <p class="mb-0"><strong>ТК:</strong> {{ meta.transport_company }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

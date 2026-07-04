@@ -1,0 +1,30 @@
+/* «?» слева от «Добавить производственное задание» в хлебных крошках */
+.pa-add-breadcrumb-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: baseline;
+}
+
+.pa-breadcrumb-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid #417690;
+  color: #417690;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+}
+
+.pa-breadcrumb-help:hover,
+.pa-breadcrumb-help:focus-visible {
+  background: #e8f4fc;
+  outline: none;
+}

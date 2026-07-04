@@ -1,0 +1,1149 @@
+/* Позиции техкарты: шапка и строки (6 колонок). Восстановление старого вида — комментарий RESTORE в techcard_items_tabs.js */
+
+.techcard-items-inline-group {
+  --tc-stage-pref: 132px;
+  --tc-code-pref: 72px;
+  /* Ширина колонки «Материал» (ручка ресайза), не minmax(...,1fr) — иначе визуально не двигается */
+  --tc-material-pref: 220px;
+  --tc-norm-pref: 132px;
+  --tc-tech-pref: 120px;
+  /* Этап | Код | Материал | Норма | Техкарта | Параметры (⚙ + чекбокс) */
+  --tc-items-cols: minmax(72px, var(--tc-stage-pref, 132px)) minmax(48px, var(--tc-code-pref, 72px))
+    minmax(120px, var(--tc-material-pref, 220px)) minmax(90px, var(--tc-norm-pref, 132px))
+    minmax(0px, var(--tc-tech-pref, 120px)) 44px;
+}
+
+.techcard-items-inline-group.tc-tech-col-collapsed {
+  --tc-tech-pref: 0px;
+}
+
+.techcard-items-inline-group.tc-tech-col-collapsed .tc-mgh-tech .tc-col-resizer {
+  display: none;
+}
+
+.techcard-items-inline-group .tc-materials-grid-head {
+  display: grid;
+  grid-template-columns: var(--tc-items-cols);
+  gap: 6px 10px;
+  align-items: center;
+  padding: 8px 12px;
+  font-family: var(--font-family-primary, inherit);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #374151;
+  text-transform: none;
+  letter-spacing: normal;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-bottom: 1px solid #2563eb;
+  box-sizing: border-box;
+  margin: 0 0 0;
+}
+
+.techcard-items-inline-group .tc-mgh-select-all-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.techcard-items-inline-group .tc-mgh-select-all {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.techcard-items-inline-group .tc-mgh-material {
+  position: relative;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-mgh-move-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  position: relative;
+}
+
+.techcard-items-inline-group .tc-mgh-move-btn {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  line-height: 1.2;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.techcard-items-inline-group .tc-mgh-move-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.techcard-items-inline-group .tc-mgh-move-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 200px;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.techcard-items-inline-group .tc-mgh-move-menu li {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #334155;
+}
+
+.techcard-items-inline-group .tc-mgh-move-menu li:hover {
+  background: #f1f5f9;
+}
+
+.techcard-items-inline-group .tc-mgh-material-head-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-mgh-params {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  min-height: 32px;
+}
+
+.techcard-items-inline-group .tc-mgh-params .tc-mgh-gear {
+  font-size: 14px;
+  line-height: 1;
+  color: #2563eb;
+  user-select: none;
+}
+
+.techcard-items-inline-group .tc-mgh-tech-collapse-label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  line-height: 1;
+}
+
+.techcard-items-inline-group .tc-mgh-tech-col-collapse {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.techcard-items-inline-group .tc-mgh-cell:not(.tc-mgh-gear-spacer) {
+  font-size: 10px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.techcard-items-inline-group .tc-mgh-cell .tc-mgh-help {
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.techcard-items-inline-group .tc-mgh-cell.tc-mgh-stage,
+.techcard-items-inline-group .tc-mgh-cell.tc-mgh-code,
+.techcard-items-inline-group .tc-mgh-cell.tc-mgh-material,
+.techcard-items-inline-group .tc-mgh-cell.tc-mgh-norm,
+.techcard-items-inline-group .tc-mgh-cell.tc-mgh-tech {
+  position: relative;
+  padding-right: 10px;
+}
+
+.techcard-items-inline-group .tc-col-resizer,
+.techcard-items-inline-group .tc-stage-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+  user-select: none;
+}
+
+.techcard-items-inline-group .tc-col-resizer:hover,
+.techcard-items-inline-group .tc-stage-col-resizer:hover {
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.12));
+}
+
+/* Одна панель «Материалы» без подвкладок */
+.techcard-items-inline-group .tc-item-panel--unified {
+  display: block !important;
+  max-width: none;
+}
+
+/* Панель: тип позиции + импорт + иконки (поиск — внутри каждого этапа) */
+.techcard-items-inline-group .tc-item-global-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  margin-bottom: 12px;
+}
+
+.techcard-items-inline-group .tc-item-global-toolbar .tc-item-search-icons {
+  margin-left: auto;
+}
+
+.techcard-items-inline-group .tc-materials-stages-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 8px;
+  /* visible: меню ⋯ позиционируется под кнопкой и иначе обрезается снизу */
+  overflow: visible;
+  border: 1px solid #e5e7eb;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-stages-empty {
+  font-size: 13px;
+  color: #64748b;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+}
+
+.techcard-items-inline-group .tc-stage-panel {
+  background: #fff;
+  overflow: visible;
+  border: none;
+  border-bottom: 1px solid #2563eb;
+  border-radius: 0;
+}
+
+.techcard-items-inline-group .tc-stage-panel:last-child {
+  border-bottom: 1px solid #2563eb;
+}
+
+/* Одна сетка на этап: рейка в колонке «Этап» на все строки позиций; карточки — subgrid под шапку */
+.techcard-items-inline-group .tc-stage-panel-inner {
+  display: grid;
+  grid-template-columns: var(--tc-items-cols);
+  column-gap: 10px;
+  row-gap: 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+.techcard-items-inline-group .tc-stage-name-rail {
+  grid-column: 1;
+  z-index: 2;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 8px 6px;
+  margin: 0;
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.25;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-stage-items {
+  display: contents;
+  min-height: 0;
+  border-bottom: none;
+}
+
+.techcard-items-inline-group .tc-stage-items:not(:empty) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.techcard-items-inline-group .tc-stage-items:empty {
+  min-height: 0;
+}
+
+/* Подвал этапа: поиск и кнопки только в колонке «Материал» (кол. 3), без захвата нормы/техкарты */
+.techcard-items-inline-group .tc-stage-search-footer {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: var(--tc-items-cols);
+  column-gap: 10px;
+  row-gap: 0;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-stage-search-footer-skip {
+  grid-column: 1 / 3;
+  min-height: 1px;
+}
+
+.techcard-items-inline-group .tc-stage-search-footer-inner {
+  grid-column: 3;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.techcard-items-inline-group .tc-item-search-row--stage {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 20px;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-search-row--stage .tc-item-search-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.techcard-items-inline-group .tc-item-search-row--stage .tc-item-add-from-directory,
+.techcard-items-inline-group .tc-item-search-row--stage .tc-item-import--stage {
+  flex-shrink: 0;
+  margin-left: 0;
+  white-space: nowrap;
+}
+
+/* Тип позиции — в строке этапа, не в общей верхней панели */
+.techcard-items-inline-group .tc-item-kind-inline {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.techcard-items-inline-group .tc-item-kind-inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: #4b5563;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.techcard-items-inline-group .tc-item-kind-select--stage {
+  min-width: 118px;
+  max-width: 200px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 18px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 3px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-import--stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* Иконки справа от строки поиска */
+.techcard-items-inline-group .tc-item-search-icons {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+  flex-shrink: 0;
+  height: 20px;
+}
+
+.techcard-items-inline-group .tc-item-search-icon-help {
+  opacity: 0.8;
+  display: block;
+  cursor: help;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.techcard-items-inline-group .tc-item-search-icon-gear {
+  font-size: 12px;
+  line-height: 20px;
+  color: #2563eb;
+  cursor: default;
+  user-select: none;
+}
+
+.techcard-items-inline-group .tc-item-kind-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.techcard-items-inline-group .tc-item-kind-field label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #4b5563;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+  line-height: 20px;
+}
+
+.techcard-items-inline-group .tc-item-kind-select {
+  min-width: 160px;
+  max-width: 220px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 18px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 3px;
+  background: #fff;
+  box-sizing: border-box;
+  text-align: left;
+  text-align-last: left;
+}
+
+.techcard-items-inline-group .tc-item-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 12px;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Одна линия, высота строки и контролов 20px (перекрывает базовый .tc-item-search-row) */
+.techcard-items-inline-group .tc-item-search-row.tc-item-search-row--unified {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: 20px;
+  height: 20px;
+  overflow-x: auto;
+}
+
+.techcard-items-inline-group .tc-item-search-row--unified .tc-item-search-wrap {
+  align-self: center;
+  min-height: 20px;
+}
+
+.techcard-items-inline-group .tc-item-add-from-directory {
+  flex-shrink: 0;
+  margin-top: 0;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #c4c4c4;
+  border-radius: 3px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-add-from-directory:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.techcard-items-inline-group .tc-item-import {
+  flex-shrink: 0;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #c4c4c4;
+  border-radius: 3px;
+  cursor: not-allowed;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-import:not(:disabled) {
+  cursor: pointer;
+  color: #374151;
+  background: #fff;
+}
+
+.techcard-items-inline-group .tc-item-search-wrap {
+  position: relative;
+  z-index: 10;
+  flex: 1 1 240px;
+  min-width: 160px;
+  max-width: 560px;
+}
+
+.techcard-items-inline-group .tc-item-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 20px;
+  min-height: 20px;
+  font-size: 10px;
+  padding: 0 8px;
+  line-height: 18px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 3px;
+}
+
+.techcard-items-inline-group .tc-item-dropdown {
+  display: none;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.techcard-items-inline-group .tc-item-dropdown.visible {
+  display: block;
+}
+
+.techcard-items-inline-group .tc-item-dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.techcard-items-inline-group .tc-item-dropdown li:hover {
+  background: #f1f5f9;
+}
+
+.techcard-items-inline-group .tc-item-chosen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0 0 12px;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  background: #fff;
+}
+
+.techcard-items-inline-group .tc-item-chosen-list:empty {
+  display: none;
+}
+
+.techcard-items-inline-group .tc-item-chosen-list:not(:empty) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Карточка строки: те же 8 колонок, что шапка (кол. 2 под текст рейки — прозрачная) */
+.techcard-items-inline-group .tc-item-card {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  gap: 4px 8px;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  box-sizing: border-box;
+  transition: background-color 0.12s ease;
+  --tc-card-row-hover-bg: #fff59d;
+}
+
+@supports not (grid-template-columns: subgrid) {
+  .techcard-items-inline-group .tc-item-card {
+    grid-template-columns: var(--tc-items-cols);
+  }
+}
+
+.techcard-items-inline-group .tc-item-card:hover,
+.techcard-items-inline-group .tc-item-card:focus-within {
+  background-color: var(--tc-card-row-hover-bg);
+}
+
+.techcard-items-inline-group .tc-item-card-col-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.techcard-items-inline-group .tc-item-card-drag {
+  display: grid;
+  grid-template-columns: 3px 3px;
+  grid-template-rows: repeat(3, 3px);
+  gap: 2px;
+  padding: 2px;
+  cursor: grab;
+  border-radius: 3px;
+  user-select: none;
+}
+
+.techcard-items-inline-group .tc-item-card-drag:active {
+  cursor: grabbing;
+}
+
+.techcard-items-inline-group .tc-item-card-drag-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.techcard-items-inline-group .tc-item-card-col-chk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.techcard-items-inline-group .tc-item-card-select {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.techcard-items-inline-group .tc-item-card-col-stage-spacer {
+  min-height: 1px;
+  background: transparent;
+}
+
+.techcard-items-inline-group .tc-item-card-col-code {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-item-card input.vTextField {
+  box-sizing: border-box;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+}
+
+.techcard-items-inline-group .tc-item-card:hover input,
+.techcard-items-inline-group .tc-item-card:focus-within input,
+.techcard-items-inline-group .tc-item-card:hover select.tc-item-card-unit,
+.techcard-items-inline-group .tc-item-card:focus-within select.tc-item-card-unit,
+.techcard-items-inline-group .tc-item-card:hover select.tc-item-card-tech-select,
+.techcard-items-inline-group .tc-item-card:focus-within select.tc-item-card-tech-select {
+  background-color: #fff;
+}
+
+.techcard-items-inline-group .tc-item-card-norm-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-item-card-unit {
+  flex: 0 0 auto;
+  max-width: 72px;
+  height: 22px;
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-card-col-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.techcard-items-inline-group .tc-item-card-menu-wrap {
+  position: relative;
+}
+
+.techcard-items-inline-group .tc-item-card-kebab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.techcard-items-inline-group .tc-item-card-kebab:hover {
+  background: #e2e8f0;
+  box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
+.techcard-items-inline-group .tc-item-card-kebab-dot {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.techcard-items-inline-group .tc-item-card-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10050;
+  min-width: 220px;
+  margin-top: 4px;
+  padding: 6px 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.techcard-items-inline-group .tc-item-card-menu.tc-item-card-menu--flip {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.techcard-items-inline-group .tc-item-card-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #334155;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.techcard-items-inline-group .tc-item-card-menu button:hover {
+  background: #f1f5f9;
+}
+
+.techcard-items-inline-group .tc-item-card-material-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 20px;
+  align-self: stretch;
+  background-color: transparent;
+}
+
+.techcard-items-inline-group .tc-item-card-material-cell > .tc-item-card-drag {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.techcard-items-inline-group .tc-item-card-material-cell > .tc-item-card-select {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.techcard-items-inline-group .tc-item-card-tech-cell {
+  align-self: center;
+  background-color: transparent;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-stage-items .tc-item-card:last-child {
+  border-bottom: none;
+}
+
+.techcard-items-inline-group .tc-item-card-stage {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.3;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-item-card-stage-select {
+  box-sizing: content-box;
+  width: auto;
+  min-width: 8ch;
+  max-width: min(100%, 48ch);
+  field-sizing: content;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  background: #fff;
+  text-align: left;
+  text-align-last: left;
+}
+
+.techcard-items-inline-group .tc-item-card-stage-empty {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.techcard-items-inline-group .tc-item-card-material-cell > .tc-item-card-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.techcard-items-inline-group .tc-item-card-name {
+  font-size: 11px;
+  color: #111827;
+  line-height: 18px;
+  max-height: 22px;
+  margin-bottom: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.techcard-items-inline-group .tc-item-card-tech-select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 22px;
+  min-height: 22px;
+  font-size: 10px;
+  padding: 0 4px;
+}
+
+.techcard-items-inline-group .tc-item-card-qty {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 3ch;
+  max-width: 72px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  font-size: 10px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.techcard-items-inline-group .tc-item-card-qty::placeholder,
+.techcard-items-inline-group .tc-item-card-note::placeholder {
+  color: #94a3b8;
+}
+
+.techcard-items-inline-group .tc-item-card-tech-placeholder {
+  font-size: 10px;
+  line-height: 18px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.techcard-items-inline-group .tc-item-card-tech-link {
+  font-size: 10px;
+  line-height: 18px;
+  color: #2563eb;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.techcard-items-inline-group .tc-item-card-tech-link:hover {
+  text-decoration: underline;
+}
+
+/* Таблица инлайна остаётся в DOM для POST; интерфейс — карточки. Не раскрывать при ошибках валидации
+   (раньше класс techcard-items-backend--errors в tabular.html). Откат: условный класс в шаблоне + стили :not/--errors. */
+.techcard-items-backend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tc-items-custom-fieldset {
+  margin-bottom: 0 !important;
+  overflow: visible;
+}
+
+/* Модальное окно выбора материалов (несколько позиций + норма за раз) */
+.tc-mp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.tc-mp-overlay[hidden] {
+  display: none !important;
+}
+
+.tc-mp-dialog {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  width: min(1120px, 100%);
+  max-height: min(88vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.tc-mp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tc-mp-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.tc-mp-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tc-mp-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.tc-mp-toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tc-mp-search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 480px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.tc-mp-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tc-mp-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid #e2e8f0;
+  overflow-y: auto;
+  background: #f8fafc;
+  padding: 8px 0;
+}
+
+.tc-mp-group-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.tc-mp-group-btn:hover {
+  background: #e2e8f0;
+}
+
+.tc-mp-group-btn.is-active {
+  background: #bfdbfe;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.tc-mp-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tc-mp-table-wrap {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 200px;
+}
+
+.tc-mp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tc-mp-table th,
+.tc-mp-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tc-mp-table thead th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #475569;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tc-mp-table .tc-mp-col-qty {
+  width: 88px;
+}
+
+.tc-mp-table .tc-mp-col-qty input {
+  width: 100%;
+  max-width: 80px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.tc-mp-loadmore {
+  margin: 8px 12px 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+}
+
+.tc-mp-loadmore:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.tc-mp-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tc-mp-btn-primary {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.tc-mp-btn-primary:hover {
+  background: #15803d;
+}
+
+.tc-mp-btn-secondary {
+  padding: 8px 18px;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.tc-mp-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+.tc-mp-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0 0 0 auto;
+  align-self: center;
+  max-width: 280px;
+  text-align: right;
+}

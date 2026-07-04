@@ -1,0 +1,57 @@
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("", views.dashboard, name="dashboard"),
+    path("account/login/", views.account_login, name="account_login"),
+    path("account/register/", views.account_register, name="account_register"),
+    path("account/verify-email/<str:token>/", views.account_verify_email, name="account_verify_email"),
+    path("account/resend-verification/", views.account_resend_verification, name="account_resend_verification"),
+    path("account/logout/", views.account_logout, name="account_logout"),
+    path("account/preview-role/<str:role>/", views.set_storefront_preview_role, name="set_storefront_preview_role"),
+    path("catalog/", views.catalog, name="catalog"),
+    path("catalog/<int:product_id>/", views.product_detail, name="product_detail"),
+    path("production-request/", views.production_request_create, name="production_request_create"),
+    path("production-request/<int:request_id>/", views.production_request_detail, name="production_request_detail"),
+    path(
+        "production-request/<int:request_id>/issue-invoice/",
+        views.production_request_issue_invoice,
+        name="production_request_issue_invoice",
+    ),
+    path("production-request/success/<int:request_id>/", views.production_request_success, name="production_request_success"),
+    path("production-request/<int:request_id>/chat/", views.production_request_add_message, name="production_request_add_message"),
+    path("production-request/<int:request_id>/chat/messages/", views.production_request_chat_messages, name="production_request_chat_messages"),
+    path(
+        "production-request/<int:request_id>/chat/messages/<int:message_id>/edit/",
+        views.production_request_edit_message,
+        name="production_request_edit_message",
+    ),
+    path("cart/", views.cart_view, name="cart"),
+    path("checkout/", views.checkout, name="checkout"),
+    path("order/success/<int:order_id>/", views.order_success, name="order_success"),
+    path("account/orders/", views.account_orders, name="account_orders"),
+    path("account/orders/<int:order_id>/", views.account_order_detail, name="account_order_detail"),
+    path("account/orders/<int:order_id>/repeat/", views.account_repeat_order, name="account_repeat_order"),
+    path("account/production-requests/", views.account_production_requests, name="account_production_requests"),
+    path("employee/contracts/", views.employee_contracts, name="employee_contracts"),
+    path("employee/contracts/create/", views.employee_contract_create, name="employee_contract_create"),
+    path("employee/contracts/<int:contract_id>/", views.employee_contract_detail, name="employee_contract_detail"),
+    path("employee/production-requests/", views.employee_production_requests, name="employee_production_requests"),
+    path("employee/quarantine-files/", views.employee_quarantine_files, name="employee_quarantine_files"),
+    path("customer-invoices/<int:invoice_id>/", views.customer_invoice_detail, name="customer_invoice_detail"),
+    path("customer-invoices/<int:invoice_id>/print/", views.customer_invoice_print, name="customer_invoice_print"),
+    path(
+        "customer-invoices/<int:invoice_id>/mark-paid/",
+        views.customer_invoice_mark_paid,
+        name="customer_invoice_mark_paid",
+    ),
+    path(
+        "customer-invoices/<int:invoice_id>/send-to-chat/",
+        views.customer_invoice_send_to_chat,
+        name="customer_invoice_send_to_chat",
+    ),
+    path("products/", views.product_list, name="product_list"),
+    path("orders/", views.order_list, name="order_list"),
+    path("my-work/", views.my_work, name="my_work"),
+]

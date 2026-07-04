@@ -1,0 +1,88 @@
+{% extends "core/base.html" %}
+{% block title %}Заказ на производство{% endblock %}
+{% block content %}
+<h1 class="mb-3">Заказ на производство</h1>
+<p class="text-muted">Опишите требования к изготовлению. Менеджер проверит запрос и свяжется с вами.</p>
+
+{% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="card card-body border-0 shadow-sm">
+  <form method="post" enctype="multipart/form-data" class="row g-3">
+    {% csrf_token %}
+    <div class="col-md-6">
+      <label class="form-label">Имя или компания *</label>
+      <input type="text" name="customer_name" class="form-control" value="{{ form_data.customer_name|default:'' }}" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Телефон *</label>
+      <input type="text" name="phone" class="form-control" value="{{ form_data.phone|default:'' }}" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Email *</label>
+      <input type="email" name="email" class="form-control" value="{{ form_data.email|default:'' }}" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Наименование заказа *</label>
+      <input type="text" name="request_title" class="form-control" value="{{ form_data.request_title|default:'' }}" placeholder="Например: Короб с лазерной резкой" required>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Количество *</label>
+      <input type="number" min="1" name="quantity" class="form-control" value="{{ form_data.quantity|default:'1' }}" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Желаемый срок</label>
+      <input type="date" name="deadline" class="form-control" value="{{ form_data.deadline|default:'' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Товар/основа (если есть)</label>
+      <select name="product_id" class="form-select">
+        <option value="">— не выбрано —</option>
+        {% for p in products %}
+        <option value="{{ p.id }}" {% if form_data.product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Предпочтения по материалу</label>
+      <input type="text" name="material_preferences" class="form-control" value="{{ form_data.material_preferences|default:'' }}" placeholder="МДФ 10мм, фанера, пластик...">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Файл макета</label>
+      <input
+        type="file"
+        id="layout_file"
+        name="layout_file"
+        class="d-none"
+        accept=".pdf,.cdr,.ai,.eps,.svg,.dxf,.dwg,.zip,.rar,.7z,.png,.jpg,.jpeg,.webp"
+        onchange="document.getElementById('layout_file_name').value = this.files.length ? this.files[0].name : 'Файл не выбран';"
+      >
+      <div class="input-group">
+        <label class="btn btn-outline-secondary mb-0" for="layout_file">Прикрепить файл</label>
+        <input
+          type="text"
+          id="layout_file_name"
+          class="form-control"
+          value="Файл не выбран"
+          readonly
+        >
+      </div>
+      <div class="form-text">Можно прикрепить макет или архив с макетами.</div>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Параметры и требования</label>
+      <textarea name="specs" class="form-control" rows="4" placeholder="Размеры, толщина, обработка кромки, цвет, требования к упаковке...">{{ form_data.specs|default:'' }}</textarea>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Комментарий</label>
+      <textarea name="comment" class="form-control" rows="3">{{ form_data.comment|default:'' }}</textarea>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-success">Отправить запрос</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

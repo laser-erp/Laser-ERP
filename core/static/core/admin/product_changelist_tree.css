@@ -1,0 +1,123 @@
+/**
+ * Боковое дерево групп на списке товаров/услуг: раскрытие по кнопке-стрелке.
+ */
+.product-changelist-sidebar {
+  width: 240px;
+}
+
+.product-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.product-tree-branch {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.product-tree-branch:last-child {
+  border-bottom: none;
+}
+
+.product-tree-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  /* Строка дерева групп (не поле ввода): чуть выше кликабельной зоны, чем 20px у инпутов */
+  min-height: 28px;
+}
+
+.product-tree-toggle {
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: #475569;
+}
+
+.product-tree-toggle:hover,
+.product-tree-toggle:focus-visible {
+  background: #e2e8f0;
+  outline: none;
+}
+
+.product-tree-toggle:focus-visible {
+  box-shadow: 0 0 0 2px #93c5fd;
+}
+
+.product-tree-chevron {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+.product-tree-toggle[aria-expanded="true"] .product-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.product-tree-head {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px 6px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.product-tree-head:hover {
+  background: #e2e8f0;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.product-tree-head.is-active {
+  background: #93c5fd;
+  border-left-color: #2563eb;
+}
+
+.product-tree-panel {
+  padding: 0 0 8px 0;
+  margin: 0;
+}
+
+.product-tree-panel[hidden] {
+  display: none !important;
+}
+
+.product-tree-leaf {
+  display: block;
+  padding: 5px 12px 5px 44px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #000;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.product-tree-leaf:hover {
+  background: #e2e8f0;
+  text-decoration: none;
+  color: #000;
+}
+
+.product-tree-leaf.is-active {
+  background: #bfdbfe;
+  border-left-color: #2563eb;
+}

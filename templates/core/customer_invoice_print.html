@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Счет {{ invoice.number }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #111; margin: 20px; }
+    .sheet { max-width: 900px; margin: 0 auto; }
+    .bank-block { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .bank-block td { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+    .bank-block .muted { font-size: 11px; color: #333; margin-top: 4px; }
+    h1 { font-size: 24px; margin: 14px 0; }
+    .party { margin: 8px 0; line-height: 1.45; }
+    .party .label { display: inline-block; width: 150px; font-weight: 700; }
+    .line { border-top: 1px solid #000; margin: 10px 0; }
+    .items { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .items th, .items td { border: 1px solid #000; padding: 6px 6px; }
+    .items th { text-align: center; }
+    .t-right { text-align: right; }
+    .totals { margin-top: 8px; width: 360px; margin-left: auto; }
+    .totals-row { display: flex; justify-content: space-between; padding: 2px 0; }
+    .sum-words { margin-top: 10px; }
+    .sign { margin-top: 30px; display: flex; justify-content: space-between; gap: 16px; }
+    .sign-item { flex: 1 1 0; }
+    @media print {
+      body { margin: 0; }
+      .print-controls { display: none !important; }
+      .sheet { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="print-controls" style="margin-bottom: 12px;">
+      <button onclick="window.print()">Печать</button>
+    </div>
+
+    <table class="bank-block">
+      <tr>
+        <td style="width:66%;">
+          <div><strong>{{ invoice.our_organization.bank_name|default:"Банк получателя" }}</strong></div>
+          <div class="muted">Банк получателя</div>
+        </td>
+        <td style="width:34%;">
+          БИК {{ invoice.our_organization.bank_bik|default:"—" }}<br>
+          Сч. № {{ invoice.our_organization.bank_corr_account|default:"—" }}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          ИНН {{ invoice.our_organization.inn|default:"—" }}
+          {% if invoice.our_organization.kpp %}КПП {{ invoice.our_organization.kpp }}{% endif %}
+          <br>
+          <strong>{{ invoice.our_organization.name|default:"Наша организация" }}</strong>
+          <div class="muted">Получатель</div>
+        </td>
+        <td>
+          Сч. № {{ invoice.our_organization.bank_account|default:"—" }}
+        </td>
+      </tr>
+    </table>
+
+    <h1>Счет на оплату № {{ invoice.number }} от {{ invoice.issue_date|date:"d.m.Y" }} г.</h1>
+
+    <div class="party">
+      <span class="label">Поставщик:</span>
+      {{ invoice.our_organization.name|default:"Наша организация" }},
+      ИНН {{ invoice.our_organization.inn|default:"—" }}
+      {% if invoice.our_organization.kpp %}, КПП {{ invoice.our_organization.kpp }}{% endif %}
+      {% if invoice.our_organization.legal_address %}, {{ invoice.our_organization.legal_address }}{% endif %}
+      {% if invoice.our_organization.phone %}, тел.: {{ invoice.our_organization.phone }}{% endif %}
+    </div>
+    <div class="party">
+      <span class="label">Покупатель:</span>
+      {{ invoice.customer_name }}
+      {% if invoice.customer_email %}, {{ invoice.customer_email }}{% endif %}
+      {% if invoice.customer_phone %}, тел.: {{ invoice.customer_phone }}{% endif %}
+    </div>
+    <div class="party">
+      <span class="label">Основание:</span>
+      {% if invoice.production_request_id %}
+        Запрос на производство №{{ invoice.production_request_id }}
+      {% else %}
+        Счет клиента
+      {% endif %}
+    </div>
+
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:40px;">№</th>
+          <th>Товары (работы, услуги)</th>
+          <th style="width:80px;">Кол-во</th>
+          <th style="width:80px;">Ед.</th>
+          <th style="width:120px;">Цена</th>
+          <th style="width:120px;">Сумма</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="t-right">1</td>
+          <td>{{ item_name }}</td>
+          <td class="t-right">{{ quantity }}</td>
+          <td>шт</td>
+          <td class="t-right">{{ unit_price }}</td>
+          <td class="t-right">{{ invoice.amount }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="totals-row"><strong>Итого:</strong> <strong>{{ invoice.amount }}</strong></div>
+      <div class="totals-row"><span>{{ vat_note }}</span> <span>—</span></div>
+      <div class="totals-row"><strong>Всего к оплате:</strong> <strong>{{ invoice.amount }}</strong></div>
+    </div>
+
+    <div class="sum-words">
+      Всего наименований 1, на сумму {{ invoice.amount }} руб.
+    </div>
+    <div class="sum-words">
+      Назначение платежа: {{ invoice.purpose|default:"Оплата по счету" }}
+    </div>
+
+    <div class="sign">
+      <div class="sign-item">Руководитель ____________________</div>
+      <div class="sign-item">Бухгалтер ____________________</div>
+    </div>
+
+    <div style="margin-top:20px; display:flex; align-items:flex-start; gap:14px;">
+      {% if qr_data_url %}
+      <img src="{{ qr_data_url }}" alt="QR для оплаты счета" style="width:170px;height:170px;border:1px solid #ccc;">
+      <div style="font-size:12px;line-height:1.4;max-width:420px;">
+        <strong>QR для оплаты</strong><br>
+        Отсканируйте код в банковском приложении: реквизиты и сумма счета подставятся автоматически.
+      </div>
+      {% else %}
+      <div style="font-size:12px;color:#a00;">
+        QR не сформирован: проверьте реквизиты нашей организации (банк, БИК, расчетный счет).
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

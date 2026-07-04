@@ -1,0 +1,117 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .laser-entry-wrap {
+    max-width: 760px;
+    margin: 28px auto;
+  }
+  .laser-entry-card {
+    background: #fff;
+    border: 1px solid #d7dce4;
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(36, 45, 61, 0.08);
+    padding: 24px;
+  }
+  .laser-drop-zone {
+    border: 2px dashed #9aa5b5;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 24px;
+    text-align: center;
+    transition: background .2s, border-color .2s;
+  }
+  .laser-drop-zone.is-hover {
+    background: #eef6ff;
+    border-color: #4177b9;
+  }
+  .laser-entry-divider {
+    margin: 16px 0;
+    text-align: center;
+    color: #7a8798;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .laser-file-note {
+    margin-top: 8px;
+    color: #536173;
+    font-size: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="laser-entry-wrap">
+  <div class="laser-entry-card">
+    <h1 style="margin-top:0">Новый счёт поставщика</h1>
+    <p style="color:#5e6b7b; margin-bottom:18px;">
+      Загрузите файл счёта для автоматического распознавания или перейдите к ручному заполнению карточки.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="_entry_mode" value="ocr_upload">
+      <div class="laser-drop-zone js-invoice-drop-zone">
+        <input id="id_invoice_file_entry" type="file" name="invoice_file" accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff" style="display:none;">
+        <p style="margin:0 0 8px 0;"><strong>Перетащите файл сюда</strong></p>
+        <p style="margin:0 0 14px 0; color:#607085;">или выберите файл вручную</p>
+        <button type="button" class="button" id="id_pick_invoice_file">Выбрать файл</button>
+        <div class="laser-file-note" id="id_invoice_file_name">Файл не выбран</div>
+      </div>
+      <div style="margin-top:14px;">
+        <button type="submit" class="button default">Распознать и создать счёт</button>
+      </div>
+    </form>
+
+    <div class="laser-entry-divider">или</div>
+
+    <a class="button" href="{{ manual_add_url }}">Ручной ввод</a>
+    <a class="button" href="{{ changelist_url }}" style="margin-left:8px;">К списку счетов</a>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var dropZone = document.querySelector(".js-invoice-drop-zone");
+    if (!dropZone) return;
+    var fileInput = document.getElementById("id_invoice_file_entry");
+    var pickButton = document.getElementById("id_pick_invoice_file");
+    var fileName = document.getElementById("id_invoice_file_name");
+
+    function setFile(file) {
+      if (!file) return;
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      fileName.textContent = file.name;
+    }
+
+    pickButton.addEventListener("click", function () {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files.length) {
+        fileName.textContent = fileInput.files[0].name;
+      }
+    });
+
+    dropZone.addEventListener("dragover", function (event) {
+      event.preventDefault();
+      dropZone.classList.add("is-hover");
+    });
+    dropZone.addEventListener("dragleave", function () {
+      dropZone.classList.remove("is-hover");
+    });
+    dropZone.addEventListener("drop", function (event) {
+      event.preventDefault();
+      dropZone.classList.remove("is-hover");
+      if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+        setFile(event.dataTransfer.files[0]);
+      }
+    });
+  })();
+</script>
+{% endblock %}

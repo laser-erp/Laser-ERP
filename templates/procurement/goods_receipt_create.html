@@ -1,0 +1,444 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Приёмка — новый документ</title>
+  <link rel="stylesheet" href="{% static 'procurement/goods_receipt_ms.css' %}">
+</head>
+<body class="ms-receipt">
+  {{ materials_json|json_script:"materials-data" }}
+  {{ products_json|json_script:"products-data" }}
+  {{ po_lines_json|json_script:"po-lines-data" }}
+
+  <nav class="ms-topbar" aria-label="Главное меню">
+    <a href="#">Показатели</a>
+    <a href="#" class="ms-active">Закупки</a>
+    <a href="#">Продажи</a>
+    <a href="#">Товары</a>
+    <a href="#">Контрагенты</a>
+    <a href="/admin/warehouse/">Склад</a>
+    <a href="#">Деньги</a>
+    <a href="#">Розница</a>
+    <a href="#">Онлайн-торговля</a>
+    <a href="/admin/production/">Производство</a>
+    <a href="#">Задачи</a>
+    <a href="#">Решения</a>
+  </nav>
+
+  <div class="ms-subbar">
+    <a href="/admin/procurement/supplierpurchaseorder/">Заказы поставщикам</a>
+    <a href="/admin/procurement/supplierinvoice/">Счета поставщиков</a>
+    <a href="#" class="ms-active">Приемки</a>
+    <a href="/admin/procurement/supplierreturn/">Возвраты поставщикам</a>
+    <a href="/admin/procurement/receivedvatinvoice/">Счета-фактуры полученные</a>
+    <a href="/admin/procurement/purchasemanagementproduct/">Управление закупками</a>
+    <a href="#">Обучение</a>
+  </div>
+
+  {% if messages %}
+  <div class="ms-messages">
+    {% for message in messages %}
+    <div class="ms-msg {% if 'error' in message.tags %}ms-msg-error{% else %}ms-msg-success{% endif %}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'procurement:goods_receipt_create' %}" id="receipt-form">
+    {% csrf_token %}
+    <input type="hidden" name="form_action" id="form_action" value="save">
+    <div class="ms-toolbar">
+      <button
+        type="submit"
+        class="ms-btn ms-btn-green"
+        onclick="document.getElementById('form_action').value='save';"
+      >Сохранить</button>
+      <a class="ms-btn ms-btn-gray" href="{% url 'dashboard' %}">Закрыть</a>
+      <button type="button" class="ms-btn">Изменить ▾</button>
+      <button type="button" class="ms-btn">Создать документ ▾</button>
+      <button type="button" class="ms-btn">Печать ▾</button>
+      <button type="button" class="ms-btn">Отправить ▾</button>
+      <span class="ms-user">{{ user_display }}</span>
+    </div>
+
+    <div class="ms-sheet">
+      <div class="ms-doc-head">
+        <div class="ms-doc-title-row">
+          <h1>Приёмка №</h1>
+          <span class="ms-inline-field">
+            <input type="text" name="number" placeholder="авто" style="width:100px">
+          </span>
+          <span>от</span>
+          <span class="ms-inline-field">
+            <input type="datetime-local" name="received_at" value="{{ default_datetime }}">
+          </span>
+          <span class="ms-badge-green ms-badge-draft" id="status-badge">Черновик</span>
+          <label class="ms-check">
+            <input type="checkbox" name="is_posted" id="id_is_posted">
+            Проведено
+          </label>
+        </div>
+
+        <div class="ms-grid-2">
+          <div>
+            <div class="ms-field">
+              <label>Организация <span class="req">*</span></label>
+              <div class="ms-field-row">
+                <select name="our_organization" required>
+                  <option value="" selected>— выберите —</option>
+                  {% for o in organizations %}
+                  <option value="{{ o.pk }}">{{ o.name }}</option>
+                  {% empty %}
+                  <option value="">— нет организаций —</option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="ms-icon-btn" title="Очистить">×</button>
+                <button type="button" class="ms-icon-btn" title="Добавить">+</button>
+              </div>
+            </div>
+            <div class="ms-field">
+              <label>Контрагент <span class="req">*</span></label>
+              <div class="ms-field-row" style="margin-bottom:6px">
+                <input type="text" name="supplier_inn" value="{{ supplier_inn|default:'' }}" placeholder="Поиск по ИНН">
+                <button
+                  type="submit"
+                  class="ms-btn"
+                  onclick="document.getElementById('form_action').value='lookup_inn';"
+                >Найти ИНН</button>
+              </div>
+              <div class="ms-field-row">
+                <select name="supplier" required>
+                  <option value="">— выберите —</option>
+                  {% for o in organizations %}
+                  <option value="{{ o.pk }}" {% if selected_supplier_id and selected_supplier_id == o.pk %}selected{% endif %}>{{ o.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="ms-icon-btn" title="Добавить">+</button>
+              </div>
+            </div>
+            <div class="ms-field">
+              <label>Проект</label>
+              <div class="ms-field-row">
+                <input type="text" name="project" placeholder="" autocomplete="off">
+                <button type="button" class="ms-icon-btn" title="Добавить">+</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="ms-field">
+              <label>Склад <span class="req">*</span></label>
+              <div class="ms-field-row">
+                <select name="warehouse" required>
+                  <option value="" selected>— выберите —</option>
+                  {% for w in warehouses %}
+                  <option value="{{ w.pk }}">{{ w.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="ms-icon-btn" title="Очистить">×</button>
+                <button type="button" class="ms-icon-btn" title="Изменить">✎</button>
+              </div>
+            </div>
+            <div class="ms-field">
+              <label>Договор</label>
+              <div class="ms-field-row">
+                <select name="contract_ref">
+                  <option value="">— выберите договор —</option>
+                  {% for c in contracts %}
+                  <option value="{{ c.pk }}" {% if selected_contract_id and selected_contract_id == c.pk %}selected{% endif %}>
+                    {{ c.number }} — {{ c.counterparty.name }} ({{ c.get_status_display }})
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <input type="text" name="contract" placeholder="Текст договора (опционально)">
+            </div>
+            <div class="ms-field">
+              <label>Входящий номер</label>
+              <div class="ms-field-row">
+                <input type="text" name="incoming_number" placeholder="" style="flex:1">
+                <span>от</span>
+                <input type="date" name="incoming_document_date" style="width:auto">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-tabs">
+        <button type="button" class="ms-tab-active" id="tab-main">Главная</button>
+        <button type="button" id="tab-related">Связанные документы</button>
+      </div>
+
+      <div class="ms-panel" id="panel-main">
+        <div class="ms-table-toolbar">
+          <select><option>Маркировка</option></select>
+          <select><option>Принято</option></select>
+          <span class="ms-pill">Остатки</span>
+          <span class="ms-pill">Объем</span>
+          <span class="ms-pill">Цена</span>
+          <span class="ms-pill">НДС</span>
+          <span class="ms-pill">Скидка</span>
+          <span style="margin-left:auto"></span>
+          <span>Сумма</span>
+          <span>Себест. единицы</span>
+          <span>Себестоимость</span>
+          <span>Страна</span>
+        </div>
+
+        <input type="text" class="ms-add-row" placeholder="Добавить позицию — введите наименование, код, штрихкод или артикул" autocomplete="off" id="fake-search">
+
+        <div class="ms-extra-btns">
+          <a href="#" class="ms-link">Добавить из справочника</a>
+          <a href="#" class="ms-link">Проверить комплектацию</a>
+          <a href="#" class="ms-link">Импорт ▾</a>
+          <button type="button" class="ms-btn" id="btn-add-line" style="margin-left:auto">+ Строка</button>
+        </div>
+
+        <div class="ms-table-wrap">
+          <table class="ms-lines" id="lines-table">
+            <thead>
+              <tr>
+                <th style="width:36px">№</th>
+                <th style="width:100px">Тип</th>
+                <th>Номенклатура</th>
+                <th>Строка заказа</th>
+                <th style="width:100px">Кол-во</th>
+                <th style="width:100px">Цена</th>
+                <th style="width:110px" class="ms-num">Сумма</th>
+                <th class="ms-row-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="lines-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="ms-panel" id="panel-related" hidden>
+        <p style="color:#777;margin:0">Нет связанных документов.</p>
+      </div>
+
+      <div class="ms-footer-grid">
+        <div>
+          <label class="ms-field"><span style="color:#777;font-size:12px">Комментарий</span>
+            <textarea class="ms-comment" name="comment" placeholder=""></textarea>
+          </label>
+        </div>
+        <div class="ms-totals">
+          <div class="row"><span>Промежуточный итог</span><span id="subtotal">0,00</span></div>
+          <div class="row"><label><input type="checkbox" disabled> НДС</label><span>0,00</span></div>
+          <div class="row"><label><input type="checkbox" disabled> Цена включает НДС</label></div>
+          <div class="row total"><span>Итого</span><span id="grandtotal">0,00</span></div>
+          <div class="row" style="margin-top:10px">
+            <span>Накладные расходы</span>
+            <input type="text" value="0" disabled style="width:60px;text-align:right">
+          </div>
+          <a href="#" class="ms-link">Распределить по цене</a>
+        </div>
+      </div>
+
+      <details class="ms-collapse">
+        <summary>Задачи</summary>
+        <div class="inner">
+          <button type="button" class="ms-btn">+ Задача</button>
+          <p>Нет задач.</p>
+        </div>
+      </details>
+      <details class="ms-collapse">
+        <summary>Файлы</summary>
+        <div class="inner">
+          <button type="button" class="ms-btn">+ Файл</button>
+          <table class="ms-lines" style="margin-top:8px">
+            <thead><tr><th>Наименование</th><th>Размер, МБ</th><th>Дата добавления</th><th>Сотрудник</th></tr></thead>
+            <tbody><tr><td colspan="4" style="color:#999">Нет файлов</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </form>
+
+  <script>
+  (function() {
+    const materialsEl = document.getElementById('materials-data');
+    const productsEl = document.getElementById('products-data');
+    const poEl = document.getElementById('po-lines-data');
+    const materials = materialsEl ? JSON.parse(materialsEl.textContent) : [];
+    const products = productsEl ? JSON.parse(productsEl.textContent) : [];
+    const poLines = poEl ? JSON.parse(poEl.textContent) : [];
+    const tbody = document.getElementById('lines-body');
+    const posted = document.getElementById('id_is_posted');
+    const badge = document.getElementById('status-badge');
+    const supplierSel = document.querySelector('select[name="supplier"]');
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+
+    function materialOptionsHtml() {
+      let o = '<option value="">— материал —</option>';
+      materials.forEach(function(m) {
+        o += '<option value="' + m.id + '">' + esc(m.name) + '</option>';
+      });
+      return o;
+    }
+
+    function productOptionsHtml() {
+      let o = '<option value="">— товар —</option>';
+      products.forEach(function(p) {
+        o += '<option value="' + p.id + '">' + esc(p.name) + '</option>';
+      });
+      return o;
+    }
+
+    function supplierId() {
+      const v = supplierSel && supplierSel.value;
+      return v ? parseInt(v, 10) : null;
+    }
+
+    function poOptionsForRow(row) {
+      const sid = supplierId();
+      const typeSel = row.querySelector('.line-line-type');
+      const lt = typeSel ? typeSel.value : 'material';
+      const mid = row.querySelector('.line-mat') && row.querySelector('.line-mat').value;
+      const pid = row.querySelector('.line-prod') && row.querySelector('.line-prod').value;
+      let o = '<option value="">— не привязано —</option>';
+      if (!sid) return o;
+      poLines.forEach(function(pl) {
+        if (pl.supplier_id !== sid) return;
+        if (lt === 'material') {
+          if (!mid || pl.material_id == null || String(pl.material_id) !== String(mid)) return;
+        } else {
+          if (!pid || pl.product_id == null || String(pl.product_id) !== String(pid)) return;
+        }
+        o += '<option value="' + pl.id + '">' + esc(pl.label) + ' (ост. ' + pl.remaining + ')</option>';
+      });
+      return o;
+    }
+
+    function refreshPoSelect(row) {
+      const sel = row.querySelector('.line-po');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = poOptionsForRow(row);
+      if (prev && Array.prototype.some.call(sel.options, function(opt) { return opt.value === prev; })) {
+        sel.value = prev;
+      } else {
+        sel.value = '';
+      }
+    }
+
+    function toggleNomenclature(row) {
+      const lt = row.querySelector('.line-line-type').value;
+      const mat = row.querySelector('.line-mat');
+      const prod = row.querySelector('.line-prod');
+      if (lt === 'product') {
+        mat.value = '';
+        mat.style.display = 'none';
+        prod.style.display = 'block';
+      } else {
+        prod.value = '';
+        prod.style.display = 'none';
+        mat.style.display = 'block';
+      }
+      refreshPoSelect(row);
+    }
+
+    function fmtMoney(n) {
+      return n.toFixed(2).replace('.', ',');
+    }
+
+    function parseNum(s) {
+      if (!s) return 0;
+      const v = parseFloat(String(s).replace(',', '.'));
+      return isNaN(v) ? 0 : v;
+    }
+
+    function recalc() {
+      let sum = 0;
+      tbody.querySelectorAll('tr').forEach(function(row) {
+        const q = parseNum(row.querySelector('.line-qty') && row.querySelector('.line-qty').value);
+        const p = parseNum(row.querySelector('.line-price') && row.querySelector('.line-price').value);
+        const lineSum = q * p;
+        sum += lineSum;
+        const cell = row.querySelector('.line-sum');
+        if (cell) cell.textContent = fmtMoney(lineSum);
+      });
+      document.getElementById('subtotal').textContent = fmtMoney(sum);
+      document.getElementById('grandtotal').textContent = fmtMoney(sum);
+    }
+
+    function refreshAllPoSelects() {
+      tbody.querySelectorAll('tr').forEach(refreshPoSelect);
+    }
+
+    function addRow() {
+      const ix = tbody.querySelectorAll('tr').length + 1;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="ms-num">' + ix + '</td>' +
+        '<td><select class="line-line-type" name="line_line_type">' +
+        '<option value="material" selected>Материал</option>' +
+        '<option value="product">Товар</option></select></td>' +
+        '<td><select class="line-mat" name="line_material">' + materialOptionsHtml() + '</select>' +
+        '<select class="line-prod" name="line_product" style="margin-top:4px;display:none">' +
+        productOptionsHtml() + '</select></td>' +
+        '<td><select class="line-po" name="line_po_line">' + poOptionsForRow(tr) + '</select></td>' +
+        '<td><input type="text" class="line-qty" name="line_qty" inputmode="decimal" placeholder="0"></td>' +
+        '<td><input type="text" class="line-price" name="line_price" inputmode="decimal" placeholder="0"></td>' +
+        '<td class="ms-num line-sum">0,00</td>' +
+        '<td class="ms-row-actions"><button type="button" class="ms-icon-btn line-del" title="Удалить">×</button></td>';
+      tbody.appendChild(tr);
+      const typeSel = tr.querySelector('.line-line-type');
+      typeSel.addEventListener('change', function() { toggleNomenclature(tr); });
+      tr.querySelector('.line-mat').addEventListener('change', function() { refreshPoSelect(tr); });
+      tr.querySelector('.line-prod').addEventListener('change', function() { refreshPoSelect(tr); });
+      tr.querySelector('.line-qty').addEventListener('input', recalc);
+      tr.querySelector('.line-price').addEventListener('input', recalc);
+      tr.querySelector('.line-del').addEventListener('click', function() {
+        tr.remove();
+        renumber();
+        recalc();
+      });
+      toggleNomenclature(tr);
+      recalc();
+    }
+
+    function renumber() {
+      tbody.querySelectorAll('tr').forEach(function(row, i) {
+        row.cells[0].textContent = String(i + 1);
+      });
+    }
+
+    if (supplierSel) {
+      supplierSel.addEventListener('change', refreshAllPoSelects);
+    }
+
+    document.getElementById('btn-add-line').addEventListener('click', addRow);
+    posted.addEventListener('change', function() {
+      if (posted.checked) {
+        badge.textContent = 'Принято';
+        badge.classList.remove('ms-badge-draft');
+      } else {
+        badge.textContent = 'Черновик';
+        badge.classList.add('ms-badge-draft');
+      }
+    });
+
+    document.getElementById('tab-main').addEventListener('click', function() {
+      document.getElementById('panel-main').hidden = false;
+      document.getElementById('panel-related').hidden = true;
+      document.getElementById('tab-main').classList.add('ms-tab-active');
+      document.getElementById('tab-related').classList.remove('ms-tab-active');
+    });
+    document.getElementById('tab-related').addEventListener('click', function() {
+      document.getElementById('panel-main').hidden = true;
+      document.getElementById('panel-related').hidden = false;
+      document.getElementById('tab-related').classList.add('ms-tab-active');
+      document.getElementById('tab-main').classList.remove('ms-tab-active');
+    });
+
+    addRow();
+  })();
+  </script>
+</body>
+</html>

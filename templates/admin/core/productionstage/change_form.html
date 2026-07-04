@@ -1,0 +1,37 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{# Этап производства: вкладки сотрудники/контрагенты, кастомный M2M + услуги у контрагентов #}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/production_stage_form.css' %}?v=7">
+{% endblock %}
+
+{% block after_field_sets %}
+{{ block.super }}
+{# Услуги контрагентов встроены в список выбранных (production_stage_form.js) #}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+{% url 'admin:autocomplete' as autocomplete_url %}
+<script>
+window.PRODUCTION_STAGE_FORM = {
+  autocompleteUrl: "{{ autocomplete_url|escapejs }}",
+  employeeParams: "{{ employee_autocomplete_params|default:''|escapejs }}",
+  counterpartyParams: "{{ counterparty_autocomplete_params|default:''|escapejs }}"
+};
+</script>
+{% if counterparty_service_choices %}
+{{ counterparty_service_choices|json_script:"ps-service-choices" }}
+{% else %}
+<script id="ps-service-choices" type="application/json">[]</script>
+{% endif %}
+{% if counterparty_services_initial %}
+{{ counterparty_services_initial|json_script:"ps-services-initial" }}
+{% else %}
+<script id="ps-services-initial" type="application/json">{}</script>
+{% endif %}
+<script src="{% static 'core/admin/production_stage_form.js' %}?v=6" defer></script>
+{% endblock %}

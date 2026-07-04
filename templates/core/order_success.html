@@ -1,0 +1,54 @@
+{% extends "core/base.html" %}
+{% block title %}Заказ оформлен{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-4">
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    <h1 class="mb-3">Заказ оформлен</h1>
+    <p class="lead mb-1">Номер заказа: <strong>№{{ order.id }}</strong></p>
+    <p class="mb-1">Оплата: <strong>{{ payment_display }}</strong></p>
+    <p class="mb-3">Доставка: <strong>{{ delivery_display }}</strong></p>
+    <p class="text-muted">Мы получили ваш заказ и скоро свяжемся для подтверждения.</p>
+
+    <div class="d-flex gap-2 mt-3">
+      <a href="{% url 'catalog' %}" class="btn btn-primary">Вернуться в каталог</a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'account_orders' %}" class="btn btn-outline-secondary">Мои заказы</a>
+      {% else %}
+      <a href="{% url 'account_login' %}?next={% url 'account_orders' %}" class="btn btn-outline-secondary">Войти и видеть мои заказы</a>
+      {% endif %}
+    </div>
+
+    {% if can_claim_account %}
+    <hr class="my-4">
+    <h2 class="h5 mb-3">Создать аккаунт и привязать заказ</h2>
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-4">
+        <label class="form-label">Логин</label>
+        <input type="text" name="username" class="form-control" required minlength="3">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" value="{{ prefill_email }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Пароль</label>
+        <input type="password" name="password1" class="form-control" required minlength="8">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Подтверждение пароля</label>
+        <input type="password" name="password2" class="form-control" required minlength="8">
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-success">Создать аккаунт и перейти в мои заказы</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

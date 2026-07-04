@@ -1,0 +1,35 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/organization_bank_bik_lookup.js' %}?v=1" defer></script>
+<script src="{% static 'core/admin/organization_refresh_from_fns_confirm.js' %}?v=4" defer></script>
+{% endblock %}
+
+{% block form_top %}
+{{ block.super }}
+{% if fns_search_url %}
+<p class="help" style="margin-bottom: 10px;">
+  <a href="{{ fns_search_url }}">🔍 Поиск контрагента по ИНН или наименованию (база ФНС)</a>
+</p>
+{% endif %}
+{% if bank_bik_lookup_url %}
+<div id="organization-bank-bik-lookup-meta" data-lookup-url="{{ bank_bik_lookup_url }}" style="display:none;"></div>
+{% endif %}
+{% if refresh_from_fns_url %}
+<div style="margin-bottom: 10px;">
+  <button
+    type="submit"
+    class="button"
+    id="organization-refresh-from-fns-btn"
+    formaction="{{ refresh_from_fns_url }}"
+    formmethod="post"
+    formnovalidate
+  >
+    Обновить
+  </button>
+  <span class="help" style="margin-left:8px;">Обновить данные контрагента из базы ФНС на текущую дату.</span>
+</div>
+{% endif %}
+{% endblock %}

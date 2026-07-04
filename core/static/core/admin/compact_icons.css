@@ -1,0 +1,57 @@
+/* Компактные иконки в админке (восстановление по описанию из старого чата) */
+
+.related-widget-wrapper-link img {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+a.addlink,
+a.changelink,
+a.deletelink,
+a.viewlink,
+a.hidelink,
+.inlinechangelink,
+.inlineviewlink {
+  background-size: 12px 12px !important;
+  padding-left: 15px !important;
+}
+
+.inline-deletelink {
+  font-size: 1.05rem !important;
+}
+
+.selector:not(.stacked) .selector-chooser li a {
+  background-size: 24px 18px !important;
+  height: 18px !important;
+  width: 24px !important;
+}
+
+.selector.stacked .selector-chooser li a {
+  background-size: 24px 18px !important;
+  height: 18px !important;
+  width: 24px !important;
+}
+
+.datetimeshortcuts a {
+  background-size: 16px 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Ручки ресайза столбцов (column_resize.js) */
+#result_list thead th {
+  position: relative;
+}
+.laser-col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 2;
+}
+.laser-col-resize-handle:hover {
+  background: rgba(0, 0, 0, 0.08);
+}

@@ -1,0 +1,70 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'production:status' %}">{{ title }}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module">
+  <h2>Заказы на производство по статусам</h2>
+  {% if orders_by_status %}
+  <table style="border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f8f8f8;">
+        <th style="padding: 8px; text-align: left;">Статус</th>
+        <th style="padding: 8px;">Количество</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in orders_by_status %}
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 8px;">{{ row.status|default:"—" }}</td>
+        <td style="padding: 8px;">{{ row.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Нет заказов.</p>
+  {% endif %}
+  <p><a href="{% url 'admin:production_productionorderproxy_changelist' %}">Перейти к заказам на производство →</a></p>
+</div>
+
+<div class="module">
+  <h2>Производственные задания по статусам</h2>
+  {% if assignments_by_status %}
+  <table style="border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f8f8f8;">
+        <th style="padding: 8px; text-align: left;">Статус</th>
+        <th style="padding: 8px;">Количество</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in assignments_by_status %}
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 8px;">{{ row.status|default:"—" }}</td>
+        <td style="padding: 8px;">{{ row.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Нет производственных заданий.</p>
+  {% endif %}
+  <p><a href="{% url 'admin:production_productionassignmentproxy_changelist' %}">Перейти к производственным заданиям →</a></p>
+</div>
+
+<p style="margin-top: 1.5em;">
+  <a href="{% url 'admin:index' %}">← На главную админки</a>
+  &nbsp;|&nbsp;
+  <a href="{% url 'production:stage_register' %}">Реестр выполнения этапов</a>
+</p>
+{% endblock %}

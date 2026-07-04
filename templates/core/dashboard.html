@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Панель управления{% endblock %}
+{% block content %}
+<h1 class="mb-4">Панель управления</h1>
+<div class="row">
+  <div class="col-md-4">
+    <div class="card text-bg-primary mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Изделия</h5>
+        <p class="card-text fs-3">{{ total_products }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-success mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Заказы</h5>
+        <p class="card-text fs-3">{{ total_orders }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-info mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Плановая выручка</h5>
+        <p class="card-text fs-3">{{ total_revenue|default:0 }} ₽</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

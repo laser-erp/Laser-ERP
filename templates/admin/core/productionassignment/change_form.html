@@ -1,0 +1,51 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block bodyclass %}{{ block.super }} production-assignment-doc{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/production_assignment_change_form.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'core/admin/production_assignment_shell.css' %}?v=22">
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; {% if has_view_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}
+&rsaquo; {% if add %}
+<span class="pa-add-breadcrumb-segment">
+  <span
+    class="pa-breadcrumb-help"
+    role="img"
+    tabindex="0"
+    aria-label="{% translate 'Справка: что такое производственное задание' %}"
+    title="{% translate 'Производственное задание описывает: какую продукцию и в каком объёме надо произвести, по каким техкартам; какие для этого потребуются материалы и затраты; как выполняется задание. Можно создать задание на смену, неделю работы или заказ от покупателя. В документе поэтапно отмечается выполнение.' %}"
+  >?</span>
+  {% blocktranslate with name=opts.verbose_name %}Add {{ name }}{% endblocktranslate %}
+</span>
+{% else %}
+{{ original|truncatewords:"18" }}
+{% endif %}
+</div>
+{% endblock %}
+
+{% block form_top %}
+{% include "admin/core/productionassignment/_doc_shell.html" %}
+{% endblock %}
+
+{% block field_sets %}
+<details class="pa-requisites" open>
+<summary class="pa-requisites-summary">{% translate "Реквизиты, даты, комментарий" %}</summary>
+<div class="pa-requisites-inner">
+{% for fieldset in adminform %}
+  {% include "admin/includes/fieldset.html" with heading_level=2 prefix="fieldset" id_prefix=0 id_suffix=forloop.counter0 %}
+{% endfor %}
+</div>
+</details>
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script src="{% static 'core/admin/production_assignment_shell.js' %}?v=3" defer></script>
+{% endblock %}

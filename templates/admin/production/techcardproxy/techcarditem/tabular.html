@@ -1,0 +1,154 @@
+{% load i18n admin_urls static admin_modify %}
+<link rel="stylesheet" href="{% static 'core/admin/techcard_items_tabs.css' %}?v=44">
+<div class="js-inline-admin-formset inline-group techcard-items-inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
+     data-inline-type="tabular"
+     data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+  <fieldset class="module tc-items-custom-fieldset" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading-custom">
+    <h2 id="{{ inline_admin_formset.formset.prefix }}-heading-custom" class="inline-heading tc-items-ms-hidden-title">
+      {% if inline_admin_formset.formset.max_num == 1 %}
+        {{ inline_admin_formset.opts.verbose_name|capfirst }}
+      {% else %}
+        {{ inline_admin_formset.opts.verbose_name_plural|capfirst }}
+      {% endif %}
+    </h2>
+    <div class="tc-materials-grid-head" role="row" aria-hidden="false">
+      <div class="tc-mgh-cell tc-mgh-stage">Этап</div>
+      <div class="tc-mgh-cell tc-mgh-code">Код</div>
+      <div class="tc-mgh-cell tc-mgh-material">
+        <div class="tc-mgh-material-head-inner">
+          <span class="tc-mgh-select-all-wrap">
+            <input type="checkbox" class="tc-mgh-select-all" title="Выбрать все позиции" aria-label="Выбрать все позиции" />
+          </span>
+          <span class="tc-mgh-material-label">Материал</span>
+          <span class="tc-mgh-move-wrap" style="display: none;">
+            <button type="button" class="tc-mgh-move-btn">Переместить в другой этап</button>
+            <ul class="tc-mgh-move-menu" role="listbox" hidden></ul>
+          </span>
+        </div>
+      </div>
+      <div class="tc-mgh-cell tc-mgh-norm">Норма по техкарте</div>
+      <div class="tc-mgh-cell tc-mgh-tech" title="Данное поле позволяет сохранить ссылку на техкарту материала, если материал является полуфабрикатом и может быть произведён на вашем производстве.">
+        Техкарта
+        <img src="{% static 'admin/img/icon-unknown.svg' %}" class="tc-mgh-help" width="12" height="12" alt="" title="Техкарта полуфабриката при комплектующих">
+      </div>
+      <div class="tc-mgh-cell tc-mgh-params" title="Параметры отображения">
+        <span class="tc-mgh-gear" aria-hidden="true">⚙</span>
+        <label class="tc-mgh-tech-collapse-label">
+          <input type="checkbox" class="tc-mgh-tech-col-collapse" title="Скрыть колонку «Техкарта»" aria-label="Скрыть колонку «Техкарта»" />
+        </label>
+      </div>
+    </div>
+    <div class="tc-item-panel tc-item-panel--unified active" role="region" aria-label="Материалы и состав">
+      <div class="tc-materials-stages-root" id="tc-materials-stages-root-{{ inline_admin_formset.formset.prefix }}"></div>
+    </div>
+  </fieldset>
+
+  <div class="tabular inline-related techcard-items-backend {% if forloop.last %}last-related{% endif %}">
+{{ inline_admin_formset.formset.management_form }}
+<fieldset class="module {{ inline_admin_formset.classes }} techcard-items-backend-fieldset" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading">
+  {% if inline_admin_formset.is_collapsible %}<details><summary>{% endif %}
+  <h2 id="{{ inline_admin_formset.formset.prefix }}-heading" class="inline-heading visually-hidden-techcard-backend">
+  {% if inline_admin_formset.formset.max_num == 1 %}
+    {{ inline_admin_formset.opts.verbose_name|capfirst }}
+  {% else %}
+    {{ inline_admin_formset.opts.verbose_name_plural|capfirst }}
+  {% endif %}
+  </h2>
+  {% if inline_admin_formset.is_collapsible %}</summary>{% endif %}
+   {{ inline_admin_formset.formset.non_form_errors }}
+  <div class="wrapper">
+    <table>
+     <thead><tr>
+       <th class="original"></th>
+     {% for field in inline_admin_formset.fields %}
+       <th class="column-{{ field.name }}{% if field.required %} required{% endif %}{% if field.widget.is_hidden %} hidden{% endif %}">{{ field.label|capfirst }}
+       {% if field.help_text %}<img src="{% static "admin/img/icon-unknown.svg" %}" class="help help-tooltip" width="10" height="10" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}">{% endif %}
+       </th>
+     {% endfor %}
+     <th>{% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission %}{% translate "Delete?" %}{% endif %}</th>
+     </tr></thead>
+
+     <tbody>
+     {% for inline_admin_form in inline_admin_formset %}
+        {% if inline_admin_form.form.non_field_errors %}
+        <tr class="row-form-errors"><td colspan="{{ inline_admin_form|cell_count }}">{{ inline_admin_form.form.non_field_errors }}</td></tr>
+        {% endif %}
+        <tr class="form-row {% if inline_admin_form.original or inline_admin_form.show_url %}has_original{% endif %}{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}"
+             id="{{ inline_admin_formset.formset.prefix }}-{% if forloop.last and inline_admin_formset.has_add_permission %}empty{% else %}{{ forloop.counter0 }}{% endif %}"
+             data-item-kind="{% if inline_admin_form.original %}{{ inline_admin_form.original.item_kind }}{% else %}{{ inline_admin_form.form.item_kind.value }}{% endif %}"
+             {% if inline_admin_form.original %}
+             data-product-id="{% if inline_admin_form.original.product_id %}{{ inline_admin_form.original.product_id }}{% endif %}"
+             data-product-name="{% if inline_admin_form.original.product_id %}{{ inline_admin_form.original.product.name|default:'' }}{% endif %}"
+             data-product-code="{% if inline_admin_form.original.product_id %}{{ inline_admin_form.original.product.code|default:'' }}{% endif %}"
+             data-product-article="{% if inline_admin_form.original.product_id %}{{ inline_admin_form.original.product.article|default:'' }}{% endif %}"
+             data-product-unit="{% if inline_admin_form.original.product_id %}{{ inline_admin_form.original.product.unit|default:'' }}{% endif %}"
+             data-material-id="{% if inline_admin_form.original.material_id %}{{ inline_admin_form.original.material_id }}{% endif %}"
+             data-material-code=""
+             data-material-unit="{% if inline_admin_form.original.material_id %}{{ inline_admin_form.original.material.unit|default:'' }}{% endif %}"
+             data-component-tech-card-id="{% if inline_admin_form.original.component_tech_card_id %}{{ inline_admin_form.original.component_tech_card_id }}{% endif %}"
+             {% endif %}>
+        <td class="original">
+          {% if inline_admin_form.original or inline_admin_form.show_url %}<p>
+          {% if inline_admin_form.original %}
+          {{ inline_admin_form.original }}
+          {% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}<a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="{{ inline_admin_formset.has_change_permission|yesno:'inlinechangelink,inlineviewlink' }}">{% if inline_admin_formset.has_change_permission %}{% translate "Change" %}{% else %}{% translate "View" %}{% endif %}</a>{% endif %}
+          {% endif %}
+          {% if inline_admin_form.show_url %}<a href="{{ inline_admin_form.absolute_url }}">{% translate "View on site" %}</a>{% endif %}
+            </p>{% endif %}
+          {% if inline_admin_form.needs_explicit_pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+          {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+        </td>
+        {% for fieldset in inline_admin_form %}
+          {% for line in fieldset %}
+            {% for field in line %}
+              <td class="{% if field.field.name %}field-{{ field.field.name }}{% endif %}{% if field.field.is_hidden %} hidden{% endif %}">
+              {% if field.is_readonly %}
+                  <p>{{ field.contents }}</p>
+              {% else %}
+                  {{ field.field.errors.as_ul }}
+                  {{ field.field }}
+              {% endif %}
+              </td>
+            {% endfor %}
+          {% endfor %}
+        {% endfor %}
+        <td class="delete">{% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission and inline_admin_form.original %}{{ inline_admin_form.deletion_field.field }}{% endif %}</td>
+        </tr>
+     {% endfor %}
+     </tbody>
+    </table>
+  </div>
+  {% if inline_admin_formset.is_collapsible %}</details>{% endif %}
+</fieldset>
+  </div>
+</div>
+<script>
+(function () {
+  var map = {};
+  var el = document.getElementById("tech-process-stages-data");
+  if (el && el.textContent) {
+    try {
+      map = JSON.parse(el.textContent);
+    } catch (e) {}
+  }
+  window.TECHCARD_ITEMS_UI = {
+    prefix: "{{ inline_admin_formset.formset.prefix|escapejs }}",
+    autocompleteUrl: "{% url 'admin:autocomplete' %}",
+    kinds: { component: "component", raw: "raw", material: "material" },
+    materialFieldParams: "app_label=core&model_name=techcarditem&field_name=material",
+    productFieldParams: "app_label=core&model_name=techcarditem&field_name=product",
+    stagesMap: map,
+    adminProductChange: "{% url 'admin:core_product_change' 1 %}".replace(/\/1\//, "/{id}/"),
+    adminMaterialChange: "{% url 'admin:core_material_change' 1 %}".replace(/\/1\//, "/{id}/"),
+    adminTechcardAdd: "{% url 'admin:production_techcardproxy_add' %}",
+    adminTechcardChangelist: "{% url 'admin:production_techcardproxy_changelist' %}",
+    adminTechcardChange: "{% url 'admin:production_techcardproxy_change' 999888777 %}",
+    techCardsForProductTpl: "{% url 'admin:production_techcardproxy_techcards_for_product' 999888777 %}",
+    productTcMetaTpl: "{% url 'admin:core_product_techcard_inline_meta' 999888777 %}",
+    materialTcMetaTpl: "{% url 'admin:core_material_techcard_inline_meta' 999888777 %}",
+    materialPickerGroups: "{% url 'admin:production_techcardproxy_material_picker_groups' %}",
+    materialPickerItems: "{% url 'admin:production_techcardproxy_material_picker_items' %}"
+  };
+})();
+</script>
+<script src="{% static 'core/admin/techcard_items_tabs.js' %}?v=45" defer></script>

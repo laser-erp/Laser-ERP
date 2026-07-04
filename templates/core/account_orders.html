@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+{% block title %}Мои заказы{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Мои заказы</h1>
+  <a href="{% url 'account_production_requests' %}" class="btn btn-outline-secondary">Мои запросы на производство</a>
+</div>
+
+{% if orders %}
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Номер</th>
+        <th>Дата</th>
+        <th>Статус</th>
+        <th>Клиент</th>
+        <th>Оплата</th>
+        <th>Доставка</th>
+        <th>Сумма</th>
+        <th>Позиции</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in orders %}
+      <tr>
+        <td>#{{ row.order.id }}</td>
+        <td>{{ row.order.created_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ row.order.get_status_display }}</td>
+        <td>{{ row.order.customer_name }}</td>
+        <td>{{ row.payment_label }}</td>
+        <td>{{ row.delivery_label }}</td>
+        <td>{{ row.order_total }} ₽</td>
+        <td>
+          <ul class="mb-0">
+            {% for item in row.order.items.all %}
+            <li>{{ item.product.name }} × {{ item.quantity }}</li>
+            {% endfor %}
+          </ul>
+        </td>
+        <td>
+          <a href="{% url 'account_order_detail' row.order.id %}" class="btn btn-sm btn-outline-primary">Подробнее</a>
+          <form method="post" action="{% url 'account_repeat_order' row.order.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-success">Повторить</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-light border">У вас пока нет заказов.</div>
+{% endif %}
+{% endblock %}

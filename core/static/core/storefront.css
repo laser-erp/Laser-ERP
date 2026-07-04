@@ -1,0 +1,44 @@
+/* Storefront polish for marketplace-like UX */
+body {
+  background: #f6f8fb;
+}
+
+.storefront-shell {
+  padding-bottom: 2rem;
+}
+
+.storefront-card {
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.storefront-card:hover {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.storefront-card .card-img-top {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.storefront-price {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.storefront-lead {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.storefront-summary {
+  position: sticky;
+  top: 1rem;
+}
+
+.storefront-navbar .nav-link .badge {
+  margin-left: 0.3rem;
+  vertical-align: text-top;
+}

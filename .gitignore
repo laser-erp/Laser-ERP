@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Django / local runtime
+db.sqlite3
+*.sqlite3
+debug.log
+*.log
+staticfiles/
+media/
+
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+
+# Backups and local generated archives
+бекапы/
+*.zip
+
+# IDE / OS
+.idea/
+.vscode/
+.cursor/
+.cursor_chat_digest.txt
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+

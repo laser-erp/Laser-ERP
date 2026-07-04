@@ -1,0 +1,1112 @@
+/*
+ * Форма техкарты — оформление в духе карточки «Технологическая карта» (как на скриншоте МойСклад).
+ * Область действия: только страница изменения прокси techcardproxy.
+ */
+/* Шире контент, чтобы строка поиска техпроцесса могла быть ~2× от прежних 640px */
+body.change-form.model-techcardproxy #content-main {
+  max-width: min(100%, 1680px);
+}
+
+/*
+ * Верхний блок (#tc-ms-page-upper), карточка позиций (#tc-ms-positions-block) с заголовком,
+ * внутри тело (#tc-ms-page-lower). Переменные:
+ *   --tc-ms-page-upper-min-height, --tc-ms-page-upper-max-height
+ *   --tc-ms-page-lower-min-height, --tc-ms-page-lower-flex
+ */
+body.change-form.model-techcardproxy #content-main form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+body.change-form.model-techcardproxy #tc-ms-page-upper.tc-ms-page-block,
+body.change-form.model-techcardproxy .tc-ms-page-block.tc-ms-page-upper {
+  box-sizing: border-box;
+  padding: 16px 18px 18px;
+  margin: 0 0 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  min-height: var(--tc-ms-page-upper-min-height, 0);
+  max-height: var(--tc-ms-page-upper-max-height, none);
+  flex: var(--tc-ms-page-upper-flex, 0 0 auto);
+  overflow: var(--tc-ms-page-upper-overflow, visible);
+}
+
+body.change-form.model-techcardproxy #tc-ms-positions-block.tc-ms-page-block,
+body.change-form.model-techcardproxy .tc-ms-page-block.tc-ms-positions-block {
+  box-sizing: border-box;
+  padding: 16px 18px 20px;
+  margin: 0 0 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  flex: var(--tc-ms-page-lower-flex, 1 1 auto);
+  min-height: var(--tc-ms-page-lower-min-height, 120px);
+  max-height: var(--tc-ms-page-lower-max-height, none);
+  overflow: var(--tc-ms-page-lower-overflow, visible);
+}
+
+body.change-form.model-techcardproxy .tc-ms-positions-block__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #e5e7eb;
+  line-height: 1.3;
+}
+
+/* Без min-height: 0 — иначе во flex-колонке мог схлопываться контент со вкладками */
+body.change-form.model-techcardproxy .tc-ms-positions-block__body {
+  display: block;
+}
+
+body.change-form.model-techcardproxy .tc-ms-page-upper fieldset.module.tc-ms-main {
+  margin-bottom: 0;
+}
+
+/* Заголовок страницы */
+body.change-form.model-techcardproxy .tc-ms-page-header {
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+body.change-form.model-techcardproxy .tc-ms-page-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-title-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+/* Панель кнопок Сохранить / Закрыть */
+body.change-form.model-techcardproxy .submit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  margin: 0 0 20px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy .submit-row input.default {
+  background: #9ccc65 !important;
+  border: 1px solid #8bc34a !important;
+  color: #fff !important;
+  padding: 8px 22px !important;
+  font-weight: 600 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+
+body.change-form.model-techcardproxy .submit-row input.default:hover {
+  background: #aed581 !important;
+  border-color: #9ccc65 !important;
+}
+
+body.change-form.model-techcardproxy .submit-row .closelink,
+body.change-form.model-techcardproxy .submit-row a.closelink {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #c4c4c4;
+  border-radius: 3px;
+  color: #333 !important;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+body.change-form.model-techcardproxy .submit-row .closelink:hover {
+  background: #fafafa;
+}
+
+body.change-form.model-techcardproxy .submit-row input[name="_saveasnew"],
+body.change-form.model-techcardproxy .submit-row input[name="_addanother"],
+body.change-form.model-techcardproxy .submit-row input[name="_continue"] {
+  padding: 7px 14px;
+  border-radius: 3px;
+}
+
+/* Основные поля техкарты: подписи по левому краю колонки меток */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main {
+  border: none;
+  background: transparent;
+  margin-bottom: 8px;
+}
+
+/* Одна строка = .form-row > div > .flex-container(label + поле) — как в шаблоне админки */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row {
+  display: block;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row:last-of-type {
+  border-bottom: none;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: flex-start;
+  gap: 0 20px;
+  width: 100%;
+}
+
+/* Подписи: ширина колонки 260px, текст по левому краю */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container > label {
+  flex: 0 0 260px;
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 7px 8px 0 0;
+  margin: 0;
+  font-weight: 400;
+  color: #374151;
+  align-self: flex-start;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .form-row
+  > div
+  > .flex-container
+  > label
+  + * {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: flex-start;
+  width: 100%;
+}
+
+/* Выпадающие списки и автокомплит: прижать к левому краю колонки полей */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main select {
+  text-align: left;
+  text-align-last: left;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .select2-container--admin-autocomplete
+  .select2-selection--single
+  .select2-selection__rendered {
+  text-align: left !important;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .related-widget-wrapper {
+  justify-content: flex-start;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Select2 ~30px — слегка центрируем однострочную подпись к полю */
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .form-row.field-tech_process
+  > div
+  > .flex-container
+  > label {
+  padding-top: 8px;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container.checkbox-row {
+  align-items: center;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container.checkbox-row > label {
+  flex: 1 1 auto;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  text-align: left;
+  padding-top: 0;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .required label::after,
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main label.required::after {
+  content: " *";
+  color: #dc2626;
+  font-weight: 600;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .readonly {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  color: #6b7280;
+  min-height: 1.25em;
+}
+
+/* Комментарий: ниже по высоте, шире по строке */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .field-description textarea {
+  width: 100%;
+  max-width: min(100%, 960px);
+  min-height: 44px;
+  height: 52px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main input[type="text"],
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main select,
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .related-widget-wrapper {
+  max-width: 640px;
+}
+
+/* Техпроцесс: выпадающий список (Select2), справа «Добавить», затем «Удалить» только при выборе */
+body.change-form.model-techcardproxy fieldset.module.tc-ms-main .field-tech_process .related-widget-wrapper {
+  position: relative;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: min(100%, 1280px);
+}
+
+/* Нативный select не участвует в раскладке — только Select2 и иконки */
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  select.admin-autocomplete {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  flex: none !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  .select2-container {
+  flex: 1 1 auto;
+  min-width: 440px;
+  max-width: 100%;
+  order: 1;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  .add-related {
+  flex: 0 0 auto;
+  order: 2;
+  margin-left: 0;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper
+  .delete-related {
+  flex: 0 0 auto;
+  order: 3;
+  display: none;
+  pointer-events: none;
+}
+
+body.change-form.model-techcardproxy
+  fieldset.module.tc-ms-main
+  .field-tech_process
+  .related-widget-wrapper.tc-tp-has-value
+  .delete-related {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+/* Вкладки верхнего уровня */
+body.change-form.model-techcardproxy .tc-ms-tabbed-section {
+  margin-top: 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  /* visible: иначе overflow:hidden обрезает выпадающие меню карточек материалов (⋯) */
+  overflow: visible;
+}
+
+body.change-form.model-techcardproxy .tc-ms-primary-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f3f4f6;
+  align-items: flex-end;
+}
+
+body.change-form.model-techcardproxy .tc-ms-ptab {
+  margin: 0 2px 0 0;
+  padding: 10px 20px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: #2563eb;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  white-space: nowrap;
+  position: relative;
+  top: 1px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-ptab:hover {
+  color: #1d4ed8;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Активная вкладка: белый фон, серая рамка по бокам, синяя полоса сверху (как в МойСклад) */
+body.change-form.model-techcardproxy .tc-ms-ptab.active {
+  color: #111827;
+  font-weight: 600;
+  background: #fff;
+  border-color: #d1d5db;
+  border-top: 3px solid #2563eb;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+  z-index: 2;
+}
+
+body.change-form.model-techcardproxy .tc-ms-panels {
+  padding: 0;
+  min-height: 120px;
+  background: #fff;
+  border-top: none;
+}
+
+body.change-form.model-techcardproxy .tc-ms-ppanel {
+  padding: 16px 18px 20px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-ppanel:not(.active) {
+  display: none !important;
+}
+
+body.change-form.model-techcardproxy .tc-ms-ppanel.active {
+  display: block;
+}
+
+/* Материалы (скрытый backend + видимые карточки): выпадающие списки слева */
+body.change-form.model-techcardproxy #tc-ms-panel-materials select {
+  text-align: left;
+  text-align-last: left;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-materials
+  .select2-container--admin-autocomplete
+  .select2-selection--single
+  .select2-selection__rendered {
+  text-align: left !important;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-materials .related-widget-wrapper {
+  justify-content: flex-start;
+}
+
+/* Вкладка «Деньги»: таблица норм по этапам */
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table {
+  width: 100%;
+  max-width: 1100px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table th,
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table thead th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-tfoot td {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #111827;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-money .techcard-labor-inline-group .wrapper {
+  overflow-x: auto;
+}
+
+/*
+ * Колонка «Этап» (Деньги): одна строка — поле выбора / поиск (select2),
+ * сразу справа от неё — удалить и изменить; справа в ячейке — только «+» (новый этап).
+ */
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table td.field-production_stage {
+  min-width: 0;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Выпадающий список или контейнер select2 — «строка поиска», растягивается */
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  > select:not(.admin-autocomplete) {
+  flex: 1 1 auto;
+  min-width: 0;
+  order: 1;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  > .select2-container {
+  flex: 1 1 auto;
+  min-width: 120px;
+  order: 1;
+}
+
+/* Autocomplete: нативный select убираем из потока, если есть select2 */
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper:has(> .select2-container)
+  > select.admin-autocomplete {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  border: 0 !important;
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper:has(> .select2-container)
+  > select.admin-autocomplete {
+  order: 1;
+}
+
+/* Если autocomplete ещё не инициализирован — select занимает ширину */
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  > select.admin-autocomplete:not(.select2-hidden-accessible) {
+  flex: 1 1 auto;
+  min-width: 0;
+  order: 1;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  .delete-related {
+  order: 2;
+  flex: 0 0 auto;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  .change-related {
+  order: 3;
+  flex: 0 0 auto;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  .view-related {
+  order: 4;
+  flex: 0 0 auto;
+}
+
+body.change-form.model-techcardproxy
+  #tc-ms-panel-money
+  .tc-labor-inline-table
+  td.field-production_stage
+  .related-widget-wrapper
+  .add-related {
+  order: 5;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Таблица «Продукция» (как МойСклад: наименование | норма, строка поиска снизу) */
+body.change-form.model-techcardproxy .tc-ms-product-table-wrap {
+  margin-top: 8px;
+  /* Как .tc-materials-stages-root: рамка и скругление блока */
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table {
+  table-layout: fixed;
+}
+
+body.change-form.model-techcardproxy .tc-ms-grid-table {
+  width: 100%;
+  max-width: none;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-th-name,
+body.change-form.model-techcardproxy .tc-ms-product-th-norm {
+  position: relative;
+  /* как .tc-mgh-cell с ручкой: отступ справа под ресайзер */
+  padding-right: 10px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-table-wrap .tc-ms-product-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+  user-select: none;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-table-wrap .tc-ms-product-col-resizer:hover {
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.12));
+}
+
+body.change-form.model-techcardproxy .tc-ms-grid-table th,
+body.change-form.model-techcardproxy .tc-ms-grid-table td {
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+body.change-form.model-techcardproxy .tc-ms-grid-table thead th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table thead {
+  /* Одна мягкая «синяя» тень под шапкой, как акцент у материалов */
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.14);
+}
+
+/*
+ * Заголовки столбцов — как .tc-materials-grid-head + .tc-mgh-cell.
+ * В админке Django для любых thead th заданы text-transform: uppercase и font-size: 0.6875rem (~11px);
+ * шапка «Материалы» — div, поэтому там 10px и обычный регистр. Явно сбрасываем стиль таблицы админки.
+ */
+body.change-form.model-techcardproxy .tc-ms-product-composition-table thead th {
+  box-sizing: border-box;
+  background: #fafafa;
+  font-family: var(--font-family-primary, inherit);
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 1.2;
+  color: #374151;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2563eb;
+  text-transform: none !important;
+  letter-spacing: normal;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table thead th.tc-ms-product-th-name {
+  padding-right: 10px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table thead th.tc-ms-product-th-norm {
+  padding-right: 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table thead th.tc-ms-product-th-actions {
+  padding: 8px 4px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-grid-table tbody td {
+  background: #fff;
+  color: #111827;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-th-actions {
+  width: 28px;
+  min-width: 28px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+/*
+ * Строка поиска только в колонке «Наименование»; хвостовые ячейки — фон и нижняя синяя линия на всю ширину таблицы.
+ * Тень только у ячейки с полем, чтобы не утраивать.
+ */
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tr.tc-ms-product-search-row td.tc-ms-product-search-cell {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #2563eb;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.14);
+  overflow: visible;
+  vertical-align: middle;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tr.tc-ms-product-search-row td.tc-ms-product-search-gap {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #2563eb;
+  vertical-align: middle;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-search-row--product {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 20px;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-search-row--product .tc-item-search-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 20px;
+  min-height: 20px;
+  font-size: 10px;
+  padding: 0 8px;
+  line-height: 18px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 3px;
+  margin: 0;
+  cursor: text;
+  background: #fff;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-dropdown {
+  display: none;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-dropdown.visible {
+  display: block;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-dropdown li:hover {
+  background: #f1f5f9;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-add-from-directory {
+  flex-shrink: 0;
+  height: 20px;
+  min-height: 20px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #c4c4c4;
+  border-radius: 3px;
+  cursor: pointer;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product .tc-item-add-from-directory:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Строки комплектующих: жёлтый hover на всю строку (фон на td — иначе белый td перекрывает tr) */
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row {
+  --tc-card-row-hover-bg: #fff59d;
+}
+
+/* Строка комплектующей — высота 24px; hover должен быть не слабее базового правила (иначе белый td перебивает жёлтый) */
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tbody tr.tc-ms-product-comp-row td {
+  vertical-align: middle;
+  background-color: #fff;
+  transition: background-color 0.12s ease;
+  padding: 1px 6px;
+  height: 24px;
+  max-height: 24px;
+  line-height: 22px;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row td.tc-ms-product-col-name {
+  overflow: visible;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tbody tr.tc-ms-product-comp-row:hover td,
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tbody tr.tc-ms-product-comp-row:focus-within td {
+  background-color: var(--tc-card-row-hover-bg);
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-name-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 22px;
+  /* overflow: hidden обрезал сетку точек; обрезка только у текста — .tc-ms-product-title-wrap */
+  overflow: visible;
+}
+
+/*
+ * Ручка «6 точек» на вкладке Продукция: SVG-фон (стабильно видно в таблице).
+ * Раньше opacity:0 + grid из span — в ячейке не отображалось; курсор «рука» только над этой зоной.
+ */
+body.change-form.model-techcardproxy #tc-ms-panel-product tr.tc-ms-product-comp-row .tc-ms-product-comp-drag {
+  display: block;
+  flex-shrink: 0;
+  flex-grow: 0;
+  width: 12px;
+  height: 16px;
+  min-width: 12px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 3px;
+  user-select: none;
+  cursor: grab;
+  opacity: 1;
+  pointer-events: auto;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='16' viewBox='0 0 12 16'%3E%3Ccircle cx='2.5' cy='2.5' r='1.35' fill='%23334155'/%3E%3Ccircle cx='7.5' cy='2.5' r='1.35' fill='%23334155'/%3E%3Ccircle cx='2.5' cy='8' r='1.35' fill='%23334155'/%3E%3Ccircle cx='7.5' cy='8' r='1.35' fill='%23334155'/%3E%3Ccircle cx='2.5' cy='13.5' r='1.35' fill='%23334155'/%3E%3Ccircle cx='7.5' cy='13.5' r='1.35' fill='%23334155'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 12px 16px;
+  transition: background-color 0.12s ease;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:hover .tc-ms-product-comp-drag,
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:focus-within .tc-ms-product-comp-drag {
+  background-color: rgba(15, 23, 42, 0.07);
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-product tr.tc-ms-product-comp-row .tc-ms-product-comp-drag:active {
+  cursor: grabbing;
+  background-color: rgba(15, 23, 42, 0.12);
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-composition-table tbody tr.tc-ms-product-comp-row.tc-ms-product-comp-row--drag-over td {
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+/* Ручка — первый ребёнок; артикул и наименование — во вложенном span с ellipsis */
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-title-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 10px;
+  line-height: 22px;
+  max-height: 22px;
+  color: #1e293b;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-title-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 22px;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-code {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  line-height: 22px;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-title {
+  font-weight: 400;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-col-norm {
+  text-align: left;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  height: 24px;
+  max-height: 24px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-item-card-qty {
+  box-sizing: border-box;
+  width: 88px;
+  max-width: 40%;
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
+  font-size: 10px;
+  line-height: 18px;
+  padding: 0 4px;
+  text-align: left;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-item-card-unit {
+  flex: 0 0 auto;
+  max-width: 72px;
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
+  font-size: 10px;
+  line-height: 18px;
+  padding: 0 2px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:hover .tc-item-card-qty,
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:focus-within .tc-item-card-qty,
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:hover .tc-item-card-unit,
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:focus-within .tc-item-card-unit {
+  background-color: #fff;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-col-remove {
+  text-align: center;
+  vertical-align: middle;
+  width: 28px;
+  min-width: 28px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-comp-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:hover .tc-ms-product-comp-remove,
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row:focus-within .tc-ms-product-comp-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.change-form.model-techcardproxy .tc-ms-product-comp-remove:hover {
+  border-color: #94a3b8;
+  color: #334155;
+  background: #fff;
+}
+
+body.change-form.model-techcardproxy tr.tc-ms-product-comp-row .tc-ms-product-comp-remove-x {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+body.change-form.model-techcardproxy .tc-ms-placeholder {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Inline материалов на полную ширину панели */
+body.change-form.model-techcardproxy #tc-ms-panel-materials .techcard-items-inline-group {
+  max-width: none;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-materials .techcard-items-inline-group nav.tc-item-tabs {
+  max-width: none;
+}
+
+body.change-form.model-techcardproxy .tc-items-ms-hidden-title {
+  display: none !important;
+}
+
+/* Вкладка «Деньги»: единица ч/м в заголовке столбца «Норма» */
+body.change-form.model-techcardproxy .tc-labor-norm-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+body.change-form.model-techcardproxy .tc-labor-norm-th-label {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+body.change-form.model-techcardproxy select.tc-labor-norm-unit-select {
+  min-width: 0;
+  width: auto;
+  max-width: 52px;
+  padding: 2px 20px 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+body.change-form.model-techcardproxy #tc-ms-panel-money .tc-labor-inline-table thead th.tc-labor-norm-column {
+  vertical-align: middle;
+}
+
+@media (max-width: 1024px) {
+  body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container {
+    flex-flow: column;
+    align-items: stretch;
+  }
+
+  body.change-form.model-techcardproxy fieldset.module.tc-ms-main .form-row > div > .flex-container > label {
+    flex: none;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    text-align: left;
+    padding: 0 0 8px;
+  }
+
+  body.change-form.model-techcardproxy
+    fieldset.module.tc-ms-main
+    .form-row.field-tech_process
+    > div
+    > .flex-container
+    > label {
+    padding-top: 0;
+  }
+}

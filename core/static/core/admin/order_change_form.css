@@ -1,0 +1,77 @@
+/*
+ * Форма заказа (core.Order) — тот же визуальный язык, что у техкарты.
+ */
+body.change-form.model-order #content-main {
+  max-width: min(100%, 1680px);
+}
+
+body.change-form.model-order .order-ms-page-header {
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+body.change-form.model-order .order-ms-page-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body.change-form.model-order .order-ms-title-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+body.change-form.model-order .submit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  margin: 0 0 20px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+body.change-form.model-order .submit-row input.default {
+  background: #9ccc65 !important;
+  border: 1px solid #8bc34a !important;
+  color: #fff !important;
+  padding: 8px 22px !important;
+  font-weight: 600 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+
+body.change-form.model-order .submit-row input.default:hover {
+  background: #aed581 !important;
+  border-color: #9ccc65 !important;
+}
+
+body.change-form.model-order .submit-row .closelink,
+body.change-form.model-order .submit-row a.closelink {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #c4c4c4;
+  border-radius: 3px;
+  color: #333 !important;
+  text-decoration: none !important;
+}

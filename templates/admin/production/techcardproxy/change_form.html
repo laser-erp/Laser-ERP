@@ -1,0 +1,109 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static admin_modify %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if tech_process_stages_map %}{{ tech_process_stages_map|json_script:"tech-process-stages-data" }}{% endif %}
+{% endblock %}
+
+{% block form_top %}
+<div class="tc-ms-page-header">
+  <h1 class="tc-ms-page-title">
+    <span class="tc-ms-title-help" title="Карта задаёт состав изделия: продукция и материалы">?</span>
+    Технологическая карта
+  </h1>
+</div>
+{{ block.super }}
+{% endblock %}
+
+{% block field_sets %}
+{# Верхний блок: наименование, техпроцесс, группа, распределение стоимости, комментарий (fieldset tc-ms-main) #}
+<div id="tc-ms-page-upper" class="tc-ms-page-block tc-ms-page-upper">
+{% for fieldset in adminform %}
+  {% if "tc-ms-main" in fieldset.classes %}
+    {% include "admin/includes/fieldset.html" with heading_level=2 prefix="fieldset" id_prefix=0 id_suffix=forloop.counter0 %}
+  {% endif %}
+{% endfor %}
+</div>
+{# Блок «Позиции технологической карты»: вкладки и инлайны — до кнопок «Сохранить» #}
+<div id="tc-ms-positions-block" class="tc-ms-page-block tc-ms-positions-block">
+  <h2 class="tc-ms-positions-block__title">Позиции технологической карты</h2>
+  <div id="tc-ms-page-lower" class="tc-ms-positions-block__body">
+{% for fieldset in adminform %}
+  {% if "tc-ms-main" in fieldset.classes %}
+    {# основной fieldset уже в верхнем блоке #}
+  {% else %}
+    {% include "admin/includes/fieldset.html" with heading_level=2 prefix="fieldset" id_prefix=0 id_suffix=forloop.counter0 %}
+  {% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block after_field_sets %}
+<div class="tc-ms-tabbed-section" id="tc-ms-tabbed-section">
+  <nav class="tc-ms-primary-tabs" role="tablist" aria-label="Разделы техкарты">
+    <button type="button" class="tc-ms-ptab active" data-tcms="product" role="tab" aria-selected="true" id="tc-ms-tab-product">Продукция</button>
+    <button type="button" class="tc-ms-ptab" data-tcms="materials" role="tab" aria-selected="false" id="tc-ms-tab-materials" tabindex="-1">Материалы</button>
+    <button type="button" class="tc-ms-ptab" data-tcms="money" role="tab" aria-selected="false" id="tc-ms-tab-money" tabindex="-1">Деньги</button>
+    <button type="button" class="tc-ms-ptab" data-tcms="instructions" role="tab" aria-selected="false" id="tc-ms-tab-instructions" tabindex="-1">Инструкции</button>
+  </nav>
+  <div class="tc-ms-panels">
+    <div class="tc-ms-ppanel active" id="tc-ms-panel-product" data-tcms="product" role="tabpanel" aria-labelledby="tc-ms-tab-product">
+      <div class="tc-ms-product-table-wrap">
+        <table class="tc-ms-grid-table tc-ms-product-composition-table">
+          <colgroup>
+            <col class="tc-ms-product-col-name-col" />
+            <col class="tc-ms-product-col-norm-col" />
+            <col class="tc-ms-product-col-actions-col" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" class="tc-ms-product-th-name">Наименование</th>
+              <th scope="col" class="tc-ms-product-th-norm">Норма по техкарте</th>
+              <th scope="col" class="tc-ms-product-th-actions" aria-hidden="true"></th>
+            </tr>
+          </thead>
+          <tbody id="tc-ms-product-composition-tbody"></tbody>
+          <tbody>
+            <tr class="tc-ms-product-search-row">
+              <td class="tc-ms-product-search-cell">
+                <div class="tc-ms-product-search-inner tc-item-search-row tc-item-search-row--product">
+                  <div class="tc-item-search-wrap">
+                    <input type="text" class="vTextField tc-item-search-input tc-ms-product-search-input" autocomplete="off"
+                      placeholder="Поиск по наименованию, коду, штрихкоду или артикулу"
+                      aria-label="Поиск комплектующего изделия" />
+                    <ul class="tc-item-dropdown"></ul>
+                  </div>
+                  <button type="button" class="tc-item-add-from-directory tc-ms-product-add-from-directory">Добавить из справочника</button>
+                </div>
+              </td>
+              <td class="tc-ms-product-search-gap" aria-hidden="true"></td>
+              <td class="tc-ms-product-search-gap" aria-hidden="true"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tc-ms-ppanel" id="tc-ms-panel-materials" data-tcms="materials" role="tabpanel" aria-labelledby="tc-ms-tab-materials" hidden></div>
+    <div class="tc-ms-ppanel" id="tc-ms-panel-money" data-tcms="money" role="tabpanel" aria-labelledby="tc-ms-tab-money" hidden></div>
+    <div class="tc-ms-ppanel" id="tc-ms-panel-instructions" data-tcms="instructions" role="tabpanel" aria-labelledby="tc-ms-tab-instructions" hidden>
+      <p class="tc-ms-placeholder">Раздел «Инструкции» будет доступен позже.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block inline_field_sets %}
+{% for inline_admin_formset in inline_admin_formsets %}
+  {% if inline_admin_formset.opts.opts.model_name == "techcardlaborline" %}
+  <div id="tc-ms-labor-inline-root">
+    {% include inline_admin_formset.opts.template %}
+  </div>
+  {% else %}
+  <div id="tc-ms-items-inline-root">
+    {% include inline_admin_formset.opts.template %}
+  </div>
+  {% endif %}
+{% endfor %}
+  </div>{# tc-ms-page-lower #}
+</div>{# tc-ms-positions-block #}
+{% endblock %}

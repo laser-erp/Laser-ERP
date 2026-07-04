@@ -1,0 +1,166 @@
+/*
+ * Модели внутри раздела (Производство, Склад, Core и т.д.) — в ряд с переносом,
+ * а не вертикальной таблицей. Действует на главную админки, страницы приложений и боковую панель.
+ */
+
+/* Общая сетка: таблица → блок, строки моделей — flex-ряд */
+#content-main.app-list .module > table,
+#nav-sidebar .module > table {
+  display: block;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#content-main.app-list .module > table > caption,
+#nav-sidebar .module > table > caption {
+  display: block;
+  width: 100%;
+  caption-side: top;
+  text-align: start;
+}
+
+#content-main.app-list .module > table > thead,
+#nav-sidebar .module > table > thead {
+  display: none;
+}
+
+#content-main.app-list .module > table > tbody,
+#nav-sidebar .module > table > tbody {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px 12px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 0 12px 0;
+}
+
+#nav-sidebar .module > table > tbody {
+  gap: 6px 8px;
+  padding: 4px 0 8px 0;
+}
+
+/* Одна модель — компактная «плитка» */
+#content-main.app-list .module > table > tbody > tr,
+#nav-sidebar .module > table > tbody > tr {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline-color, #e5e5e5);
+  border-radius: 4px;
+  background: var(--body-bg, #fff);
+  box-sizing: border-box;
+}
+
+#nav-sidebar .module > table > tbody > tr {
+  padding: 6px 8px;
+  max-width: 100%;
+}
+
+#content-main.app-list .module > table > tbody > tr {
+  min-width: 10rem;
+  max-width: 16rem;
+}
+
+/* Одна ячейка-карточка на строку */
+#content-main.app-list .module > table > tbody > tr > th.laser-model-card,
+#nav-sidebar .module > table > tbody > tr > th.laser-model-card {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  border: none;
+  padding: 0;
+  text-align: start;
+  background: transparent;
+  font-weight: normal;
+}
+
+.laser-model-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.laser-model-card-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.laser-model-card-name a {
+  text-decoration: none;
+  color: var(--body-fg, #333);
+}
+
+.laser-model-card-name a:hover {
+  color: var(--link-fg, #2563eb);
+  text-decoration: underline;
+}
+
+/* Кнопки внутри карточки (как в старом чате: добавить — зелёная, список/изменить — синяя) */
+.laser-model-card-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.laser-model-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  text-decoration: none !important;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  line-height: 1.2;
+  /* сброс фоновых иконок Django для этих ссылок */
+  background-image: none !important;
+  padding-left: 10px !important;
+}
+
+.laser-model-btn-add {
+  background: #16a34a !important;
+  color: #fff !important;
+}
+
+.laser-model-btn-add:hover {
+  background: #15803d !important;
+  color: #fff !important;
+}
+
+.laser-model-btn-list {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+.laser-model-btn-list:hover {
+  background: #1d4ed8 !important;
+  color: #fff !important;
+}
+
+#nav-sidebar .module > table > tbody > tr > th.laser-model-card {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+#nav-sidebar .current-model {
+  border-color: var(--link-fg, #2563eb);
+  background: var(--selected-row, #ffc);
+}
+
+#content-main.app-list .module > table > tbody > tr.current-model {
+  border-color: var(--link-fg, #2563eb);
+  box-shadow: 0 0 0 1px var(--link-fg, #2563eb);
+}

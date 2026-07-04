@@ -1,0 +1,393 @@
+/**
+ * Подсказки полей: иконка «?» слева; текст — всплывающий блок по наведению.
+ * Внешний вид «?» как в ERP: тонкий знак в круге с синей обводкой, без заливки.
+ *
+ * Ряд поля: «?» | подпись | ввод — одна горизонтальная линия, по вертикали по центру.
+ */
+
+:root {
+  --laser-admin-field-label-width: 11rem;
+}
+
+/* В ряду из нескольких полей — колонки выравниваются по высоте строки */
+fieldset.module.aligned .form-row .form-multiline {
+  align-items: flex-start;
+}
+
+fieldset.module.aligned .form-row .form-multiline > div,
+fieldset.module.aligned .form-row:not(:has(.form-multiline)) > div {
+  min-width: 0;
+}
+
+/* «?» + основной блок (подпись + поле) */
+fieldset.module.aligned .form-row .form-multiline > div > .laser-field-with-help:not(.laser-field-with-help--checkbox),
+fieldset.module.aligned .form-row:not(:has(.form-multiline)) > div > .laser-field-with-help:not(.laser-field-with-help--checkbox) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+fieldset.module.aligned .form-row .laser-field-help-col {
+  align-self: center;
+  padding-top: 0;
+}
+
+fieldset.module.aligned .form-row .form-multiline > div > .laser-field-with-help:not(.laser-field-with-help--checkbox) .laser-field-main-col,
+fieldset.module.aligned .form-row:not(:has(.form-multiline)) > div > .laser-field-with-help:not(.laser-field-with-help--checkbox) .laser-field-main-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Подпись слева от поля, фиксированная ширина колонки */
+fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  display: block;
+  float: none;
+  flex: 0 0 auto;
+  width: var(--laser-admin-field-label-width);
+  min-width: var(--laser-admin-field-label-width);
+  max-width: var(--laser-admin-field-label-width);
+  box-sizing: border-box;
+  padding: 0 0.5rem 0 0;
+  margin: 0;
+  text-align: left;
+  font-weight: 500;
+  line-height: 1.35;
+  align-self: center;
+}
+
+/* Всё после подписи — зона поля (инпут, Select2, readonly) */
+fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: center;
+}
+
+fieldset.module.aligned .laser-field-main-col .related-widget-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  /* Иначе flex + min-width:0 у родителя сжимает Select2 до десятков px */
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+
+/* Иконки «изменить / добавить / …» слева от поля автодополнения (перед наименованием в Select2) */
+fieldset.module.aligned .laser-field-main-col .related-widget-wrapper > .related-widget-wrapper-link {
+  order: -1;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding-right: 0;
+  }
+
+  fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+    align-self: stretch;
+  }
+}
+
+.laser-field-with-help {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: visible;
+}
+
+.laser-field-help-col {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  min-width: 1.75rem;
+  padding-top: 0;
+  align-self: center;
+  overflow: visible;
+}
+
+/* Обычные поля: absolute под колонкой «?»; fixed только для табличных инлайнов (admin_field_help.js) */
+.laser-field-help-col .laser-help-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.35rem;
+  z-index: 20000;
+}
+
+.laser-field-main-col {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Чекбокс: «?» в одной строке перед переключателем */
+.laser-field-with-help--checkbox {
+  display: block;
+}
+
+.laser-field-main-col--checkbox {
+  min-width: 0;
+}
+
+.laser-checkbox-help-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+fieldset.module.aligned .laser-checkbox-help-row > label {
+  margin: 0;
+  padding: 0 0.35rem 0 0;
+  font-weight: 500;
+  line-height: 1.35;
+  max-width: var(--laser-admin-field-label-width);
+}
+
+.laser-field-help-inline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Подсказка под «?» без раздувания строки (рядом с чекбоксом) */
+.laser-help-panel--anchored {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  z-index: 20000;
+}
+
+.form-multiline .laser-field-with-help--checkbox .laser-checkbox-help-row {
+  align-items: center;
+}
+
+/* Акцент как в laser_admin_theme.css (#2563eb) */
+.laser-help-trigger.help-icon-tooltip,
+button.laser-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #2563eb;
+  border-radius: 50%;
+  background: transparent;
+  color: #2563eb;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+  flex-shrink: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.laser-help-trigger:hover,
+.laser-help-trigger:focus-visible {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.laser-help-trigger[aria-expanded="true"] {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  background: transparent;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.laser-help-trigger-icon {
+  pointer-events: none;
+  user-select: none;
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Всплывающая подсказка: светло-жёлтый фон, поверх модулей и overflow */
+.laser-help-panel {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(22rem, 92vw);
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #1e293b;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.08),
+    0 10px 24px -4px rgba(15, 23, 42, 0.14);
+  z-index: 20000;
+  pointer-events: auto;
+}
+
+.laser-help-panel-inner {
+  max-width: min(20rem, 85vw);
+}
+
+.laser-help-panel-inner--empty {
+  color: var(--body-quiet-color, #777);
+  font-style: italic;
+}
+
+.laser-help-panel-inner p {
+  margin: 0.35em 0;
+}
+
+.laser-help-panel-inner p:first-child {
+  margin-top: 0;
+}
+
+.laser-help-panel-inner p:last-child {
+  margin-bottom: 0;
+}
+
+/* Текст подсказки под полем (Django .help), тот же жёлтый тон */
+body.change-form #content-main .form-row .help,
+body.add-form #content-main .form-row .help {
+  box-sizing: border-box;
+  max-width: min(48rem, 100%);
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #1e293b;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Табличные инлайны: заголовок и ячейка */
+.laser-th-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.laser-th-label-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.laser-th-with-help {
+  position: relative;
+  vertical-align: middle;
+}
+
+.laser-help-panel--tabular-head {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 0.35rem;
+}
+
+.laser-tabular-inline-wrapper {
+  overflow-x: auto;
+}
+
+.laser-tabular-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.laser-help-trigger--tabular {
+  flex-shrink: 0;
+  margin-top: 0;
+  align-self: center;
+}
+
+.laser-help-trigger--tabular-cell {
+  margin-top: 0;
+  align-self: center;
+}
+
+.laser-tabular-cell-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.laser-tabular-cell-main .errorlist {
+  margin: 0 0 0.25rem;
+}
+
+/* Плавающая панель (ячейки таблицы) */
+.laser-help-panel.laser-help-panel--floating {
+  position: fixed;
+  margin-top: 0;
+  width: max-content;
+  max-width: min(24rem, 92vw);
+  z-index: 20000;
+}
+
+/* Карточки: подсказки и строки не режутся контейнерами */
+body.change-form #content-main fieldset.module.aligned .form-row,
+body.add-form #content-main fieldset.module.aligned .form-row {
+  overflow: visible;
+}
+
+body.change-form #content-main fieldset.module.aligned,
+body.add-form #content-main fieldset.module.aligned {
+  overflow: visible;
+}
+
+/* Совместимость с компактным блоком товара */
+fieldset.module.compact-uom .laser-field-help-col {
+  padding-top: 0;
+}
+
+fieldset.module.compact-uom .laser-help-panel {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+fieldset.module.compact-uom .laser-help-panel-inner {
+  max-width: min(20rem, 85vw);
+}

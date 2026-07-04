@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+{% block title %}Мои запросы на производство{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Мои запросы на производство</h1>
+  <a href="{% url 'production_request_create' %}" class="btn btn-success">Новый запрос</a>
+</div>
+
+{% if requests_list %}
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Номер</th>
+        <th>Дата</th>
+        <th>Наименование</th>
+        <th>Количество</th>
+        <th>Статус</th>
+        <th>Макет</th>
+        <th>Проверка файла</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests_list %}
+      <tr>
+        <td>#{{ req.id }}</td>
+        <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ req.request_title }}</td>
+        <td>{{ req.quantity }}</td>
+        <td>{{ req.get_status_display }}</td>
+        <td>
+          {% if req.layout_file and not req.layout_is_quarantined and req.layout_scan_status != 'infected' %}
+          <a href="{{ req.layout_file.url }}" download>Открыть файл</a>
+          {% elif req.layout_is_quarantined or req.layout_scan_status == 'infected' %}
+          <span class="text-danger">Файл заблокирован</span>
+          {% elif req.layout_scan_status == 'failed' %}
+          <span class="text-warning">Проверка не пройдена</span>
+          {% elif req.layout_scan_status == 'pending' %}
+          <span class="text-muted">Проверяется</span>
+          {% else %}
+          —
+          {% endif %}
+        </td>
+        <td>{{ req.get_layout_scan_status_display }}</td>
+        <td class="text-end">
+          <a href="{% url 'production_request_detail' req.id %}" class="btn btn-sm btn-outline-primary">Открыть</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-light border">У вас пока нет запросов на производство.</div>
+{% endif %}
+{% endblock %}

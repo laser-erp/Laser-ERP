@@ -1,0 +1,227 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Запрос на производство №{{ request_obj.id }}{% endblock %}
+{% block extrahead %}
+<script src="{% static 'core/production_request_chat.js' %}?v=4" defer></script>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="mb-0">Запрос №{{ request_obj.id }}</h1>
+  {% if is_client_view %}
+  <a href="{% url 'account_production_requests' %}" class="btn btn-outline-secondary">К списку</a>
+  {% else %}
+  <a href="{% url 'employee_production_requests' %}" class="btn btn-outline-secondary">К списку</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Данные заявки</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Клиент</dt>
+          <dd class="col-sm-8">{{ request_obj.customer_name }}</dd>
+
+          <dt class="col-sm-4">Контакты</dt>
+          <dd class="col-sm-8">{{ request_obj.phone }} / {{ request_obj.email }}</dd>
+
+          <dt class="col-sm-4">Наименование</dt>
+          <dd class="col-sm-8">{{ request_obj.request_title }}</dd>
+
+          <dt class="col-sm-4">Количество</dt>
+          <dd class="col-sm-8">{{ request_obj.quantity }}</dd>
+
+          <dt class="col-sm-4">Товар/основа</dt>
+          <dd class="col-sm-8">{{ request_obj.product|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Желаемый срок</dt>
+          <dd class="col-sm-8">{{ request_obj.deadline|date:"d.m.Y"|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Материал</dt>
+          <dd class="col-sm-8">{{ request_obj.material_preferences|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Параметры</dt>
+          <dd class="col-sm-8">{{ request_obj.specs|default:"—"|linebreaksbr }}</dd>
+
+          <dt class="col-sm-4">Комментарий</dt>
+          <dd class="col-sm-8">{{ request_obj.comment|default:"—"|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Статус и файл</h2>
+        <p class="mb-2">Текущий статус: <strong>{{ request_obj.get_status_display }}</strong></p>
+        <p class="mb-2">Проверка файла: <strong>{{ request_obj.get_layout_scan_status_display }}</strong></p>
+        <p class="mb-3">
+          Файл макета:
+          {% if request_obj.layout_file and not request_obj.layout_is_quarantined and request_obj.layout_scan_status != 'infected' %}
+          <a href="{{ request_obj.layout_file.url }}" download>Открыть</a>
+          {% elif request_obj.layout_is_quarantined or request_obj.layout_scan_status == 'infected' %}
+          <span class="text-danger">Файл заблокирован и помещен в карантин.</span>
+          {% elif request_obj.layout_scan_status == 'failed' %}
+          <span class="text-warning">Файл недоступен из-за ошибки антивирусной проверки.</span>
+          {% elif request_obj.layout_scan_status == 'pending' %}
+          <span class="text-muted">Файл проверяется.</span>
+          {% else %}
+          —
+          {% endif %}
+        </p>
+        {% if request_obj.layout_scan_result %}
+        <p class="small text-muted mb-3">{{ request_obj.layout_scan_result }}</p>
+        {% endif %}
+        {% if can_manage_status %}
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <select name="status" class="form-select form-select-sm">
+            {% for code, label in status_choices %}
+            <option value="{{ code }}" {% if request_obj.status == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if can_manage_status %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Счет клиенту</h2>
+        <form method="post" action="{% url 'production_request_issue_invoice' request_obj.id %}" class="row g-2" novalidate>
+          {% csrf_token %}
+          <div class="col-sm-4">
+            <label class="form-label form-label-sm mb-1">Сумма</label>
+            <input
+              type="number"
+              name="amount"
+              step="0.01"
+              min="0.01"
+              class="form-control form-control-sm"
+              required
+              oninvalid="this.setCustomValidity('Укажите сумму больше нуля.')"
+              oninput="this.setCustomValidity('')"
+            >
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label form-label-sm mb-1">Дата счёта</label>
+            <input
+              type="text"
+              name="issue_date"
+              class="form-control form-control-sm"
+              value="{{ default_issue_date }}"
+              pattern="[0-9]{2}\.[0-9]{2}\.[0-9]{4}"
+              oninvalid="this.setCustomValidity('Введите дату в формате ДД.ММ.ГГГГ.')"
+              oninput="this.setCustomValidity('')"
+            >
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label form-label-sm mb-1">Оплатить до</label>
+            <input
+              type="text"
+              name="due_date"
+              class="form-control form-control-sm"
+              value="{{ default_due_date }}"
+              pattern="[0-9]{2}\.[0-9]{2}\.[0-9]{4}"
+              oninvalid="this.setCustomValidity('Введите дату в формате ДД.ММ.ГГГГ.')"
+              oninput="this.setCustomValidity('')"
+            >
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label form-label-sm mb-1">Наша организация</label>
+            <select
+              name="our_organization_id"
+              class="form-select form-select-sm"
+              required
+              oninvalid="this.setCustomValidity('Выберите нашу организацию.')"
+              onchange="this.setCustomValidity('')"
+            >
+              <option value="">Выберите организацию</option>
+              {% for org in our_organizations %}
+              <option value="{{ org.id }}">{{ org.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-sm-12">
+            <label class="form-label form-label-sm mb-1">Назначение платежа</label>
+            <input
+              type="text"
+              name="purpose"
+              class="form-control form-control-sm"
+              placeholder="Оплата по заявке №{{ request_obj.id }}"
+            >
+          </div>
+          <div class="col-sm-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-sm btn-primary">Сформировать счет</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Счета по этому клиенту</h2>
+        {% if customer_invoices %}
+          <div class="small">
+            {% for inv in customer_invoices %}
+              <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-2">
+                <div>
+                  <a href="{% url 'customer_invoice_detail' inv.id %}">{{ inv.number }}</a>
+                  от {{ inv.issue_date|date:"d.m.Y" }}
+                  — {{ inv.amount }} руб.
+                </div>
+                <span class="text-muted">{{ inv.get_status_display }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted small">Счета этому клиенту пока не выставлялись.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div
+      class="card border-0 shadow-sm js-production-chat"
+      data-fetch-url="{% url 'production_request_chat_messages' request_obj.id %}"
+      data-post-url="{% url 'production_request_add_message' request_obj.id %}"
+    >
+      <div class="card-body">
+        <h2 class="h6 mb-3">Мини-чат</h2>
+        <div class="small mb-2 js-chat-messages border rounded p-2 bg-light" style="max-height: 280px; overflow-y: auto;">
+          {% for msg in chat_messages %}
+          <div class="mb-2">
+            <div class="text-muted" style="font-size: 12px;">
+              {{ msg.created_at|date:"d.m.Y H:i" }} —
+              {% if is_client_view %}
+                {% if msg.is_employee_message %}Менеджер{% else %}Вы{% endif %}
+              {% else %}
+                {% if msg.is_employee_message %}{{ msg.author|default:"Сотрудник" }}{% else %}Клиент{% endif %}
+              {% endif %}
+            </div>
+            <div>{{ msg.text|urlize|linebreaksbr }}</div>
+          </div>
+          {% empty %}
+          <div class="text-muted">Пока сообщений нет.</div>
+          {% endfor %}
+        </div>
+        <form method="post" action="{% url 'production_request_add_message' request_obj.id %}" class="d-flex gap-2 js-chat-form mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <input
+            type="text"
+            name="text"
+            class="form-control form-control-sm"
+            placeholder="{% if is_client_view %}Ваше сообщение менеджеру...{% else %}Ответ клиенту...{% endif %}"
+          >
+          <button type="submit" class="btn btn-sm btn-primary">Отправить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
