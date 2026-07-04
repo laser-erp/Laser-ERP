@@ -83,6 +83,16 @@
     return round2(n).toFixed(2);
   }
 
+  function getPlannedCostBreakdown() {
+    var el = document.getElementById("product-planned-cost-breakdown");
+    if (!el || !el.textContent) return null;
+    try {
+      return JSON.parse(el.textContent);
+    } catch (e) {
+      return null;
+    }
+  }
+
   function init() {
     if (!document.body.classList.contains("model-product")) return;
     var fieldset = document.querySelector("fieldset.product-prices-tabs-host");
@@ -164,6 +174,17 @@
       "</div>" +
       '<p class="product-prices-calc-formula help">Закупочная × (1 + наценка&nbsp;% / 100)</p>';
 
+    var plannedCostRow = document.createElement("div");
+    plannedCostRow.className = "form-row product-prices-calc-row field-product_planned_total_cost";
+    plannedCostRow.innerHTML =
+      '<div class="product-prices-calc-inner">' +
+      '<span class="product-prices-calc-label">Себестоимость изделия, ₽</span>' +
+      '<span id="product-planned-total-cost-value" class="product-prices-calc-value">—</span>' +
+      "</div>" +
+      '<p id="product-planned-total-cost-hint" class="product-prices-calc-hint help">' +
+      "Материалы + оплата труда + затраты на производство + рез (из техкарты)." +
+      "</p>";
+
     var applyRow = document.createElement("div");
     applyRow.className = "form-row product-prices-apply-row";
     applyRow.innerHTML =
@@ -175,10 +196,12 @@
     if (rowMarkup) panel1.appendChild(rowMarkup);
     panel1.appendChild(calcPurchaseRow);
     panel1.appendChild(calcPlannedRow);
+    panel1.appendChild(plannedCostRow);
     panel1.appendChild(applyRow);
 
     var elPurchaseVal = document.getElementById("product-calc-purchase-value");
     var elPlannedVal = document.getElementById("product-calc-planned-value");
+    var elPlannedTotalCost = document.getElementById("product-planned-total-cost-value");
     var elHint = document.getElementById("product-calc-purchase-hint");
     var inpMarkup = document.getElementById("id_planned_markup_percent");
     var inpPurchase = document.getElementById("id_purchase_price");
@@ -233,6 +256,20 @@
       }
       if (elPlannedVal) {
         elPlannedVal.textContent = planned != null ? formatMoney(planned) : "—";
+      }
+      var breakdown = getPlannedCostBreakdown();
+      if (elPlannedTotalCost) {
+        if (breakdown && breakdown.total != null) {
+          var totalN = parseDecimal(breakdown.total);
+          elPlannedTotalCost.textContent = totalN != null ? formatMoney(totalN) : "—";
+        } else if (r.total != null && breakdown) {
+          var labor = parseDecimal(breakdown.labor) || 0;
+          var overhead = parseDecimal(breakdown.overhead) || 0;
+          var cut = parseDecimal(breakdown.cut) || 0;
+          elPlannedTotalCost.textContent = formatMoney(round2(r.total + labor + overhead + cut));
+        } else {
+          elPlannedTotalCost.textContent = r.total != null ? formatMoney(r.total) : "—";
+        }
       }
       return { purchase: r.total, planned: planned };
     }

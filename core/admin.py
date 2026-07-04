@@ -198,9 +198,46 @@ class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     list_display = ("name", "photo_thumb", "group", "material_type", "thickness_mm", "unit", "current_stock")
     list_filter = ("group", "material_type")
-    search_fields = ("name", "material_type")
+    search_fields = ("name", "material_type", "unit", "group__name")
     actions = [copy_materials]
     autocomplete_fields = ("group",)
+
+    @staticmethod
+    def _normalize_material_search_text(value) -> str:
+        return str(value or "").casefold().replace("ё", "е")
+
+    @classmethod
+    def _material_search_haystack(cls, material) -> str:
+        return cls._normalize_material_search_text(
+            " ".join(
+                str(part or "")
+                for part in (
+                    material.name,
+                    material.material_type,
+                    material.unit,
+                    material.group.name if material.group_id else "",
+                    material.thickness_mm,
+                )
+            )
+        )
+
+    def get_search_results(self, request, queryset, search_term):
+        term = (search_term or "").strip()
+        if term:
+            tokens = [
+                self._normalize_material_search_text(token)
+                for token in re.split(r"\s+", term)
+                if token.strip()
+            ]
+            if tokens:
+                rows = list(queryset.select_related("group").order_by("name"))
+                matched_ids = [
+                    material.pk
+                    for material in rows
+                    if all(token in self._material_search_haystack(material) for token in tokens)
+                ]
+                return queryset.model.objects.filter(pk__in=matched_ids).order_by("name"), False
+        return super().get_search_results(request, queryset, search_term)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -1498,6 +1535,14 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
             list(OperationType.objects.order_by("pk").values("id", "name", "result_adjective")),
         )
         context.setdefault("material_avg_unit_prices", _material_average_unit_prices_map())
+        if obj is not None and obj.pk:
+            context["product_planned_cost_breakdown"] = {
+                "materials": format(obj.planned_material_cost, "f"),
+                "labor": format(obj.planned_labor_cost, "f"),
+                "overhead": format(obj.planned_overhead_cost, "f"),
+                "cut": format(obj.planned_cut_cost, "f"),
+                "total": format(obj.planned_total_cost, "f"),
+            }
         # Не {% url %} в шаблоне: при NoReverseMatch шаблон падает с 500.
         try:
             context["supplier_new_org_url"] = reverse("admin:core_organization_add")

@@ -1,99 +1,140 @@
 {% load i18n admin_urls static admin_modify %}
+{% if production_stage_admin_urls %}{{ production_stage_admin_urls|json_script:"tc-labor-stage-admin-urls" }}{% endif %}
+<link rel="stylesheet" href="{% static 'core/admin/techcard_labor_inline.css' %}?v=7">
 <div class="js-inline-admin-formset inline-group techcard-labor-inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
      data-inline-type="tabular"
      data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
-  <div class="tabular inline-related {% if forloop.last %}last-related{% endif %}">
-{{ inline_admin_formset.formset.management_form }}
-<fieldset class="module {{ inline_admin_formset.classes }}" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading">
-  {% if inline_admin_formset.is_collapsible %}<details><summary>{% endif %}
-  <h2 id="{{ inline_admin_formset.formset.prefix }}-heading" class="inline-heading tc-items-ms-hidden-title">
-  {% if inline_admin_formset.formset.max_num == 1 %}
-    {{ inline_admin_formset.opts.verbose_name|capfirst }}
-  {% else %}
-    {{ inline_admin_formset.opts.verbose_name_plural|capfirst }}
-  {% endif %}
-  </h2>
-  {% if inline_admin_formset.is_collapsible %}</summary>{% endif %}
-   {{ inline_admin_formset.formset.non_form_errors }}
-  <div class="wrapper">
-    <table class="tc-labor-inline-table">
-     <thead><tr>
-       <th class="original"></th>
-     {% for field in inline_admin_formset.fields %}
-       {% if field.name == "norm_hours" %}
-       {% with u=labor_norm_input_unit_selected|default:"hours" %}
-       <th class="column-{{ field.name }} tc-labor-norm-column{% if field.required %} required{% endif %}">
-         <div class="tc-labor-norm-th">
-           <span class="tc-labor-norm-th-label">Норма</span>
-           <select name="labor_norm_input_unit" id="id_labor_norm_input_unit" class="tc-labor-norm-unit-select" title="Единица: ч — нормо-часы, м — минуты">
-             <option value="hours"{% if u == "hours" %} selected{% endif %}>ч</option>
-             <option value="minutes"{% if u == "minutes" %} selected{% endif %}>м</option>
-           </select>
-         </div>
-       </th>
-       {% endwith %}
-       {% else %}
-       <th class="column-{{ field.name }}{% if field.required %} required{% endif %}{% if field.widget.is_hidden %} hidden{% endif %}">{{ field.label|capfirst }}
-       {% if field.help_text %}<img src="{% static "admin/img/icon-unknown.svg" %}" class="help help-tooltip" width="10" height="10" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}">{% endif %}
-       </th>
-       {% endif %}
-     {% endfor %}
-     <th>{% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission %}{% translate "Delete?" %}{% endif %}</th>
-     </tr></thead>
-
-     <tbody>
-     {% for inline_admin_form in inline_admin_formset %}
-        {% if inline_admin_form.form.non_field_errors %}
-        <tr class="row-form-errors"><td colspan="{{ inline_admin_form|cell_count }}">{{ inline_admin_form.form.non_field_errors }}</td></tr>
-        {% endif %}
-        <tr class="form-row {% if inline_admin_form.original or inline_admin_form.show_url %}has_original{% endif %}{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}"
-             id="{{ inline_admin_formset.formset.prefix }}-{% if forloop.last and inline_admin_formset.has_add_permission %}empty{% else %}{{ forloop.counter0 }}{% endif %}">
-        <td class="original">
-          {% if inline_admin_form.original or inline_admin_form.show_url %}<p>
-          {% if inline_admin_form.original %}
-          {{ inline_admin_form.original }}
-          {% if inline_admin_form.model_admin.show_change_link and inline_admin_form.model_admin.has_registered_model %}<a href="{% url inline_admin_form.model_admin.opts|admin_urlname:'change' inline_admin_form.original.pk|admin_urlquote %}" class="{{ inline_admin_formset.has_change_permission|yesno:'inlinechangelink,inlineviewlink' }}">{% if inline_admin_formset.has_change_permission %}{% translate "Change" %}{% else %}{% translate "View" %}{% endif %}</a>{% endif %}
-          {% endif %}
-          {% if inline_admin_form.show_url %}<a href="{{ inline_admin_form.absolute_url }}">{% translate "View on site" %}</a>{% endif %}
-            </p>{% endif %}
-          {% if inline_admin_form.needs_explicit_pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
-          {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
-        </td>
-        {% for fieldset in inline_admin_form %}
-          {% for line in fieldset %}
-            {% for field in line %}
-              <td class="{% if field.field.name %}field-{{ field.field.name }}{% endif %}{% if field.field.is_hidden %} hidden{% endif %}">
-              {% if field.is_readonly %}
-                  <p>{{ field.contents }}</p>
-              {% else %}
-                  {{ field.field.errors.as_ul }}
-                  {{ field.field }}
-              {% endif %}
-              </td>
-            {% endfor %}
-          {% endfor %}
-        {% endfor %}
-        <td class="delete">{% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission and inline_admin_form.original %}{{ inline_admin_form.deletion_field.field }}{% endif %}</td>
-        </tr>
-     {% endfor %}
-     </tbody>
-     <tfoot class="tc-labor-tfoot">
-       <tr class="tc-labor-totals-row">
-         <td></td>
-         <td><strong>Итого</strong></td>
-         <td></td>
-         <td class="tc-labor-total-norm-hours">—</td>
-         <td class="tc-labor-total-machine-pay">—</td>
-         <td class="tc-labor-total-employee-minutes">—</td>
-         <td class="tc-labor-total-employee-pay">—</td>
-         <td class="tc-labor-total-overhead">—</td>
-         <td></td>
-       </tr>
-     </tfoot>
-    </table>
-  </div>
-  {% if inline_admin_formset.is_collapsible %}</details>{% endif %}
-</fieldset>
-  </div>
+  <fieldset class="module tc-labor-custom-fieldset" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading-custom">
+    <h2 id="{{ inline_admin_formset.formset.prefix }}-heading-custom" class="inline-heading tc-items-ms-hidden-title">
+      {% if inline_admin_formset.formset.max_num == 1 %}
+        {{ inline_admin_formset.opts.verbose_name|capfirst }}
+      {% else %}
+        {{ inline_admin_formset.opts.verbose_name_plural|capfirst }}
+      {% endif %}
+    </h2>
+    <div class="tc-labor-grid-head" role="row" aria-hidden="false">
+      <div class="tc-labor-mgh-cell tc-labor-mgh-stage">Этап</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-rate">Стоимость нормо-часа</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-norm">
+        {% with u=labor_norm_input_unit_selected|default:"hours" %}
+        <div class="tc-labor-norm-th">
+          <span class="tc-labor-norm-th-label">Норма</span>
+          <select name="labor_norm_input_unit" id="id_labor_norm_input_unit" class="tc-labor-norm-unit-select" title="Единица: ч — нормо-часы, м — минуты">
+            <option value="hours"{% if u == "hours" %} selected{% endif %}>ч</option>
+            <option value="minutes"{% if u == "minutes" %} selected{% endif %}>м</option>
+          </select>
+        </div>
+        {% endwith %}
+      </div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-machine-pay">Станок/этап</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-emp-min">Время сотрудника, мин</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-emp-pay">Сотрудник</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-overhead">Затраты на производство</div>
+      <div class="tc-labor-mgh-cell tc-labor-mgh-menu" aria-hidden="true"></div>
+    </div>
+    <div class="tc-labor-stages-root">
+      <div class="tabular inline-related techcard-labor-backend {% if forloop.last %}last-related{% endif %}">
+        {{ inline_admin_formset.formset.management_form }}
+        <fieldset class="module {{ inline_admin_formset.classes }} techcard-labor-backend-fieldset" aria-labelledby="{{ inline_admin_formset.formset.prefix }}-heading">
+          <h2 id="{{ inline_admin_formset.formset.prefix }}-heading" class="inline-heading visually-hidden-techcard-backend">
+            {% if inline_admin_formset.formset.max_num == 1 %}
+              {{ inline_admin_formset.opts.verbose_name|capfirst }}
+            {% else %}
+              {{ inline_admin_formset.opts.verbose_name_plural|capfirst }}
+            {% endif %}
+          </h2>
+          {{ inline_admin_formset.formset.non_form_errors }}
+          <div class="wrapper">
+            <table class="tc-labor-inline-table">
+              <tbody>
+              {% for inline_admin_form in inline_admin_formset %}
+                {% if inline_admin_form.form.non_field_errors %}
+                <tr class="row-form-errors"><td colspan="{{ inline_admin_form|cell_count }}">{{ inline_admin_form.form.non_field_errors }}</td></tr>
+                {% endif %}
+                <tr class="form-row tc-labor-data-row {% if inline_admin_form.original or inline_admin_form.show_url %}has_original{% endif %}{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}"
+                    id="{{ inline_admin_formset.formset.prefix }}-{% if forloop.last and inline_admin_formset.has_add_permission %}empty{% else %}{{ forloop.counter0 }}{% endif %}">
+                  <td class="original">
+                    {% if inline_admin_form.needs_explicit_pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+                    {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+                  </td>
+                  {% for fieldset in inline_admin_form %}
+                    {% for line in fieldset %}
+                      {% for field in line %}
+                        <td class="{% if field.field.name %}field-{{ field.field.name }}{% endif %}{% if field.field.is_hidden %} hidden{% endif %}">
+                        {% if field.is_readonly %}
+                          <p>{{ field.contents }}</p>
+                        {% else %}
+                          {{ field.field.errors.as_ul }}
+                          {{ field.field }}
+                        {% endif %}
+                        </td>
+                      {% endfor %}
+                    {% endfor %}
+                  {% endfor %}
+                  <td class="tc-labor-row-menu">
+                    {% if not forloop.last or not inline_admin_formset.has_add_permission %}
+                    <div class="tc-labor-row-menu-wrap">
+                      <button type="button" class="tc-labor-row-kebab" aria-haspopup="true" aria-expanded="false" aria-label="Действия с этапом">
+                        <span class="tc-labor-row-kebab-dot"></span>
+                        <span class="tc-labor-row-kebab-dot"></span>
+                        <span class="tc-labor-row-kebab-dot"></span>
+                      </button>
+                      <div class="tc-labor-row-menu-pop" role="menu" hidden>
+                        <button type="button" role="menuitem" data-act="delete-related">Удалить</button>
+                        <button type="button" role="menuitem" data-act="view-related">Редактировать</button>
+                        <button type="button" role="menuitem" data-act="change-related">Изменить</button>
+                        <button type="button" role="menuitem" data-act="add-related">Добавить этап</button>
+                      </div>
+                    </div>
+                    {% endif %}
+                  </td>
+                  <td class="delete">{% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission and inline_admin_form.original %}{{ inline_admin_form.deletion_field.field }}{% endif %}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+              <tfoot class="tc-labor-tfoot">
+                <tr class="tc-labor-totals-row">
+                  <td class="tc-labor-total-label"><strong>Итого</strong></td>
+                  <td class="tc-labor-total-rate" aria-hidden="true"></td>
+                  <td class="tc-labor-total-norm-hours">—</td>
+                  <td class="tc-labor-total-machine-pay">—</td>
+                  <td class="tc-labor-total-employee-minutes">—</td>
+                  <td class="tc-labor-total-employee-pay">—</td>
+                  <td class="tc-labor-total-overhead">—</td>
+                  <td class="tc-labor-total-menu" aria-hidden="true"></td>
+                  <td class="tc-labor-total-delete" aria-hidden="true"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </fieldset>
+      </div>
+      <div class="tc-unit-cost-summary" id="tc-unit-cost-summary" aria-live="polite">
+        <p class="tc-unit-cost-summary__title">Себестоимость изделия (на 1 шт.)</p>
+        <dl class="tc-unit-cost-summary__grid">
+          <div class="tc-unit-cost-summary__row">
+            <dt>Материалы</dt>
+            <dd class="tc-unit-cost-materials">—</dd>
+          </div>
+          <div class="tc-unit-cost-summary__row">
+            <dt>Оплата труда</dt>
+            <dd class="tc-unit-cost-labor">—</dd>
+          </div>
+          <div class="tc-unit-cost-summary__row">
+            <dt>Затраты на производство</dt>
+            <dd class="tc-unit-cost-overhead">—</dd>
+          </div>
+          <div class="tc-unit-cost-summary__row">
+            <dt>Рез</dt>
+            <dd class="tc-unit-cost-cut">—</dd>
+          </div>
+          <div class="tc-unit-cost-summary__row tc-unit-cost-summary__row--total">
+            <dt>Итого</dt>
+            <dd class="tc-unit-cost-total">—</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </fieldset>
 </div>
-<script src="{% static 'core/admin/techcard_labor_inline.js' %}?v=3" defer></script>
+<script src="{% static 'core/admin/techcard_labor_inline.js' %}?v=12"></script>

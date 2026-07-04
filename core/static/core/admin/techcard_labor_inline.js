@@ -62,7 +62,9 @@
     var jq = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
     if (!jq) return;
     var tpId = currentTechProcessId();
+    if (!tpId) return;
     var stages = stagesListForTechProcess(tpId);
+    if (!stages.length) return;
     jq(table)
       .find("tbody tr.form-row:not(.empty-form) select[name$='-production_stage']")
       .each(function () {
@@ -74,7 +76,14 @@
         stages.forEach(function (s) {
           if (s.id == null) return;
           var label = s.name != null ? String(s.name) : String(s.id);
-          $s.append(jq("<option></option>").attr("value", String(s.id)).text(label));
+          var $opt = jq("<option></option>").attr("value", String(s.id)).text(label);
+          if (s.hourly_rate != null && String(s.hourly_rate).trim() !== "") {
+            $opt.attr("data-machine-rate", String(s.hourly_rate));
+          }
+          if (s.employee_hourly_rate != null && String(s.employee_hourly_rate).trim() !== "") {
+            $opt.attr("data-employee-rate", String(s.employee_hourly_rate));
+          }
+          $s.append($opt);
         });
         var keep =
           cur &&
@@ -82,7 +91,12 @@
             return String(x.id) === String(cur);
           });
         $s.val(keep ? cur : "");
-        $s.trigger("change");
+        if ($s.data("select2")) {
+          $s.trigger("change");
+          $s.trigger("change.select2");
+        } else {
+          $s.trigger("change");
+        }
       });
     sumTable(table);
   }
@@ -111,6 +125,175 @@
       var t = ev.target && ev.target.closest && ev.target.closest("table.tc-labor-inline-table");
       if (!t) return;
       refillLaborStageSelects();
+      var row = ev.target && ev.target.closest && ev.target.closest("tr.form-row");
+      if (row) ensureLaborRowMenu(row);
+    });
+  }
+
+  function laborAdminUrls() {
+    if (window._tcLaborStageAdminUrls) return window._tcLaborStageAdminUrls;
+    var el = document.getElementById("tc-labor-stage-admin-urls");
+    if (!el || !el.textContent) return null;
+    try {
+      window._tcLaborStageAdminUrls = JSON.parse(el.textContent);
+      return window._tcLaborStageAdminUrls;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function laborStageId(tr) {
+    var sel = tr.querySelector("select[name$='-production_stage']");
+    if (!sel) return "";
+    var jq = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
+    if (jq && jq.fn && jq.fn.select2 && jq(sel).data("select2")) {
+      var v = jq(sel).val();
+      if (v != null && String(v).trim() !== "") return String(v).trim();
+    }
+    return sel.value != null ? String(sel.value).trim() : "";
+  }
+
+  function laborActionHref(act, stageId) {
+    var urls = laborAdminUrls();
+    if (!urls) return "";
+    if (act === "add-related") return urls.add || "";
+    if (!stageId) return "";
+    var tpl = urls.change;
+    if (act === "delete-related") tpl = urls.delete;
+    else if (act === "view-related") tpl = urls.view;
+    else if (act === "change-related") tpl = urls.change;
+    if (!tpl) return "";
+    return tpl.replace("{id}", stageId);
+  }
+
+  function openLaborAdminPopup(href, popupId) {
+    if (!href) return;
+    var fake = document.createElement("a");
+    fake.href = href;
+    fake.id = popupId || "change_tc_labor_menu";
+    if (typeof window.showRelatedObjectPopup === "function") {
+      window.showRelatedObjectPopup(fake);
+      return;
+    }
+    window.open(href, fake.id, "height=500,width=800,resizable=yes,scrollbars=yes");
+  }
+
+  function triggerLaborRelatedAction(tr, act) {
+    if (!tr || !act) return;
+    var stageId = laborStageId(tr);
+    if (act === "add-related") {
+      openLaborAdminPopup(laborActionHref("add-related", stageId), "add_tc_labor_menu");
+      return;
+    }
+    if (!stageId) return;
+    var href = laborActionHref(act, stageId);
+    if (!href) return;
+    if (act === "view-related") {
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    var pid = act === "delete-related" ? "delete_tc_labor_menu" : "change_tc_labor_menu";
+    openLaborAdminPopup(href, pid);
+  }
+
+  function ensureLaborRowMenu(tr) {
+    if (!tr || tr.classList.contains("empty-form")) return;
+    var cell = tr.querySelector("td.tc-labor-row-menu");
+    if (!cell || cell.querySelector(".tc-labor-row-menu-wrap")) return;
+    var sample = document.querySelector(
+      ".techcard-labor-inline-group tr.tc-labor-data-row:not(.empty-form) td.tc-labor-row-menu .tc-labor-row-menu-wrap"
+    );
+    if (sample) {
+      cell.appendChild(sample.cloneNode(true));
+      return;
+    }
+    cell.innerHTML =
+      '<div class="tc-labor-row-menu-wrap">' +
+      '<button type="button" class="tc-labor-row-kebab" aria-haspopup="true" aria-expanded="false" aria-label="Действия с этапом">' +
+      '<span class="tc-labor-row-kebab-dot"></span><span class="tc-labor-row-kebab-dot"></span><span class="tc-labor-row-kebab-dot"></span>' +
+      "</button>" +
+      '<div class="tc-labor-row-menu-pop" role="menu" hidden>' +
+      '<button type="button" role="menuitem" data-act="delete-related">Удалить</button>' +
+      '<button type="button" role="menuitem" data-act="view-related">Редактировать</button>' +
+      '<button type="button" role="menuitem" data-act="change-related">Изменить</button>' +
+      '<button type="button" role="menuitem" data-act="add-related">Добавить этап</button>' +
+      "</div></div>";
+  }
+
+  function ensureAllLaborRowMenus() {
+    var table = document.querySelector("table.tc-labor-inline-table");
+    if (!table) return;
+    table.querySelectorAll("tbody tr.tc-labor-data-row:not(.empty-form)").forEach(ensureLaborRowMenu);
+  }
+
+  function bindLaborRowMenusOnce() {
+    if (window._tcLaborMenusBound) return;
+    window._tcLaborMenusBound = true;
+    var jq = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
+    if (!jq) {
+      window.setTimeout(bindLaborRowMenusOnce, 100);
+      return;
+    }
+
+    function closeAllLaborMenus() {
+      jq(".techcard-labor-inline-group .tc-labor-row-menu-pop").each(function () {
+        this.setAttribute("hidden", "hidden");
+        this.classList.remove("tc-labor-row-menu-pop--flip");
+        this.style.position = "";
+        this.style.left = "";
+        this.style.top = "";
+        this.style.zIndex = "";
+      });
+      jq(".techcard-labor-inline-group .tc-labor-row-kebab").attr("aria-expanded", "false");
+    }
+
+    function placeLaborMenuPop($wrap, $pop) {
+      var wrapEl = $wrap[0];
+      var popEl = $pop[0];
+      if (!wrapEl || !popEl) return;
+      var br = wrapEl.getBoundingClientRect();
+      $pop.removeClass("tc-labor-row-menu-pop--flip");
+      popEl.style.position = "fixed";
+      popEl.style.zIndex = "10050";
+      popEl.style.left = Math.max(8, br.right - popEl.offsetWidth) + "px";
+      var top = br.bottom + 4;
+      if (top + popEl.offsetHeight > window.innerHeight - 8 && br.top > popEl.offsetHeight + 8) {
+        top = br.top - popEl.offsetHeight - 4;
+        $pop.addClass("tc-labor-row-menu-pop--flip");
+      }
+      popEl.style.top = top + "px";
+    }
+
+    jq(document).on("click.tcLaborMenu", ".techcard-labor-inline-group .tc-labor-row-kebab", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var $kebab = jq(this);
+      var $wrap = $kebab.closest(".tc-labor-row-menu-wrap");
+      var $pop = $wrap.find(".tc-labor-row-menu-pop");
+      if (!$pop.length) return;
+      var wasOpen = $pop.attr("hidden") == null;
+      closeAllLaborMenus();
+      if (!wasOpen) {
+        $pop.removeAttr("hidden");
+        $kebab.attr("aria-expanded", "true");
+        window.setTimeout(function () {
+          placeLaborMenuPop($wrap, $pop);
+        }, 0);
+      }
+    });
+
+    jq(document).on("click.tcLaborMenu", ".techcard-labor-inline-group .tc-labor-row-menu-pop button", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var tr = this.closest("tr.form-row");
+      closeAllLaborMenus();
+      triggerLaborRelatedAction(tr, this.getAttribute("data-act"));
+    });
+
+    jq(document).on("click.tcLaborMenuClose", function (e) {
+      if (!jq(e.target).closest(".tc-labor-row-menu-wrap").length) {
+        closeAllLaborMenus();
+      }
     });
   }
 
@@ -176,6 +359,18 @@
     return tr.querySelector('input[name$="-employee_minutes"]');
   }
 
+  function rowEmployeeRateCell(tr) {
+    var td = tr.querySelector("td.field-employee_hourly_rate_display");
+    return td ? td.querySelector("p") : null;
+  }
+
+  function parseMoneyText(text) {
+    var raw = String(text || "").replace(/\s+/g, "").replace(",", ".");
+    var cleaned = raw.replace(/[^\d.-]/g, "");
+    var n = parseFloat(cleaned);
+    return isFinite(n) ? n : null;
+  }
+
   function rowRateCell(tr) {
     var td = tr.querySelector("td.field-hourly_rate_display");
     return td ? td.querySelector("p") : null;
@@ -201,18 +396,41 @@
     return round2(r).toFixed(2);
   }
 
-  function stageRates(rateByStage, sid) {
-    if (!sid || !rateByStage) return { machine: null, employee: null };
+  function stageRates(rateByStage, sid, tr) {
+    if (!sid || !rateByStage) {
+      return { machine: null, employee: null };
+    }
     var row = rateByStage[sid];
-    if (row && typeof row === "object") return row;
-    if (typeof row === "number" || row === null) return { machine: row, employee: null };
-    return { machine: null, employee: null };
+    var machine = null;
+    var employee = null;
+    if (row && typeof row === "object") {
+      machine = row.machine;
+      employee = row.employee;
+    } else if (typeof row === "number" || row === null) {
+      machine = row;
+    }
+    if ((employee == null || !isFinite(employee)) && tr) {
+      var sel = rowStageSelect(tr);
+      if (sel && sel.selectedOptions && sel.selectedOptions.length) {
+        var optRate = sel.selectedOptions[0].getAttribute("data-employee-rate");
+        if (optRate != null && String(optRate).trim() !== "") {
+          var optN = parseFloat(String(optRate).replace(",", "."));
+          if (isFinite(optN)) employee = optN;
+        }
+      }
+      if (employee == null || !isFinite(employee)) {
+        var rateCell = rowEmployeeRateCell(tr);
+        var parsed = rateCell ? parseMoneyText(rateCell.textContent) : null;
+        if (parsed != null) employee = parsed;
+      }
+    }
+    return { machine: machine, employee: employee };
   }
 
   function updateRow(tr, rateByStage) {
     var sel = rowStageSelect(tr);
     var sid = sel && sel.value ? String(sel.value) : "";
-    var rates = stageRates(rateByStage, sid);
+    var rates = stageRates(rateByStage, sid, tr);
     var rate = rates.machine;
     var rp = rowRateCell(tr);
     if (rp) rp.textContent = formatRate(rate);
@@ -232,8 +450,10 @@
     var empRate = rates.employee;
     var empPay = rowEmployeePayCell(tr);
     if (empPay) {
-      if (isFinite(empMinutes) && empRate != null && isFinite(empRate)) {
+      if (isFinite(empMinutes) && empRate != null && isFinite(empRate) && empMinutes > 0) {
         empPay.textContent = formatMoney((empMinutes / 60) * empRate);
+      } else if (isFinite(empMinutes) && empMinutes === 0) {
+        empPay.textContent = formatMoney(0);
       } else {
         empPay.textContent = "—";
       }
@@ -257,7 +477,7 @@
       updateRow(tr, rateByStage);
       var sel = rowStageSelect(tr);
       var sid = sel && sel.value ? String(sel.value) : "";
-      var rates = stageRates(rateByStage, sid);
+      var rates = stageRates(rateByStage, sid, tr);
       var rate = rates.machine;
       var nhEl = rowNormHours(tr);
       var ovEl = rowOverhead(tr);
@@ -295,6 +515,202 @@
     if (tem) tem.textContent = String(round2(sumEmployeeMinutes)) + " мин";
     if (tep) tep.textContent = formatMoney(sumEmployeePay);
     if (to) to.textContent = formatMoney(sumOv);
+    updateUnitCostSummary(sumMachinePay + sumEmployeePay, sumOv);
+  }
+
+  function materialPriceMap() {
+    var el = document.getElementById("techcard-material-avg-prices");
+    if (!el || !el.textContent) return {};
+    try {
+      return JSON.parse(el.textContent);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function cutRateByStageId() {
+    var el = document.getElementById("tech-process-stages-data");
+    if (!el || !el.textContent) return {};
+    try {
+      var tpId = currentTechProcessId();
+      var map = JSON.parse(el.textContent);
+      var stages = map[String(tpId)] || [];
+      var out = {};
+      stages.forEach(function (s) {
+        if (s.id == null) return;
+        var raw = s.cut_rate_per_meter;
+        if (raw != null && String(raw).trim() !== "") {
+          var n = parseFloat(String(raw).replace(",", "."));
+          if (isFinite(n)) out[String(s.id)] = n;
+        }
+      });
+      return out;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function eachItemBackendRow(fn) {
+    document
+      .querySelectorAll(".techcard-items-backend tbody tr.form-row")
+      .forEach(function (tr) {
+        if (tr.classList.contains("empty-form")) return;
+        var del = tr.querySelector('input[name$="-DELETE"]');
+        if (del && del.checked) return;
+        fn(tr);
+      });
+  }
+
+  function rowItemKindValue(tr) {
+    var kindEl = tr.querySelector('select[name$="-item_kind"], input[name$="-item_kind"]');
+    if (kindEl && kindEl.value != null && String(kindEl.value).trim() !== "") {
+      return String(kindEl.value).trim();
+    }
+    return String(tr.getAttribute("data-item-kind") || "").trim();
+  }
+
+  function isMaterialLineKind(kind) {
+    return kind === "raw" || kind === "material";
+  }
+
+  function rowMaterialId(tr) {
+    var matEl = tr.querySelector('input[name$="-material"], select[name$="-material"]');
+    var mid = matEl ? String(matEl.value || "").trim() : "";
+    if (!mid) {
+      mid = String(tr.getAttribute("data-material-id") || "").trim();
+    }
+    return mid;
+  }
+
+  function rowQuantityValue(tr) {
+    var qtyEl = tr.querySelector('input[name$="-quantity"]');
+    var qty = qtyEl ? parseFloat(String(qtyEl.value).replace(",", ".")) : NaN;
+    if (!isFinite(qty) || qty <= 0) {
+      var rid = tr.id;
+      if (rid) {
+        var cardQty = document.querySelector(
+          '.tc-item-card[data-row-id="' + rid.replace(/"/g, '\\"') + '"] .tc-item-card-qty'
+        );
+        if (cardQty) {
+          qty = parseFloat(String(cardQty.value).replace(",", "."));
+        }
+      }
+    }
+    return qty;
+  }
+
+  function serverCostBreakdown() {
+    var el = document.getElementById("techcard-cost-breakdown");
+    if (!el || !el.textContent) return null;
+    try {
+      return JSON.parse(el.textContent);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function sumMaterialsCost() {
+    var priceMap = materialPriceMap();
+    var total = 0;
+    var lines = 0;
+    var missingPrice = 0;
+    eachItemBackendRow(function (tr) {
+      var kind = rowItemKindValue(tr);
+      if (kind === "component") return;
+      if (kind && !isMaterialLineKind(kind)) return;
+      var mid = rowMaterialId(tr);
+      if (!mid) return;
+      var qty = rowQuantityValue(tr);
+      if (!isFinite(qty) || qty <= 0) return;
+      var unitStr = priceMap[mid];
+      var unit = unitStr != null ? parseFloat(String(unitStr).replace(",", ".")) : NaN;
+      if (!isFinite(unit)) {
+        missingPrice++;
+        return;
+      }
+      total += unit * qty;
+      lines++;
+    });
+    if (lines > 0) return round2(total);
+    if (missingPrice > 0) return null;
+    var sb = serverCostBreakdown();
+    if (sb && sb.materials != null && String(sb.materials).trim() !== "") {
+      var fallback = parseFloat(String(sb.materials).replace(",", "."));
+      if (isFinite(fallback) && fallback > 0) return round2(fallback);
+    }
+    return null;
+  }
+
+  function sumCutCost() {
+    var cutRates = cutRateByStageId();
+    var total = 0;
+    var lines = 0;
+    eachItemBackendRow(function (tr) {
+      var lenEl = tr.querySelector('input[name$="-cut_length_meters_per_unit"]');
+      if (!lenEl) return;
+      var len = parseFloat(String(lenEl.value).replace(",", "."));
+      if (!isFinite(len) || len <= 0) return;
+      var stageEl = tr.querySelector('select[name$="-production_stage"]');
+      var sid = stageEl && stageEl.value ? String(stageEl.value) : "";
+      var rate = sid ? cutRates[sid] : null;
+      if (rate == null || !isFinite(rate)) return;
+      total += len * rate;
+      lines++;
+    });
+    return lines > 0 ? round2(total) : null;
+  }
+
+  function setCostCell(selector, value) {
+    var block = document.getElementById("tc-unit-cost-summary");
+    if (!block) return;
+    var el = block.querySelector(selector);
+    if (!el) return;
+    el.textContent = value != null && isFinite(value) ? formatMoney(value) : "—";
+  }
+
+  function updateUnitCostSummary(laborPay, overheadPay) {
+    var materials = sumMaterialsCost();
+    var cut = sumCutCost();
+    var labor = isFinite(laborPay) ? laborPay : 0;
+    var overhead = isFinite(overheadPay) ? overheadPay : 0;
+    var hasLabor = isFinite(laborPay);
+    var hasOverhead = isFinite(overheadPay);
+    setCostCell(".tc-unit-cost-materials", materials);
+    setCostCell(".tc-unit-cost-labor", hasLabor ? labor : null);
+    setCostCell(".tc-unit-cost-overhead", hasOverhead ? overhead : null);
+    setCostCell(".tc-unit-cost-cut", cut);
+    var parts = [];
+    if (materials != null) parts.push(materials);
+    if (hasLabor) parts.push(labor);
+    if (hasOverhead) parts.push(overhead);
+    if (cut != null) parts.push(cut);
+    var total = parts.length ? round2(parts.reduce(function (a, b) { return a + b; }, 0)) : null;
+    setCostCell(".tc-unit-cost-total", total);
+  }
+
+  function bindItemsCostRecalc() {
+    if (document.body.getAttribute("data-tc-cost-items-bound") === "1") return;
+    document.body.setAttribute("data-tc-cost-items-bound", "1");
+    function go(e) {
+      var t = e.target;
+      if (!t) return;
+      var n = t.name || "";
+      var cls = t.classList || null;
+      if (
+        n.indexOf("-quantity") === -1 &&
+        n.indexOf("-material") === -1 &&
+        n.indexOf("-cut_length") === -1 &&
+        n.indexOf("-production_stage") === -1 &&
+        n.indexOf("-item_kind") === -1 &&
+        !(cls && cls.contains("tc-item-card-qty"))
+      ) {
+        return;
+      }
+      var table = document.querySelector("table.tc-labor-inline-table");
+      if (table) sumTable(table);
+    }
+    document.addEventListener("input", go);
+    document.addEventListener("change", go);
   }
 
   function bind(table) {
@@ -325,6 +741,8 @@
     bindTechProcessToLaborStages();
     bindLaborFormsetAdded();
     bindLaborNormUnitSwitch();
+    bindItemsCostRecalc();
+    bindLaborRowMenusOnce();
     var table = document.querySelector("table.tc-labor-inline-table");
     if (table) {
       if (table.getAttribute("data-tc-labor-bound") !== "1") {
@@ -332,8 +750,22 @@
         bind(table);
       }
       refillLaborStageSelects();
+      ensureAllLaborRowMenus();
     }
   }
+
+  window.tcLaborInlineInit = init;
+
+  bindLaborRowMenusOnce();
+
+  window.addEventListener("tc-ms-tab-activate", function (ev) {
+    if (ev && ev.detail && ev.detail.name === "money") {
+      window.setTimeout(init, 50);
+    }
+  });
+  window.addEventListener("tc:labor-inline-moved", function () {
+    window.setTimeout(init, 0);
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

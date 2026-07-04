@@ -603,11 +603,87 @@ class TechCardAdminFormTests(TestCase):
         main_fields = TechCardAdmin.fieldsets[0][1]["fields"]
         self.assertNotIn("card_group", main_fields)
 
-    def test_labor_inline_has_no_employee_rate_column(self):
+    def test_labor_inline_hides_employee_rate_column(self):
         from production.admin import TechCardLaborLineInline
 
         self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.fields)
         self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.readonly_fields)
+
+    def test_material_kind_lines_included_in_planned_material_cost(self):
+        product = Product.objects.create(name="Табличка материал kind", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP material kind")
+        stage = ProductionStage.objects.create(name="Резка", sequence=1)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage, order=1)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        material = Material.objects.create(name="Фанера kind", unit="лист")
+        MaterialBatch.objects.create(
+            material=material,
+            movement_type=MaterialBatch.INCOMING,
+            quantity=Decimal("10"),
+            unit_price=Decimal("200"),
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            item_kind=TechCardItem.KIND_MATERIAL,
+            material=material,
+            quantity=Decimal("1.5"),
+        )
+        self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("300.00"))
+
+    def test_money_tab_json_includes_employee_hourly_rate(self):
+        product = Product.objects.create(name="Табличка JSON", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP JSON")
+        employee = Employee.objects.create(
+            full_name="Шлифовщик",
+            hourly_rate=Decimal("450"),
+        )
+        stage = ProductionStage.objects.create(
+            name="Шлифование материала",
+            sequence=1,
+            hourly_rate=Decimal("35"),
+            master=employee,
+        )
+        TechProcessStage.objects.create(
+            tech_process=tech_process,
+            production_stage=stage,
+            order=1,
+        )
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        from production.admin import TechCardAdmin
+
+        stage_map = TechCardAdmin._tech_process_stages_map()
+        rows = stage_map[str(tech_process.pk)]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["employee_hourly_rate"], "450.00")
+
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="money_json_admin",
+            email="money_json_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        TechCardLaborLine.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            norm_hours=Decimal("0.1"),
+            employee_minutes=Decimal("12"),
+        )
+        response = self.client.get(
+            reverse("admin:production_techcardproxy_change", args=[tech_card.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "450")
+        self.assertContains(response, "90.00")
 
     def test_material_picker_search_is_case_insensitive_for_russian_text(self):
         Material.objects.create(name="Фанера ФК 3 мм шлифованная", unit="лист")
@@ -667,6 +743,155 @@ class TechCardAdminFormTests(TestCase):
         self.assertContains(response, "Лазерная резка")
         self.assertEqual(tech_card.labor_lines.count(), 0)
 
+    def test_money_tab_stages_follow_tech_process_order(self):
+        import re
+
+        product = Product.objects.create(name="Табличка порядок этапов", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Маршрут порядок")
+        stage_sand = ProductionStage.objects.create(name="Шлифование материала", sequence=1)
+        stage_cut = ProductionStage.objects.create(name="Лазерная резка", sequence=2)
+        stage_grave = ProductionStage.objects.create(name="Лазерная гравировка", sequence=3)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage_sand, order=1)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage_cut, order=2)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage_grave, order=3)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        TechCardLaborLine.objects.create(
+            tech_card=tech_card,
+            production_stage=stage_grave,
+            norm_hours=Decimal("0.1"),
+        )
+        TechCardLaborLine.objects.create(
+            tech_card=tech_card,
+            production_stage=stage_cut,
+            norm_hours=Decimal("0.2"),
+        )
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="money_order_admin",
+            email="money_order_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("admin:production_techcardproxy_change", args=[tech_card.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        tbody_m = re.search(
+            r'<table class="tc-labor-inline-table".*?<tbody>(.*?)</tbody>',
+            html,
+            re.S,
+        )
+        self.assertIsNotNone(tbody_m)
+        tbody = tbody_m.group(1)
+        names = []
+        for row_m in re.finditer(r'<tr class="form-row[^"]*"[^>]*>(.*?)</tr>', tbody, re.S):
+            row_html = row_m.group(1)
+            if "empty-form" in row_m.group(0):
+                continue
+            sel_m = re.search(
+                r'name="labor_lines-\d+-production_stage"[^>]*>(.*?)</select>',
+                row_html,
+                re.S,
+            )
+            if not sel_m:
+                continue
+            opt_m = re.search(
+                r'<option value="\d+" selected(?:="selected")?[^>]*>([^<]+)</option>',
+                sel_m.group(1),
+            )
+            if opt_m:
+                names.append(opt_m.group(1).strip())
+        self.assertEqual(
+            names,
+            ["Шлифование материала", "Лазерная резка", "Лазерная гравировка"],
+        )
+
+    def test_labor_norms_save_via_admin_post(self):
+        import re
+
+        product = Product.objects.create(name="Табличка нормы POST", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Маршрут нормы POST")
+        stage_a = ProductionStage.objects.create(name="Этап A POST", sequence=1, hourly_rate=Decimal("100"))
+        stage_b = ProductionStage.objects.create(name="Этап B POST", sequence=2, hourly_rate=Decimal("50"))
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage_a, order=1)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage_b, order=2)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="labor_save_admin",
+            email="labor_save_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        url = reverse("admin:production_techcardproxy_change", args=[tech_card.pk])
+        get_resp = self.client.get(url)
+        self.assertEqual(get_resp.status_code, 200)
+        html = get_resp.content.decode("utf-8")
+        csrf = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html)
+        self.assertIsNotNone(csrf)
+        prefix_m = re.search(r'name="([^"]+)-TOTAL_FORMS" value="(\d+)"', html)
+        labor_prefix = None
+        labor_total = 0
+        for m in re.finditer(r'name="([^"]+)-TOTAL_FORMS" value="(\d+)"', html):
+            if m.group(1).endswith("labor_lines") or m.group(1) == "labor_lines":
+                labor_prefix = m.group(1)
+                labor_total = int(m.group(2))
+        self.assertEqual(labor_prefix, "labor_lines")
+        self.assertEqual(labor_total, 2)
+
+        post = {"csrfmiddlewaretoken": csrf.group(1)}
+        for m in re.finditer(
+            r'<input[^>]+name="([^"]+)"[^>]*value="([^"]*)"[^>]*>',
+            html,
+        ):
+            name, val = m.group(1), m.group(2)
+            if any(
+                name.endswith(suffix)
+                for suffix in ("-TOTAL_FORMS", "-INITIAL_FORMS", "-MIN_NUM_FORMS", "-MAX_NUM_FORMS")
+            ):
+                post[name] = val
+            elif name in ("name", "allocate_cost", "description"):
+                post[name] = val
+        for m in re.finditer(r'<select[^>]+name="([^"]+)"[^>]*>(.*?)</select>', html, re.S):
+            name, body = m.group(1), m.group(2)
+            if name not in ("product", "tech_process"):
+                continue
+            sel = re.search(r'<option[^>]+selected[^>]+value="([^"]*)"', body) or re.search(
+                r'<option value="([^"]*)"[^>]*selected', body
+            )
+            if sel:
+                post[name] = sel.group(1)
+
+        post["labor_norm_input_unit"] = "minutes"
+        for i, stage in enumerate((stage_a, stage_b)):
+            post[f"labor_lines-{i}-production_stage"] = str(stage.pk)
+            post[f"labor_lines-{i}-norm_hours"] = "6" if i == 0 else "12"
+            post[f"labor_lines-{i}-employee_minutes"] = "5" if i == 0 else "10"
+            post[f"labor_lines-{i}-overhead_per_unit"] = "0"
+            post.setdefault(f"labor_lines-{i}-id", "")
+
+        save_resp = self.client.post(url, post, follow=True)
+        self.assertEqual(save_resp.status_code, 200)
+        self.assertEqual(tech_card.labor_lines.count(), 2)
+        line_a = tech_card.labor_lines.get(production_stage=stage_a)
+        line_b = tech_card.labor_lines.get(production_stage=stage_b)
+        self.assertEqual(line_a.norm_hours, Decimal("0.1000"))
+        self.assertEqual(line_b.norm_hours, Decimal("0.2000"))
+        self.assertEqual(line_a.employee_minutes, Decimal("5.00"))
+        self.assertEqual(line_b.employee_minutes, Decimal("10.00"))
+        tech_card.refresh_from_db()
+        self.assertEqual(tech_card.labor_norm_input_unit, TechCard.LABOR_NORM_INPUT_MINUTES)
+
     def test_planned_labor_cost_includes_machine_and_employee_time(self):
         product = Product.objects.create(name="Табличка с трудом", min_stock=Decimal("0"))
         tech_process = TechProcess.objects.create(name="Маршрут с трудом")
@@ -698,6 +923,54 @@ class TechCardAdminFormTests(TestCase):
         )
 
         self.assertEqual(tech_card.planned_labor_cost_per_unit(), Decimal("149.97"))
+
+    def test_techcard_planned_total_cost_includes_all_parts(self):
+        product = Product.objects.create(name="Табличка полная себест.", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="Маршрут полной себест.")
+        employee = Employee.objects.create(full_name="Мастер", hourly_rate=Decimal("500"))
+        stage = ProductionStage.objects.create(
+            name="Лазерная резка",
+            sequence=1,
+            hourly_rate=Decimal("800"),
+            cut_rate_per_meter=Decimal("10"),
+            master=employee,
+        )
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage, order=1)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        material = Material.objects.create(name="Фанера 3мм", unit="лист")
+        MaterialBatch.objects.create(
+            material=material,
+            movement_type=MaterialBatch.INCOMING,
+            quantity=Decimal("10"),
+            unit_price=Decimal("100"),
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            item_kind=TechCardItem.KIND_MATERIAL,
+            material=material,
+            quantity=Decimal("0.5"),
+            cut_length_meters_per_unit=Decimal("2"),
+        )
+        TechCardLaborLine.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            norm_hours=Decimal("0.1"),
+            employee_minutes=Decimal("10"),
+            overhead_per_unit=Decimal("5"),
+        )
+        self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("50.00"))
+        self.assertEqual(tech_card.planned_cut_cost_per_unit(), Decimal("20.00"))
+        self.assertEqual(tech_card.planned_overhead_per_unit(), Decimal("5.00"))
+        total = tech_card.planned_total_cost_per_unit()
+        self.assertEqual(total, Decimal("238.33"))
+        tech_card.sync_material_norms_to_product()
+        product.refresh_from_db()
+        self.assertEqual(product.planned_total_cost, total)
 
 
 class OrderItemAutoPriceTests(TestCase):
@@ -897,3 +1170,58 @@ class ProductionExpectationStockReportTests(TestCase):
         row = admin_obj.get_queryset(request=None).get(pk=stock.pk)
         self.assertEqual(row._prod_pending, Decimal("4"))
         self.assertEqual(row._effective_qty, Decimal("6"))
+
+
+class MaterialAdminAutocompleteTests(TestCase):
+    def setUp(self):
+        Material.objects.create(name="Плёнка упаковочная 50 см", unit="м", material_type="упаковка")
+        User = get_user_model()
+        self.admin_user = User.objects.create_superuser(
+            username="material_ac_admin",
+            email="material_ac_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.admin_user)
+        self.url = reverse("admin:autocomplete")
+
+    def _autocomplete(self, term: str):
+        return self.client.get(
+            self.url,
+            {
+                "term": term,
+                "app_label": "procurement",
+                "model_name": "goodsreceiptline",
+                "field_name": "material",
+            },
+        )
+
+    def test_material_autocomplete_is_case_insensitive_for_russian(self):
+        for term in ("плёнка", "Плёнка", "пленка", "ПЛЕНКА", "упаковочная"):
+            response = self._autocomplete(term)
+            self.assertEqual(response.status_code, 200, msg=term)
+            texts = [row["text"] for row in response.json()["results"]]
+            self.assertTrue(
+                any("упаковочная" in text.casefold() for text in texts),
+                msg=term,
+            )
+
+
+class GoodsReceiptLineUnitDisplayTests(TestCase):
+    def test_unit_display_reads_material_unit(self):
+        from procurement.admin import GoodsReceiptLineInline
+        from procurement.models import GoodsReceipt, GoodsReceiptLine
+
+        org = Organization.objects.create(name="GR Org", is_supplier=True)
+        wh = Warehouse.objects.create(name="GR WH", organization=org)
+        material = Material.objects.create(name="Плёнка тест", unit="м")
+        gr = GoodsReceipt.objects.create(warehouse=wh, supplier=org)
+        line = GoodsReceiptLine.objects.create(
+            goods_receipt=gr,
+            material=material,
+            quantity=Decimal("1"),
+            unit_price=Decimal("10"),
+            amount=Decimal("10"),
+        )
+        inline = GoodsReceiptLineInline(GoodsReceiptLine, admin.site)
+        self.assertEqual(inline.unit_display(line), "м")
+        self.assertIn("unit_display", GoodsReceiptLineInline.fields)

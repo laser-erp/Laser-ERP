@@ -55,6 +55,7 @@
 {{ block.super }}
 {{ operation_types_data|json_script:"product-operation-types-data" }}
 {{ material_avg_unit_prices|json_script:"product-material-avg-prices" }}
+{% if product_planned_cost_breakdown %}{{ product_planned_cost_breakdown|json_script:"product-planned-cost-breakdown" }}{% endif %}
 {% if supplier_new_org_url %}<script>window.PRODUCT_SUPPLIER_NEW_ORG_URL = "{{ supplier_new_org_url|escapejs }}";</script>{% endif %}
 <link rel="stylesheet" href="{% static 'core/admin/product_change_form.css' %}?v=60">
 <link rel="stylesheet" href="{% static 'core/admin/product_change_tabs.css' %}?v=1">
@@ -67,7 +68,7 @@
 <script src="{% static 'core/admin/product_supplier_picker.js' %}?v=4" defer></script>
 <script src="{% static 'core/admin/product_supplier_layout_fix.js' %}?v=6" defer></script>
 <script src="{% static 'core/admin/product_name_desc_width.js' %}?v=2" defer></script>
-<script src="{% static 'core/admin/product_prices_tabs.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/product_prices_tabs.js' %}?v=3" defer></script>
 <script src="{% static 'core/admin/product_composed_name.js' %}?v=1" defer></script>
 <script src="{% static 'core/admin/product_gallery_inline_move.js' %}?v=2" defer></script>
 <script src="{% static 'core/admin/product_modifications_headers.js' %}?v=4" defer></script>

@@ -203,6 +203,7 @@
                 <th style="width:100px">Тип</th>
                 <th>Номенклатура</th>
                 <th>Строка заказа</th>
+                <th style="width:56px">Ед.</th>
                 <th style="width:100px">Кол-во</th>
                 <th style="width:100px">Цена</th>
                 <th style="width:110px" class="ms-num">Сумма</th>
@@ -327,6 +328,23 @@
       }
     }
 
+    function unitForRow(row) {
+      const lt = row.querySelector('.line-line-type') && row.querySelector('.line-line-type').value;
+      if (lt === 'product') {
+        const pid = row.querySelector('.line-prod') && row.querySelector('.line-prod').value;
+        const p = products.find(function(x) { return String(x.id) === String(pid); });
+        return (p && p.unit) ? p.unit : '—';
+      }
+      const mid = row.querySelector('.line-mat') && row.querySelector('.line-mat').value;
+      const m = materials.find(function(x) { return String(x.id) === String(mid); });
+      return (m && m.unit) ? m.unit : '—';
+    }
+
+    function refreshUnitCell(row) {
+      const cell = row.querySelector('.line-unit');
+      if (cell) cell.textContent = unitForRow(row);
+    }
+
     function toggleNomenclature(row) {
       const lt = row.querySelector('.line-line-type').value;
       const mat = row.querySelector('.line-mat');
@@ -341,6 +359,7 @@
         mat.style.display = 'block';
       }
       refreshPoSelect(row);
+      refreshUnitCell(row);
     }
 
     function fmtMoney(n) {
@@ -383,6 +402,7 @@
         '<select class="line-prod" name="line_product" style="margin-top:4px;display:none">' +
         productOptionsHtml() + '</select></td>' +
         '<td><select class="line-po" name="line_po_line">' + poOptionsForRow(tr) + '</select></td>' +
+        '<td class="line-unit ms-num">—</td>' +
         '<td><input type="text" class="line-qty" name="line_qty" inputmode="decimal" placeholder="0"></td>' +
         '<td><input type="text" class="line-price" name="line_price" inputmode="decimal" placeholder="0"></td>' +
         '<td class="ms-num line-sum">0,00</td>' +
@@ -390,8 +410,8 @@
       tbody.appendChild(tr);
       const typeSel = tr.querySelector('.line-line-type');
       typeSel.addEventListener('change', function() { toggleNomenclature(tr); });
-      tr.querySelector('.line-mat').addEventListener('change', function() { refreshPoSelect(tr); });
-      tr.querySelector('.line-prod').addEventListener('change', function() { refreshPoSelect(tr); });
+      tr.querySelector('.line-mat').addEventListener('change', function() { refreshPoSelect(tr); refreshUnitCell(tr); });
+      tr.querySelector('.line-prod').addEventListener('change', function() { refreshPoSelect(tr); refreshUnitCell(tr); });
       tr.querySelector('.line-qty').addEventListener('input', recalc);
       tr.querySelector('.line-price').addEventListener('input', recalc);
       tr.querySelector('.line-del').addEventListener('click', function() {

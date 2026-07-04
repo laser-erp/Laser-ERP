@@ -57,9 +57,9 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
     )
     warehouses = list(Warehouse.objects.all().order_by("name"))
 
-    materials_payload = [{"id": m.pk, "name": m.name} for m in materials]
+    materials_payload = [{"id": m.pk, "name": m.name, "unit": (m.unit or "").strip()} for m in materials]
     products_payload = [
-        {"id": p.pk, "name": p.name}
+        {"id": p.pk, "name": p.name, "unit": (p.unit or "").strip()}
         for p in products
         if (p.name or "").strip()
     ]

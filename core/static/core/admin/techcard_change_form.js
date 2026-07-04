@@ -12,6 +12,12 @@
       panel.appendChild(root.firstChild);
     }
     root.remove();
+    window.dispatchEvent(new CustomEvent("tc:labor-inline-moved"));
+    window.setTimeout(function () {
+      if (typeof window.tcLaborInlineInit === "function") {
+        window.tcLaborInlineInit();
+      }
+    }, 50);
   }
 
   function moveMaterialsInlineRoot() {
@@ -216,6 +222,31 @@
    * Поля инлайна «Материалы» лежат во вкладке с display:none — часть окружений не шлёт их в POST.
    * Перед отправкой формы показываем все панели вкладок (страница сразу уходит на редирект).
    */
+  /**
+   * Перед сохранением: убедиться, что этапы и нормы из вкладки «Деньги» попадут в POST
+   * (Select2 может не синхронизировать скрытый select; панель вкладки — display:none).
+   */
+  function syncTechcardLaborBeforeSubmit() {
+    var table = document.querySelector("table.tc-labor-inline-table");
+    if (!table) {
+      return;
+    }
+    var jq = window.django && window.django.jQuery ? window.django.jQuery : window.jQuery;
+    table.querySelectorAll("tbody tr.form-row:not(.empty-form)").forEach(function (tr) {
+      var del = tr.querySelector('input[name$="-DELETE"]');
+      if (del && del.checked) {
+        return;
+      }
+      var sel = tr.querySelector('select[name$="-production_stage"]');
+      if (sel && jq && jq.fn && jq.fn.select2 && jq(sel).data("select2")) {
+        var v = jq(sel).val();
+        if (v != null) {
+          sel.value = String(v);
+        }
+      }
+    });
+  }
+
   function bindSubmitUnhideTabPanels() {
     var form = document.querySelector("#content-main form[method='post']");
     var section = document.getElementById("tc-ms-tabbed-section");
@@ -226,6 +257,7 @@
       "submit",
       function () {
         syncTechcardInlineBeforeSubmit();
+        syncTechcardLaborBeforeSubmit();
         if (section) {
           section.removeAttribute("hidden");
           section.querySelectorAll(".tc-ms-ppanel").forEach(function (p) {

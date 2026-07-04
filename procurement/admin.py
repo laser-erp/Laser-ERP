@@ -22,7 +22,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.admin_mixins import ReturnToReferrerMixin
-from core.models import Order, OrderItem, Organization, Product
+from core.models import Material, Order, OrderItem, Organization, Product
 from core.services.fns import fetch_contragents
 from core.services.production_stock_reports import pending_production_quantity_subquery
 
@@ -94,7 +94,25 @@ class GoodsReceiptLineInline(admin.TabularInline):
     formset = GoodsReceiptLineFormSet
     extra = 1
     autocomplete_fields = ("material", "product", "supplier_order_line")
-    readonly_fields = ("amount",)
+    readonly_fields = ("unit_display", "amount")
+    fields = (
+        "material",
+        "product",
+        "supplier_order_line",
+        "unit_display",
+        "quantity",
+        "unit_price",
+        "amount",
+    )
+    template = "admin/procurement/goodsreceipt/edit_inline/tabular.html"
+
+    @admin.display(description="Ед.")
+    def unit_display(self, obj):
+        if obj and obj.material_id:
+            return (obj.material.unit or "").strip() or "—"
+        if obj and obj.product_id:
+            return (obj.product.unit or "").strip() or "—"
+        return "—"
 
 
 class SupplierPurchaseOrderLineInline(admin.TabularInline):
@@ -605,6 +623,7 @@ class SupplierInvoiceCategoryMemoryAdmin(ReturnToReferrerMixin, admin.ModelAdmin
 @admin.register(GoodsReceipt)
 class GoodsReceiptAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin, admin.ModelAdmin):
     _supplier_fk_model = GoodsReceipt
+    change_form_template = "admin/procurement/goodsreceipt/change_form.html"
     list_display = (
         "number",
         "received_at",
@@ -653,6 +672,22 @@ class GoodsReceiptAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin, admi
         if obj and obj.posted_at:
             return []
         return [GoodsReceiptLineInline]
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["goods_receipt_unit_map"] = {
+            "materials": {
+                str(m.pk): (m.unit or "").strip()
+                for m in Material.objects.only("pk", "unit").order_by("pk")
+            },
+            "products": {
+                str(p.pk): (p.unit or "").strip()
+                for p in Product.objects.filter(product_kind=Product.PRODUCT_KIND_GOODS)
+                .only("pk", "unit")
+                .order_by("pk")
+            },
+        }
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.posted_at:

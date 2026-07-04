@@ -1,0 +1,8 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if goods_receipt_unit_map %}{{ goods_receipt_unit_map|json_script:"goods-receipt-unit-map" }}{% endif %}
+<script src="{% static 'procurement/goods_receipt_line_inline.js' %}?v=1" defer></script>
+{% endblock %}

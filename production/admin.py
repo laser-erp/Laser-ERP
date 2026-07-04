@@ -15,7 +15,8 @@ from django.shortcuts import render
 from django.urls import path, reverse
 
 from core.admin_mixins import ReturnToReferrerMixin
-from django.db.models import Prefetch, Q
+from core.admin import _material_average_unit_prices_map
+from django.db.models import IntegerField, OuterRef, Prefetch, Q, Subquery
 
 from django.forms.models import BaseInlineFormSet
 from django.forms.utils import ErrorDict
@@ -39,6 +40,7 @@ from core.models import (
     TechOperationMaterial,
     TechOperationProduct,
     TechProcess,
+    TechProcessStage,
 )
 from core.admin import (
     LaborTimeLogAdmin,
@@ -263,6 +265,52 @@ class TechCardItemFormSet(BaseInlineFormSet):
         return self.new_objects
 
 
+class TechCardLaborLineFormSet(BaseInlineFormSet):
+    """Строки «Деньги» — в порядке этапов техпроцесса, а не по алфавиту названия."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self._sort_forms_by_tech_process_order()
+
+    def _sort_forms_by_tech_process_order(self):
+        tc = self.instance
+        if not tc or not getattr(tc, "tech_process_id", None):
+            return
+        stage_order = {
+            tps.production_stage_id: tps.order
+            for tps in tc.tech_process.get_stages_ordered()
+        }
+
+        def stage_id_for(form):
+            if form.instance.production_stage_id:
+                return form.instance.production_stage_id
+            init = form.initial or {}
+            val = init.get("production_stage")
+            if val is None:
+                return None
+            return getattr(val, "pk", val)
+
+        def is_template_row(form):
+            return not form.instance.pk and stage_id_for(form) is None
+
+        filled = []
+        templates = []
+        for form in self.forms:
+            if is_template_row(form):
+                templates.append(form)
+            else:
+                filled.append(form)
+
+        filled.sort(
+            key=lambda f: (
+                stage_order.get(stage_id_for(f), 9999),
+                f.instance.pk or 0,
+            )
+        )
+        self.forms = filled + templates
+
+
 class TechCardItemInline(admin.TabularInline):
     model = TechCardItem
     fk_name = "tech_card"
@@ -316,6 +364,7 @@ class TechCardItemInline(admin.TabularInline):
 class TechCardLaborLineInline(admin.TabularInline):
     model = TechCardLaborLine
     form = TechCardLaborLineForm
+    formset = TechCardLaborLineFormSet
     extra = 0
     fields = (
         "production_stage",
@@ -332,7 +381,6 @@ class TechCardLaborLineInline(admin.TabularInline):
         "employee_pay_display",
     )
     template = "admin/production/techcardproxy/techcardlabor/tabular.html"
-    ordering = ("production_stage__name", "pk")
     classes = ["tc-labor-fieldset"]
 
     def get_formset(self, request, obj=None, **kwargs):
@@ -360,6 +408,11 @@ class TechCardLaborLineInline(admin.TabularInline):
                 u = request.POST.get("labor_norm_input_unit")
                 if u in (TechCard.LABOR_NORM_INPUT_HOURS, TechCard.LABOR_NORM_INPUT_MINUTES):
                     unit = u
+            parent_tc = SimpleNamespace(labor_norm_input_unit=unit)
+        elif request.method == "POST":
+            unit = request.POST.get("labor_norm_input_unit", TechCard.LABOR_NORM_INPUT_HOURS)
+            if unit not in (TechCard.LABOR_NORM_INPUT_HOURS, TechCard.LABOR_NORM_INPUT_MINUTES):
+                unit = TechCard.LABOR_NORM_INPUT_HOURS
             parent_tc = SimpleNamespace(labor_norm_input_unit=unit)
 
         class FormWithParent(TechCardLaborLineForm):
@@ -410,7 +463,17 @@ class TechCardLaborLineInline(admin.TabularInline):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("production_stage")
+        qs = super().get_queryset(request).select_related("production_stage")
+        parent = getattr(self, "_parent_tech_card", None)
+        if parent and parent.tech_process_id:
+            order_sq = TechProcessStage.objects.filter(
+                tech_process_id=parent.tech_process_id,
+                production_stage_id=OuterRef("production_stage_id"),
+            ).values("order")[:1]
+            return qs.annotate(
+                _tp_stage_order=Subquery(order_sq, output_field=IntegerField())
+            ).order_by("_tp_stage_order", "pk")
+        return qs.order_by("production_stage__name", "pk")
 
     def hourly_rate_display(self, obj):
         if obj and obj.production_stage_id:
@@ -431,6 +494,14 @@ class TechCardLaborLineInline(admin.TabularInline):
         return "—"
 
     labor_pay_display.short_description = "Станок/этап"
+
+    def employee_hourly_rate_display(self, obj):
+        if not obj or not obj.production_stage_id:
+            return "—"
+        rate = obj.employee_hourly_rate_for_plan()
+        return format_html("{}&nbsp;&#8381;", format(rate.quantize(Decimal("0.01")), "f"))
+
+    employee_hourly_rate_display.short_description = "Ставка сотрудника"
 
     def employee_pay_display(self, obj):
         if not obj:
@@ -465,8 +536,9 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     )
     list_display = (
         "name",
-        "labor_cost_display",
+        "total_cost_display",
         "material_cost_display",
+        "labor_cost_display",
         "overhead_per_unit_display",
         "cut_cost_display",
         "comment_display",
@@ -616,9 +688,17 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     def _tech_process_stages_map():
         """id техпроцесса (str) → [{id, name, hourly_rate, employee_hourly_rate}, …] в порядке этапов."""
         out = {}
+        tps_qs = (
+            TechProcessStage.objects.select_related("production_stage__master")
+            .prefetch_related("production_stage__executors")
+            .order_by("tech_process_id", "order", "production_stage__name")
+        )
+        by_tp = {}
+        for tps in tps_qs:
+            by_tp.setdefault(tps.tech_process_id, []).append(tps)
         for tp in TechProcess.objects.all():
             rows = []
-            for tps in tp.get_stages_ordered().select_related("production_stage__master"):
+            for tps in by_tp.get(tp.pk, []):
                 st = tps.production_stage
                 hr = st.hourly_rate
                 emp_hr = st.employee_hourly_rate_for_plan()
@@ -627,7 +707,12 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                         "id": st.pk,
                         "name": st.name,
                         "hourly_rate": "" if hr is None else format(hr, "f"),
-                        "employee_hourly_rate": "" if not emp_hr else format(emp_hr, "f"),
+                        "employee_hourly_rate": format(emp_hr, "f"),
+                        "cut_rate_per_meter": (
+                            ""
+                            if st.cut_rate_per_meter is None
+                            else format(st.cut_rate_per_meter, "f")
+                        ),
                     }
                 )
             out[str(tp.pk)] = rows
@@ -635,8 +720,41 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 
     def _techcard_form_extra_context(self, request, object_id=None):
         """Контекст формы техкарты: карта этапов и выбранная единица нормы (ч/м) для заголовка столбца."""
-        extra = {"tech_process_stages_map": self._tech_process_stages_map()}
+        extra = {
+            "tech_process_stages_map": self._tech_process_stages_map(),
+            "material_avg_unit_prices": _material_average_unit_prices_map(),
+        }
+        _stage_id_ph = "999999999"
+        _change = reverse("admin:core_productionstage_change", args=[int(_stage_id_ph)])
+        extra["production_stage_admin_urls"] = {
+            "change": _change.replace(_stage_id_ph, "{id}") + "?_to_field=id&_popup=1",
+            "delete": reverse("admin:core_productionstage_delete", args=[int(_stage_id_ph)]).replace(
+                _stage_id_ph, "{id}"
+            )
+            + "?_to_field=id&_popup=1",
+            "view": _change.replace(_stage_id_ph, "{id}") + "?_to_field=id",
+            "add": reverse("admin:core_productionstage_add") + "?_to_field=id&_popup=1",
+        }
         extra["techcard_title_product"] = ""
+        extra["techcard_cost_breakdown"] = None
+        obj = None
+        if object_id not in (None, ""):
+            try:
+                obj = (
+                    TechCard.objects.filter(pk=int(object_id))
+                    .prefetch_related("items__material", "labor_lines__production_stage")
+                    .first()
+                )
+            except (TypeError, ValueError):
+                obj = None
+        if obj and obj.pk:
+            extra["techcard_cost_breakdown"] = {
+                "materials": format(obj.planned_material_cost_per_unit(), "f"),
+                "labor": format(obj.planned_labor_cost_per_unit(), "f"),
+                "overhead": format(obj.planned_overhead_per_unit(), "f"),
+                "cut": format(obj.planned_cut_cost_per_unit(), "f"),
+                "total": format(obj.planned_total_cost_per_unit(), "f"),
+            }
         if request.method == "POST":
             u = request.POST.get("labor_norm_input_unit")
             extra["labor_norm_input_unit_selected"] = (
@@ -730,6 +848,15 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         qcopy.pop("p", None)
         extra_context["tc_sidebar_qs_base"] = urlencode(qcopy, doseq=True)
         return super().changelist_view(request, extra_context)
+
+    @admin.display(description="Себестоимость")
+    def total_cost_display(self, obj):
+        if not obj:
+            return "—"
+        cost = obj.planned_total_cost_per_unit()
+        if cost == 0:
+            return "—"
+        return f"{cost} ₽"
 
     @admin.display(description="Оплата труда")
     def labor_cost_display(self, obj):

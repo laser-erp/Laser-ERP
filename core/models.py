@@ -662,8 +662,21 @@ class Product(models.Model):
             total += pm.quantity_per_unit * avg_price
         return total.quantize(Decimal("0.01")) if total else Decimal("0.00")
 
+    def _primary_tech_card_for_cost(self):
+        """Техкарта для плановой себестоимости (последняя сохранённая с этим изделием)."""
+        if not self.pk:
+            return None
+        return (
+            self.tech_cards.prefetch_related("labor_lines__production_stage", "items__material")
+            .order_by("-pk")
+            .first()
+        )
+
     @property
     def planned_labor_cost(self) -> Decimal:
+        tc = self._primary_tech_card_for_cost()
+        if tc is not None:
+            return tc.planned_labor_cost_per_unit()
         total = Decimal("0")
         for ln in self.labor_norms.select_related("operation_type"):
             minutes = ln.minutes_per_unit
@@ -672,8 +685,18 @@ class Product(models.Model):
         return total.quantize(Decimal("0.01")) if total else Decimal("0.00")
 
     @property
+    def planned_overhead_cost(self) -> Decimal:
+        tc = self._primary_tech_card_for_cost()
+        if tc is not None:
+            return tc.planned_overhead_per_unit()
+        return Decimal("0.00")
+
+    @property
     def planned_cut_cost(self) -> Decimal:
         """Рез по метрам: сумма по всем техкартам изделия."""
+        tc = self._primary_tech_card_for_cost()
+        if tc is not None:
+            return tc.planned_cut_cost_per_unit()
         total = Decimal("0")
         for tc in self.tech_cards.all():
             total += tc.planned_cut_cost_per_unit()
@@ -682,7 +705,10 @@ class Product(models.Model):
     @property
     def planned_total_cost(self) -> Decimal:
         return (
-            self.planned_material_cost + self.planned_labor_cost + self.planned_cut_cost
+            self.planned_material_cost
+            + self.planned_labor_cost
+            + self.planned_overhead_cost
+            + self.planned_cut_cost
         ).quantize(Decimal("0.01"))
 
     def get_quick_sale_price(
@@ -1193,6 +1219,28 @@ class TechCard(models.Model):
         if s is None:
             return Decimal("0")
         return Decimal(str(s)).quantize(Decimal("0.01"))
+
+    def planned_material_cost_per_unit(self) -> Decimal:
+        """Материалы на 1 изд. по строкам техкарты × средняя цена закупки."""
+        total = Decimal("0")
+        for item in self.items.filter(
+            material__isnull=False,
+            item_kind__in=(TechCardItem.KIND_RAW, TechCardItem.KIND_MATERIAL),
+        ).select_related("material"):
+            price = item.material.average_price
+            if price is None:
+                continue
+            total += Decimal(str(price)) * Decimal(str(item.quantity))
+        return total.quantize(Decimal("0.01"))
+
+    def planned_total_cost_per_unit(self) -> Decimal:
+        """Плановая себестоимость 1 изделия по техкарте: материалы + труд + прочее + рез."""
+        return (
+            self.planned_material_cost_per_unit()
+            + self.planned_labor_cost_per_unit()
+            + self.planned_overhead_per_unit()
+            + self.planned_cut_cost_per_unit()
+        ).quantize(Decimal("0.01"))
 
     def material_quantities_per_unit_by_material_id(self) -> dict[int, Decimal]:
         """Суммарный расход материала на 1 готовое изделие по всем строкам техкарты (с материалом)."""

@@ -4,6 +4,8 @@
 {% block extrahead %}
 {{ block.super }}
 {% if tech_process_stages_map %}{{ tech_process_stages_map|json_script:"tech-process-stages-data" }}{% endif %}
+{% if material_avg_unit_prices %}{{ material_avg_unit_prices|json_script:"techcard-material-avg-prices" }}{% endif %}
+{% if techcard_cost_breakdown %}{{ techcard_cost_breakdown|json_script:"techcard-cost-breakdown" }}{% endif %}
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}

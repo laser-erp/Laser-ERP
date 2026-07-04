@@ -83,14 +83,7 @@ def build_techcard_sidebar_tree():
 
 def tech_card_material_cost_estimate(tech_card) -> Decimal:
     """Оценка по позициям техкарты: цена материала — средневзвешенная по поступлениям (Material.average_price)."""
-    total = Decimal("0")
-    for item in tech_card.items.all():
-        if not item.material_id:
-            continue
-        price = item.material.average_price
-        if price is not None:
-            total += Decimal(str(price)) * Decimal(str(item.quantity))
-    return total.quantize(Decimal("0.01"))
+    return tech_card.planned_material_cost_per_unit()
 
 
 def tech_card_cut_cost_estimate(tech_card) -> Decimal:
