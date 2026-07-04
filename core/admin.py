@@ -10,7 +10,8 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Count, F, OuterRef, Prefetch, Q, Subquery, Sum
+from django.db.models import Count, DecimalField, F, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import NoReverseMatch, path, reverse
@@ -23,6 +24,7 @@ from .admin_mixins import ReturnToReferrerMixin
 from .services.bank_bik import fetch_bank_details_by_bik
 from .services.fns import fetch_contragents, fetch_contragent_egr_payload
 from .services.material_nomenclature_sync import sync_catalog_material_from_product_nomenclature
+from .services.production_stock_reports import pending_production_quantity_subquery
 from .widgets import UnitDatalistTextWidget
 
 
@@ -1040,10 +1042,50 @@ class MaterialStockAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 
 @admin.register(ProductStock)
 class ProductStockAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("warehouse", "product", "quantity")
+    list_display = (
+        "warehouse",
+        "product",
+        "quantity",
+        "col_production_pending",
+        "col_effective_quantity",
+    )
     list_filter = ("warehouse",)
     search_fields = ("product__name",)
     autocomplete_fields = ("warehouse", "product")
+
+    def get_queryset(self, request):
+        dec3 = DecimalField(max_digits=16, decimal_places=3)
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(
+                _prod_pending=Coalesce(
+                    pending_production_quantity_subquery(
+                        product_lookup="product_id",
+                        warehouse_lookup="warehouse_id",
+                    ),
+                    Value(Decimal("0")),
+                    output_field=dec3,
+                ),
+            )
+            .annotate(
+                _effective_qty=F("quantity") + F("_prod_pending"),
+            )
+        )
+
+    @admin.display(description="Ожидание (производство)", ordering="_prod_pending")
+    def col_production_pending(self, obj):
+        v = getattr(obj, "_prod_pending", None)
+        if v is None or v == 0:
+            return "—"
+        return str(v.quantize(Decimal("0.001")) if isinstance(v, Decimal) else v)
+
+    @admin.display(description="С учётом производства", ordering="_effective_qty")
+    def col_effective_quantity(self, obj):
+        v = getattr(obj, "_effective_qty", None)
+        if v is None:
+            return "—"
+        return str(v.quantize(Decimal("0.001")) if isinstance(v, Decimal) else v)
 
 
 class ProductMaterialInline(admin.TabularInline):

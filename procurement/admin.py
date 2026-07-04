@@ -24,6 +24,7 @@ from django.utils import timezone
 from core.admin_mixins import ReturnToReferrerMixin
 from core.models import Order, OrderItem, Organization, Product
 from core.services.fns import fetch_contragents
+from core.services.production_stock_reports import pending_production_quantity_subquery
 
 from .services.invoice_ocr import (
     apply_ocr_data_to_supplier_invoice,
@@ -719,13 +720,15 @@ class ReceivedVatInvoiceAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin
 @admin.register(PurchaseManagementProduct)
 class PurchaseManagementProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     """
-    Остатки, открытые заказы покупателей, заказы поставщикам (ожидание), продажи за 30 дней.
+    Остатки, открытые заказы покупателей, заказы поставщикам и плановый выпуск (ожидание), продажи за 30 дней.
     Резерв = min(открытый спрос, остаток) — сколько со склада покрывает текущие заказы.
     Доступно = остаток − резерв.
-    Ожидание = сумма непоставленного по строкам заказов поставщику: max(0, заказано − получено)
+    Ожидание (поставщик) = сумма непоставленного по строкам заказов поставщику: max(0, заказано − получено)
     (статусы «Отправлен», «Подтверждён»).
+    Ожидание (производство) = сумма max(0, план − годная) по заданиям с флажком «Ожидание»
+    (статусы «Черновик», «В работе»).
     Дней на складе = остаток / средние продажи (без заказов и поставок).
-    Дней запаса = max(0, остаток + ожидание − открытые заказы) / средние продажи.
+    Дней запаса = max(0, остаток + ожидание поставщика + ожидание производства − открытые заказы) / средние продажи.
     """
 
     _OPEN_ORDER_STATUSES = (Order.STATUS_NEW, Order.STATUS_IN_PROGRESS)
@@ -744,6 +747,7 @@ class PurchaseManagementProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         "col_stock",
         "col_reserved",
         "col_pending",
+        "col_prod_pending",
         "col_available",
         "col_days_wh",
         "col_days_supply",
@@ -853,6 +857,11 @@ class PurchaseManagementProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                     Value(Decimal("0")),
                     output_field=dec3,
                 ),
+                _prod_pending=Coalesce(
+                    pending_production_quantity_subquery(),
+                    Value(Decimal("0")),
+                    output_field=dec3,
+                ),
             )
             .annotate(
                 _reserved_physical=Least(
@@ -870,7 +879,7 @@ class PurchaseManagementProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
             )
             .annotate(
                 _coverage_for_days=Greatest(
-                    F("_stock_total") + F("_po_pending") - F("_open_qty"),
+                    F("_stock_total") + F("_po_pending") + F("_prod_pending") - F("_open_qty"),
                     Value(Decimal("0")),
                     output_field=dec3,
                 ),
@@ -935,6 +944,10 @@ class PurchaseManagementProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     @admin.display(description="Ожидание (заказ у поставщика)", ordering="_po_pending")
     def col_pending(self, obj):
         return self._fmt_qty(getattr(obj, "_po_pending", None))
+
+    @admin.display(description="Ожидание (производство)", ordering="_prod_pending")
+    def col_prod_pending(self, obj):
+        return self._fmt_qty(getattr(obj, "_prod_pending", None))
 
     @admin.display(description="Доступно", ordering="_available_calc")
     def col_available(self, obj):

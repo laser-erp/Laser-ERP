@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -776,3 +777,117 @@ class ProductModificationPricingTests(TestCase):
             abrasive_grit="p120",
         )
         self.assertEqual(mod.name, "3 мм | сорт 2/2 | Ш2 | P120")
+
+
+class ProductionExpectationStockReportTests(TestCase):
+    """S2: плановый выпуск (флажок «Ожидание») в отчётах закупок и остатков."""
+
+    def setUp(self):
+        self.org = Organization.objects.create(name="Org Expectation")
+        self.product_wh = Warehouse.objects.create(name="WH Product", organization=self.org)
+        self.material_wh = Warehouse.objects.create(name="WH Material", organization=self.org)
+        self.product = Product.objects.create(
+            name="Баня настольная",
+            product_kind=Product.PRODUCT_KIND_GOODS,
+            min_stock=Decimal("0"),
+        )
+        self.other_wh = Warehouse.objects.create(name="WH Other", organization=self.org)
+        self.tech_process = TechProcess.objects.create(name="TP Expectation")
+        self.tech_card = TechCard.objects.create(
+            name=self.product.name,
+            product=self.product,
+            tech_process=self.tech_process,
+        )
+
+    def _assignment_with_pending(self, *, planned=Decimal("10"), produced=Decimal("3"), expectation=True):
+        assignment = ProductionAssignment.objects.create(
+            product_warehouse=self.product_wh,
+            material_warehouse=self.material_wh,
+            status=ProductionAssignment.STATUS_IN_PROGRESS,
+            expectation=expectation,
+        )
+        ProductionAssignmentItem.objects.create(
+            assignment=assignment,
+            tech_card=self.tech_card,
+            quantity_planned=planned,
+            quantity_produced=produced,
+            sequence=1,
+        )
+        return assignment
+
+    def test_pending_production_by_product_counts_planned_minus_good(self):
+        self._assignment_with_pending(planned=Decimal("10"), produced=Decimal("3"))
+        from core.services.production_stock_reports import pending_production_by_product
+
+        pending = pending_production_by_product()
+        self.assertEqual(pending.get(self.product.pk), Decimal("7"))
+
+    def test_pending_production_ignores_completed_and_disabled_expectation(self):
+        self._assignment_with_pending(expectation=False)
+        completed = ProductionAssignment.objects.create(
+            product_warehouse=self.product_wh,
+            material_warehouse=self.material_wh,
+            status=ProductionAssignment.STATUS_COMPLETED,
+            expectation=True,
+        )
+        ProductionAssignmentItem.objects.create(
+            assignment=completed,
+            tech_card=self.tech_card,
+            quantity_planned=Decimal("5"),
+            quantity_produced=Decimal("0"),
+            sequence=1,
+        )
+        from core.services.production_stock_reports import pending_production_by_product
+
+        self.assertEqual(pending_production_by_product(), {})
+
+    def test_pending_production_scoped_by_warehouse(self):
+        self._assignment_with_pending(planned=Decimal("4"), produced=Decimal("1"))
+        other_assignment = ProductionAssignment.objects.create(
+            product_warehouse=self.other_wh,
+            material_warehouse=self.material_wh,
+            status=ProductionAssignment.STATUS_DRAFT,
+            expectation=True,
+        )
+        ProductionAssignmentItem.objects.create(
+            assignment=other_assignment,
+            tech_card=self.tech_card,
+            quantity_planned=Decimal("8"),
+            quantity_produced=Decimal("0"),
+            sequence=1,
+        )
+        from core.services.production_stock_reports import pending_production_by_product
+
+        by_wh = pending_production_by_product(warehouse_id=self.product_wh.pk)
+        self.assertEqual(by_wh.get(self.product.pk), Decimal("3"))
+        total = pending_production_by_product()
+        self.assertEqual(total.get(self.product.pk), Decimal("11"))
+
+    def test_purchase_management_admin_includes_production_pending(self):
+        self._assignment_with_pending(planned=Decimal("6"), produced=Decimal("2"))
+        ProductStock.objects.create(
+            warehouse=self.product_wh,
+            product=self.product,
+            quantity=Decimal("1"),
+        )
+        from procurement.admin import PurchaseManagementProductAdmin
+        from procurement.models import PurchaseManagementProduct
+
+        admin_obj = PurchaseManagementProductAdmin(PurchaseManagementProduct, admin.site)
+        row = admin_obj.get_queryset(request=None).get(pk=self.product.pk)
+        self.assertEqual(row._prod_pending, Decimal("4"))
+        self.assertEqual(row._coverage_for_days, Decimal("5"))
+
+    def test_product_stock_admin_shows_production_pending(self):
+        self._assignment_with_pending(planned=Decimal("5"), produced=Decimal("1"))
+        stock = ProductStock.objects.create(
+            warehouse=self.product_wh,
+            product=self.product,
+            quantity=Decimal("2"),
+        )
+        from core.admin import ProductStockAdmin
+
+        admin_obj = ProductStockAdmin(ProductStock, admin.site)
+        row = admin_obj.get_queryset(request=None).get(pk=stock.pk)
+        self.assertEqual(row._prod_pending, Decimal("4"))
+        self.assertEqual(row._effective_qty, Decimal("6"))
