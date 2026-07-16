@@ -1,5 +1,5 @@
 {% load i18n admin_urls static admin_modify %}
-<link rel="stylesheet" href="{% static 'core/admin/techcard_items_tabs.css' %}?v=44">
+<link rel="stylesheet" href="{% static 'core/admin/techcard_items_tabs.css' %}?v=47">
 <div class="js-inline-admin-formset inline-group techcard-items-inline-group" id="{{ inline_admin_formset.formset.prefix }}-group"
      data-inline-type="tabular"
      data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
@@ -16,6 +16,7 @@
       <div class="tc-mgh-cell tc-mgh-code">Код</div>
       <div class="tc-mgh-cell tc-mgh-material">
         <div class="tc-mgh-material-head-inner">
+          <span class="tc-mgh-drag-spacer" aria-hidden="true"></span>
           <span class="tc-mgh-select-all-wrap">
             <input type="checkbox" class="tc-mgh-select-all" title="Выбрать все позиции" aria-label="Выбрать все позиции" />
           </span>
@@ -26,7 +27,7 @@
           </span>
         </div>
       </div>
-      <div class="tc-mgh-cell tc-mgh-norm">Норма по техкарте</div>
+      <div class="tc-mgh-cell tc-mgh-norm" title="Расход материала. Поле «рез, м» появляется только на этапах лазерной резки и гравировки">Норма</div>
       <div class="tc-mgh-cell tc-mgh-tech" title="Данное поле позволяет сохранить ссылку на техкарту материала, если материал является полуфабрикатом и может быть произведён на вашем производстве.">
         Техкарта
         <img src="{% static 'admin/img/icon-unknown.svg' %}" class="tc-mgh-help" width="12" height="12" alt="" title="Техкарта полуфабриката при комплектующих">
@@ -151,4 +152,4 @@
   };
 })();
 </script>
-<script src="{% static 'core/admin/techcard_items_tabs.js' %}?v=45" defer></script>
+<script src="{% static 'core/admin/techcard_items_tabs.js' %}?v=49" defer></script>

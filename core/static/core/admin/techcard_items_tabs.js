@@ -10,11 +10,11 @@
  * ТЕКУЩАЯ РЕАЛИЗАЦИЯ (актуально для правок — не ломать без явного запроса):
  * - Шесть колонок сетки: Этап | Код | Материал | Норма | Техкарта | Параметры (⚙ + чекбокс скрытия «Техкарта»).
  * - Рейка названия этапа: колонка 1, span по числу строк позиций; карточки — subgrid; подвал — отдельная строка.
- * - В карточке: … | норма + ед. изм. (ед. с карточки товара/материала через tc-meta API и data-* на tr) | техкарта | меню ⋯
+ * - В карточке: … | норма материала + ед. + рез (м) | техкарта | меню ⋯
  * - Чек «все» и «Переместить в другой этап» — в шапке колонки «Материал»; синхронизация с tbody и formset без изменения префиксов полей.
  * - Ресайз: ручки на правом краю шапок Этап/Код/Материал/Норма/Техкарта; переменные --tc-* (кол. «Материал» — --tc-material-pref) и localStorage.
  * - Скрытие колонки «Техкарта»: класс tc-tech-col-collapsed на группе, LS techcardItemsTechColCollapsed, --tc-tech-pref: 0.
- * - Подвал поиска: .tc-stage-search-footer-inner — только колонка «Материал» (grid-column: 3).
+ * - Подвал поиска: .tc-stage-search-footer — grid-column 3 / -1 в сетке панели (Материал…Параметры).
  * - Статика: версии ?v= в tabular.html для сброса кэша при правках css/js.
  */
 (function () {
@@ -69,6 +69,114 @@
     var techCardsCache = {};
     var unitCacheProduct = {};
     var unitCacheMaterial = {};
+    var techcardProductAreaCache = {};
+
+    function parseAreaM2(raw) {
+      if (raw == null || String(raw).trim() === '') {
+        return null;
+      }
+      var n = parseFloat(String(raw).replace(',', '.'));
+      return isFinite(n) && n > 0 ? n : null;
+    }
+
+    function formatNormQty(n) {
+      if (!isFinite(n) || n <= 0) {
+        return '';
+      }
+      var s = n.toFixed(6).replace(/\.?0+$/, '');
+      return s.replace('.', ',');
+    }
+
+    function techcardProductId() {
+      var el = document.getElementById('id_product');
+      if (!el || el.value == null) {
+        return '';
+      }
+      return String(el.value).trim();
+    }
+
+    function withTechcardProductArea(cb) {
+      var pid = techcardProductId();
+      if (!pid) {
+        cb(null);
+        return;
+      }
+      if (Object.prototype.hasOwnProperty.call(techcardProductAreaCache, pid)) {
+        cb(techcardProductAreaCache[pid]);
+        return;
+      }
+      var tpl = U.productTcMetaTpl;
+      if (!tpl) {
+        cb(null);
+        return;
+      }
+      var url = tpl.replace('999888777', pid);
+      fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          Accept: 'application/json',
+        },
+      })
+        .then(function (r) {
+          if (!r.ok) {
+            throw new Error('product area');
+          }
+          return r.json();
+        })
+        .then(function (data) {
+          var area = parseAreaM2(data && data.area_m2);
+          techcardProductAreaCache[pid] = area;
+          cb(area);
+        })
+        .catch(function () {
+          techcardProductAreaCache[pid] = null;
+          cb(null);
+        });
+    }
+
+    /** Норма листа = площадь изделия / площадь листа материала. */
+    function maybeAutofillMaterialSheetNorm($row, force) {
+      if (!$row || !$row.length) {
+        return;
+      }
+      var kind = rowItemKind($row);
+      if (kind !== K.material && kind !== K.raw) {
+        return;
+      }
+      var $qty = $row.find('[name$="-quantity"]');
+      if (!$qty.length) {
+        return;
+      }
+      var cur = String($qty.val() || '').trim();
+      if (!force && cur !== '') {
+        return;
+      }
+      var matArea = parseAreaM2($row.attr('data-material-area-m2'));
+      if (matArea == null) {
+        return;
+      }
+      withTechcardProductArea(function (prodArea) {
+        if (prodArea == null || matArea <= 0) {
+          return;
+        }
+        var qty = prodArea / matArea;
+        var formatted = formatNormQty(qty);
+        if (!formatted) {
+          return;
+        }
+        $qty.val(formatted).trigger('change');
+        var rid = $row.attr('id') || '';
+        if (rid) {
+          var $cardQty = $group.find(
+            '.tc-item-card[data-row-id="' + rid.replace(/"/g, '\\"') + '"] .tc-item-card-qty'
+          );
+          if ($cardQty.length) {
+            $cardQty.val(formatted);
+          }
+        }
+      });
+    }
 
     function withTechCardsForProduct(pid, cb) {
       if (!pid) {
@@ -118,6 +226,42 @@
       return stagesMap[pid];
     }
 
+    /** Поле «рез, м» только для лазерной резки / гравировки (или этапа с ₽/м). */
+    function stageSupportsCutMeters(stageId) {
+      if (!stageId) {
+        return false;
+      }
+      var stages = currentStages();
+      var st = null;
+      for (var i = 0; i < stages.length; i++) {
+        if (String(stages[i].id) === String(stageId)) {
+          st = stages[i];
+          break;
+        }
+      }
+      if (!st) {
+        return false;
+      }
+      var name = String(st.name || '')
+        .toLowerCase()
+        .replace(/ё/g, 'е');
+      var isLaser = name.indexOf('лазер') >= 0 || name.indexOf('laser') >= 0;
+      if (isLaser && (name.indexOf('рез') >= 0 || name.indexOf('гравир') >= 0)) {
+        return true;
+      }
+      if (name.indexOf('гравир') >= 0) {
+        return true;
+      }
+      var rateRaw = st.cut_rate_per_meter;
+      if (rateRaw != null && String(rateRaw).trim() !== '') {
+        var rate = parseFloat(String(rateRaw).replace(',', '.'));
+        if (isFinite(rate) && rate > 0) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     function onTechProcessUiChange() {
       window.setTimeout(rebuildMirrors, 0);
     }
@@ -130,6 +274,18 @@
       var $tp = $('#id_tech_process');
       if ($tp.length) {
         $tp.on('select2:select select2:clear select2:unselect change', onTechProcessUiChange);
+      }
+    }
+
+    function onTechcardProductChange() {
+      techcardProductAreaCache = {};
+    }
+    var prodEl = document.getElementById('id_product');
+    if (prodEl && prodEl.getAttribute('data-tc-prod-area-bound') !== '1') {
+      prodEl.setAttribute('data-tc-prod-area-bound', '1');
+      prodEl.addEventListener('change', onTechcardProductChange);
+      if ($.fn.select2) {
+        $(prodEl).on('select2:select select2:clear select2:unselect change', onTechcardProductChange);
       }
     }
 
@@ -316,13 +472,29 @@
         if (meta.name != null && String(meta.name).trim() !== '') {
           $row.attr('data-product-name', String(meta.name).trim());
         }
+        if (meta.area_m2 != null) {
+          $row.attr('data-product-area-m2', meta.area_m2);
+        }
       } else {
         $row.attr('data-material-id', pk);
         $row.attr('data-material-unit', meta.unit != null ? meta.unit : '');
+        $row.attr(
+          'data-material-area-m2',
+          meta.area_m2 != null ? String(meta.area_m2) : ''
+        );
+        $row.attr(
+          'data-material-sheet-length-mm',
+          meta.sheet_length_mm != null ? String(meta.sheet_length_mm) : ''
+        );
+        $row.attr(
+          'data-material-sheet-width-mm',
+          meta.sheet_width_mm != null ? String(meta.sheet_width_mm) : ''
+        );
       }
     }
 
-    function prefetchRowUnits($row, done) {
+    function prefetchRowUnits($row, done, opts) {
+      opts = opts || {};
       if (!$row || !$row.length) {
         if (done) {
           done();
@@ -358,23 +530,28 @@
         } else {
           $row.attr('data-material-id', '');
           $row.attr('data-material-unit', '');
+          $row.attr('data-material-area-m2', '');
         }
         if (done) {
           done();
         }
         return;
+      }
+      function afterMeta() {
+        if (opts.autofillNorm) {
+          maybeAutofillMaterialSheetNorm($row, !!opts.forceAutofill);
+        }
+        if (done) {
+          done();
+        }
       }
       if (Object.prototype.hasOwnProperty.call(cache, pk)) {
         applyRowTcMeta($row, kind, pk, cache[pk]);
-        if (done) {
-          done();
-        }
+        afterMeta();
         return;
       }
       if (!tpl) {
-        if (done) {
-          done();
-        }
+        afterMeta();
         return;
       }
       var url = tpl.replace('999888777', pk);
@@ -399,18 +576,22 @@
                   code: data && data.code != null ? String(data.code).trim() : '',
                   article: data && data.article != null ? String(data.article).trim() : '',
                   name: data && data.name != null ? String(data.name).trim() : '',
+                  area_m2: data && data.area_m2 != null ? String(data.area_m2).trim() : '',
                 }
               : {
                   unit: data && data.unit != null ? String(data.unit).trim() : '',
+                  area_m2: data && data.area_m2 != null ? String(data.area_m2).trim() : '',
+                  sheet_length_mm:
+                    data && data.sheet_length_mm != null ? String(data.sheet_length_mm).trim() : '',
+                  sheet_width_mm:
+                    data && data.sheet_width_mm != null ? String(data.sheet_width_mm).trim() : '',
                 };
           cache[pk] = meta;
           applyRowTcMeta($row, kind, pk, meta);
         })
         .catch(function () {})
         .finally(function () {
-          if (done) {
-            done();
-          }
+          afterMeta();
         });
     }
 
@@ -704,7 +885,6 @@
             .append($('<span class="tc-item-import-label"></span>').text('Импортировать'))
         );
         $footInner.append($sr);
-        $footer.append($('<div class="tc-stage-search-footer-skip" aria-hidden="true"></div>'));
         $footer.append($footInner);
 
         $inner.append($items);
@@ -874,6 +1054,7 @@
         var $normCell = $('<div class="tc-item-card-norm-cell"></div>');
         var $qty = $('<input type="text" class="tc-item-card-qty vTextField">');
         $qty.attr('placeholder', 'Норма');
+        $qty.attr('title', 'Расход материала на 1 изделие (в единицах материала: лист, шт и т.п.)');
         $qty.val(qty);
         $qty.on('input change', function () {
           $row.find('[name$="-quantity"]').val($qty.val()).trigger('change');
@@ -882,6 +1063,29 @@
         $unitSel.append(new Option(unit, unit, true, true));
         $normCell.append($qty);
         $normCell.append($unitSel);
+
+        var $cutField = $row.find('[name$="-cut_length_meters_per_unit"]');
+        if (stageSupportsCutMeters(sk)) {
+          var cutVal = $cutField.val() || '';
+          var $cutWrap = $('<div class="tc-item-card-cut-wrap"></div>');
+          var $cut = $('<input type="text" class="tc-item-card-cut vTextField" inputmode="decimal">');
+          $cut.attr('placeholder', 'рез');
+          $cut.attr(
+            'title',
+            'Длина реза/траектории на 1 изделие, м. Не путать с ед. материала (лист). Стоимость = м × ₽/м этапа.'
+          );
+          $cut.attr('aria-label', 'Норма длины реза, м');
+          $cut.val(cutVal);
+          $cut.on('input change', function () {
+            $cutField.val($cut.val()).trigger('change');
+          });
+          $cutWrap.append($cut);
+          $cutWrap.append($('<span class="tc-item-card-cut-unit"></span>').text('м'));
+          $normCell.append($cutWrap);
+        } else if ($cutField.length) {
+          /* На шлифовке/сборке и т.п. метры реза не нужны */
+          $cutField.val('');
+        }
         $card.append($normCell);
 
         var $techCell = $('<div class="tc-item-card-tech-cell"></div>');
@@ -1032,10 +1236,11 @@
         var n = $cards.length;
         var $footer = $panel.find('.tc-stage-search-footer');
         var footEl = $footer[0];
+        $panel.toggleClass('tc-stage-panel--empty', n === 0);
         if (railEl) {
           railEl.style.gridColumn = '1';
           if (n === 0) {
-            railEl.style.gridRow = '1 / 2';
+            railEl.style.gridRow = '1';
           } else {
             railEl.style.gridRow = '1 / span ' + n;
           }
@@ -1045,8 +1250,13 @@
           this.style.gridRow = String(idx + 1);
         });
         if (footEl) {
-          footEl.style.gridColumn = '1 / -1';
-          footEl.style.gridRow = n === 0 ? '2' : String(n + 1);
+          if (n === 0) {
+            footEl.style.gridColumn = '3 / -1';
+            footEl.style.gridRow = '1';
+          } else {
+            footEl.style.gridColumn = '1 / -1';
+            footEl.style.gridRow = String(n + 1);
+          }
         }
       });
     }
@@ -1360,7 +1570,10 @@
           }
           pendingAdd = null;
           adding = false;
-          prefetchRowUnits($row, continueMaterialBatchAfterRow);
+          prefetchRowUnits($row, continueMaterialBatchAfterRow, {
+            autofillNorm: true,
+            forceAutofill: !(p.quantity != null && String(p.quantity).trim() !== ''),
+          });
         }, 220);
       },
       false
@@ -2156,7 +2369,10 @@
             $r.attr('data-item-kind', ($(this).val() || '').trim());
           }
           window.setTimeout(function () {
-            prefetchRowUnits($r, rebuildMirrors);
+            prefetchRowUnits($r, rebuildMirrors, {
+              autofillNorm: true,
+              forceAutofill: nm.indexOf('-material') !== -1,
+            });
           }, 0);
         }
       );
@@ -2167,7 +2383,10 @@
           clearComponentTechCardIfNeeded(this);
           var $r = $(this).closest('tr.form-row');
           window.setTimeout(function () {
-            prefetchRowUnits($r, rebuildMirrors);
+            prefetchRowUnits($r, rebuildMirrors, {
+              autofillNorm: true,
+              forceAutofill: true,
+            });
           }, 0);
         }
       );

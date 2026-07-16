@@ -6,7 +6,7 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'core/admin/compact_icons.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'core/admin/laser_admin_theme.css' %}?v=8">
+<link rel="stylesheet" href="{% static 'core/admin/laser_admin_theme.css' %}?v=10">
 <link rel="stylesheet" href="{% static 'core/admin/admin_app_list_horizontal.css' %}?v=3">
 <link rel="stylesheet" href="{% static 'core/admin/admin_add_draft.css' %}?v=1">
 <link rel="stylesheet" href="{% static 'core/admin/admin_field_help.css' %}?v=13">
@@ -16,9 +16,10 @@
 {% block extrahead %}
 {{ block.super }}
 <script src="{% static 'core/admin/admin_autosize_fields.js' %}?v=5" defer></script>
-<script src="{% static 'core/admin/column_resize.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/column_resize.js' %}?v=3" defer></script>
 <script src="{% static 'core/admin/admin_add_draft.js' %}?v=3" defer></script>
 <script src="{% static 'core/admin/admin_field_help.js' %}?v=4" defer></script>
+<script src="{% static 'core/admin/laser_admin_nav.js' %}?v=1" defer></script>
 {% endblock %}
 
 {% block branding %}
@@ -73,12 +74,26 @@
     <span class="laser-topnav-label">Продажи</span>
   </a>
 
-  <a href="{% url 'admin:warehouse_materialstockproxy_changelist' %}" class="laser-topnav-item{% if 'admin/warehouse' in path %} laser-nav-active{% endif %}">
-    <span class="laser-topnav-icon" aria-hidden="true">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-    </span>
-    <span class="laser-topnav-label">Склад</span>
-  </a>
+  <div class="laser-topnav-dropdown{% if 'admin/warehouse' in path or 'admin/core/material' in path %} laser-nav-active{% endif %}">
+    <a href="{% url 'admin:core_material_changelist' %}" class="laser-topnav-item{% if 'admin/warehouse' in path or 'admin/core/material' in path %} laser-nav-active{% endif %}" aria-haspopup="true">
+      <span class="laser-topnav-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </span>
+      <span class="laser-topnav-label">Склад</span>
+    </a>
+    <div class="laser-topnav-flyout" role="menu" aria-label="Склад">
+      <div class="laser-topnav-flyout-group">
+        <div class="laser-topnav-flyout-group-title">Материалы</div>
+        <a href="{% url 'admin:core_material_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Справочник материалов</a>
+        <a href="{% url 'admin:core_materialgroup_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Группы материалов</a>
+        <a href="{% url 'admin:warehouse_materialstockproxy_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Остатки материалов</a>
+        <a href="{% url 'admin:warehouse_materialbatchproxy_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Движения по материалам</a>
+      </div>
+      <div class="laser-topnav-flyout-divider" aria-hidden="true"></div>
+      <a href="{% url 'admin:warehouse_warehouseproxy_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Склады</a>
+      <a href="{% url 'admin:warehouse_productstockproxy_changelist' %}" class="laser-topnav-flyout-link" role="menuitem">Остатки продукции</a>
+    </div>
+  </div>
 
   <a href="{% url 'admin:production_techcardproxy_changelist' %}" class="laser-topnav-item{% if '/production/' in path %} laser-nav-active{% endif %}">
     <span class="laser-topnav-icon" aria-hidden="true">
@@ -118,12 +133,14 @@
 {% endif %}
 
 {# ——— Вторая строка: склад ——— #}
-{% if 'admin/warehouse' in path %}
+{% if 'admin/warehouse' in path or 'admin/core/material' in path or 'admin/core/materialgroup' in path or 'admin/core/materialbatch' in path %}
 <div class="laser-admin-subnav-bar" role="navigation" aria-label="Склад">
-  <a href="{% url 'admin:warehouse_warehouseproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_warehouseproxy_changelist' %}laser-subnav-active{% endif %}">Склады</a>
+  <a href="{% url 'admin:core_material_changelist' %}" class="{% if 'admin/core/material/' in path and 'materialbatch' not in path and 'materialgroup' not in path and 'materialstock' not in path %}laser-subnav-active{% endif %}">Материалы</a>
+  <a href="{% url 'admin:core_materialgroup_changelist' %}" class="{% if 'admin/core/materialgroup' in path %}laser-subnav-active{% endif %}">Группы материалов</a>
   <a href="{% url 'admin:warehouse_materialstockproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_materialstockproxy_changelist' %}laser-subnav-active{% endif %}">Остатки материалов</a>
-  <a href="{% url 'admin:warehouse_productstockproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_productstockproxy_changelist' %}laser-subnav-active{% endif %}">Остатки продукции</a>
   <a href="{% url 'admin:warehouse_materialbatchproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_materialbatchproxy_changelist' %}laser-subnav-active{% endif %}">Движения по материалам</a>
+  <a href="{% url 'admin:warehouse_warehouseproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_warehouseproxy_changelist' %}laser-subnav-active{% endif %}">Склады</a>
+  <a href="{% url 'admin:warehouse_productstockproxy_changelist' %}" class="{% if request.resolver_match.url_name == 'warehouse_productstockproxy_changelist' %}laser-subnav-active{% endif %}">Остатки продукции</a>
 </div>
 {% endif %}
 

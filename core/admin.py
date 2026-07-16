@@ -180,6 +180,8 @@ def copy_materials(modeladmin, request, queryset):
             group=material.group,
             material_type=material.material_type,
             thickness_mm=material.thickness_mm,
+            sheet_length_mm=material.sheet_length_mm,
+            sheet_width_mm=material.sheet_width_mm,
             unit=material.unit,
             current_stock=0,
             photo=material.photo,
@@ -196,11 +198,61 @@ class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 
 @admin.register(Material)
 class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("name", "photo_thumb", "group", "material_type", "thickness_mm", "unit", "current_stock")
+    list_display = (
+        "name",
+        "photo_thumb",
+        "group",
+        "material_type",
+        "sheet_length_mm",
+        "sheet_width_mm",
+        "thickness_mm",
+        "area_m2_display",
+        "unit",
+        "current_stock",
+    )
     list_filter = ("group", "material_type")
     search_fields = ("name", "material_type", "unit", "group__name")
     actions = [copy_materials]
     autocomplete_fields = ("group",)
+    readonly_fields = ("area_m2", "sheet_area_cm2", "sheet_area_mm2", "sheet_geometry_preview")
+    fieldsets = (
+        (
+            "Основное",
+            {
+                "fields": ("name", "group", "material_type", "unit", "current_stock", "photo"),
+            },
+        ),
+        (
+            "Размеры листа и площадь",
+            {
+                "description": (
+                    "Укажите длину и ширину листа в мм — площадь посчитается автоматически "
+                    "(как у товара). Толщина — отдельно для номенклатуры."
+                ),
+                "fields": (
+                    ("sheet_length_mm", "sheet_width_mm", "thickness_mm"),
+                    "sheet_geometry_preview",
+                    ("area_m2", "sheet_area_cm2", "sheet_area_mm2"),
+                ),
+            },
+        ),
+    )
+
+    class Media:
+        js = ("core/admin/material_sheet_areas.js",)
+
+    @admin.display(description="Пл., м²")
+    def area_m2_display(self, obj):
+        if not obj or obj.area_m2 is None:
+            return "—"
+        return format(obj.area_m2.quantize(Decimal("0.0001")), "f")
+
+    @admin.display(description="Расчёт площади")
+    def sheet_geometry_preview(self, obj):
+        return mark_safe(
+            '<div id="material-sheet-area-preview" class="material-sheet-area-preview" '
+            'style="font-size:13px;color:#334155;">Задайте длину и ширину листа</div>'
+        )
 
     @staticmethod
     def _normalize_material_search_text(value) -> str:
@@ -259,14 +311,28 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         return custom + super().get_urls()
 
     def techcard_inline_meta_json(self, request, object_id):
-        """Ед. изм. для зеркала «Норма» в инлайне позиций техкарты."""
+        """Ед. изм. и габариты листа для зеркала «Норма» в инлайне позиций техкарты."""
         if not request.user.is_staff:
             return JsonResponse({"error": "forbidden"}, status=403)
         try:
-            m = Material.objects.only("unit").get(pk=object_id)
+            m = Material.objects.only(
+                "unit",
+                "sheet_length_mm",
+                "sheet_width_mm",
+                "thickness_mm",
+                "area_m2",
+            ).get(pk=object_id)
         except Material.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
-        return JsonResponse({"unit": (m.unit or "").strip()})
+        return JsonResponse(
+            {
+                "unit": (m.unit or "").strip(),
+                "sheet_length_mm": "" if m.sheet_length_mm is None else format(m.sheet_length_mm, "f"),
+                "sheet_width_mm": "" if m.sheet_width_mm is None else format(m.sheet_width_mm, "f"),
+                "thickness_mm": "" if m.thickness_mm is None else format(m.thickness_mm, "f"),
+                "area_m2": "" if m.area_m2 is None else format(m.area_m2, "f"),
+            }
+        )
 
     @admin.display(description="Фото")
     def photo_thumb(self, obj):
@@ -1067,7 +1133,7 @@ class WarehouseAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
 
 @admin.register(MaterialStock)
 class MaterialStockAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("material", "quantity", "material_type_display", "warehouse")
+    list_display = ("material", "quantity", "material_type_display", "warehouse", "material_card_link")
     list_filter = ("warehouse",)
     search_fields = ("material__name", "material__material_type")
     autocomplete_fields = ("warehouse", "material")
@@ -1075,6 +1141,16 @@ class MaterialStockAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     @admin.display(description="Тип")
     def material_type_display(self, obj):
         return obj.material.material_type or "—" if obj and obj.material_id else "—"
+
+    @admin.display(description="Карточка")
+    def material_card_link(self, obj):
+        if not obj or not obj.material_id:
+            return "—"
+        try:
+            url = reverse("admin:core_material_change", args=[obj.material_id])
+        except NoReverseMatch:
+            return "—"
+        return format_html('<a href="{}">Размеры / правка</a>', url)
 
 
 @admin.register(ProductStock)
@@ -1470,11 +1546,13 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         return custom + super().get_urls()
 
     def techcard_inline_meta_json(self, request, object_id):
-        """Ед. изм., код, артикул для зеркала позиций техкарты (норма, колонка «Код»)."""
+        """Ед. изм., код, артикул и площадь для зеркала позиций техкарты."""
         if not request.user.is_staff:
             return JsonResponse({"error": "forbidden"}, status=403)
         try:
-            p = Product.objects.only("unit", "code", "article", "name").get(pk=object_id)
+            p = Product.objects.only(
+                "unit", "code", "article", "name", "area_m2_manual"
+            ).get(pk=object_id)
         except Product.DoesNotExist:
             return JsonResponse({"error": "not found"}, status=404)
         return JsonResponse(
@@ -1483,6 +1561,11 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 "code": (p.code or "").strip(),
                 "article": (p.article or "").strip(),
                 "name": (p.name or "").strip(),
+                "area_m2": (
+                    ""
+                    if p.area_m2_manual is None
+                    else format(p.area_m2_manual, "f")
+                ),
             }
         )
 

@@ -199,6 +199,11 @@
         if (cq && bq) {
           bq.value = cq.value;
         }
+        var ccut = card.querySelector(".tc-item-card-cut");
+        var bcut = row.querySelector('[name$="-cut_length_meters_per_unit"]');
+        if (ccut && bcut) {
+          bcut.value = ccut.value;
+        }
       });
     });
     document.querySelectorAll("#tc-ms-product-composition-tbody tr.tc-ms-product-comp-row").forEach(function (mrow) {

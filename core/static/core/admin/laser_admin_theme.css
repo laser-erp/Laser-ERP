@@ -9,6 +9,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 100;
 }
 
 .laser-admin-nav-bar {
@@ -23,6 +26,9 @@
   align-items: center;
   gap: 8px 28px;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: visible;
+  position: relative;
+  z-index: 110;
 }
 
 /* Верхняя полоса разделов: тонкие белые иконки над тонким белым текстом, фон без изменений */
@@ -133,6 +139,82 @@ fieldset.module > h2,
 
 .laser-admin-nav-primary a.laser-topnav-item.laser-nav-active .laser-topnav-label {
   text-decoration: none;
+}
+
+/* Склад: выпадающее меню в синей строке */
+.laser-topnav-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.laser-topnav-flyout {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  min-width: 15rem;
+  padding: 8px 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* Невидимый мост — меню не закрывается при движении мыши вниз */
+.laser-topnav-flyout::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+.laser-topnav-dropdown:hover > .laser-topnav-flyout,
+.laser-topnav-dropdown:focus-within > .laser-topnav-flyout,
+.laser-topnav-dropdown.is-open > .laser-topnav-flyout {
+  display: block;
+}
+
+.laser-topnav-flyout-group-title {
+  padding: 6px 14px 4px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.laser-topnav-flyout-link {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 14px;
+  color: #1e293b !important;
+  text-decoration: none !important;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.laser-topnav-flyout-group .laser-topnav-flyout-link {
+  padding-left: 18px;
+}
+
+.laser-topnav-flyout-link:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb !important;
+}
+
+.laser-topnav-flyout-divider {
+  height: 1px;
+  margin: 6px 10px;
+  background: #e2e8f0;
 }
 
 /* Вторая строка — подразделы (одна линия; при нехватке ширины — горизонтальный скролл) */

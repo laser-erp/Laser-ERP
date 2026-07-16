@@ -69,6 +69,46 @@ class Material(models.Model):
         blank=True,
         help_text="Толщина в миллиметрах",
     )
+    sheet_length_mm = models.DecimalField(
+        "Длина листа, мм",
+        max_digits=12,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        help_text="Длина листа/заготовки в мм. Вместе с шириной используется для расчёта площади листа.",
+    )
+    sheet_width_mm = models.DecimalField(
+        "Ширина листа, мм",
+        max_digits=12,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        help_text="Ширина листа/заготовки в мм.",
+    )
+    area_m2 = models.DecimalField(
+        "Пл. листа, м²",
+        max_digits=14,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Считается из длины × ширины (мм). Для ед. «лист» — площадь одного листа.",
+    )
+    sheet_area_mm2 = models.DecimalField(
+        "Пл. листа, мм²",
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    sheet_area_cm2 = models.DecimalField(
+        "Пл. листа, см²",
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        editable=False,
+    )
     unit = models.CharField(
         "Ед. измерения",
         max_length=50,
@@ -88,6 +128,35 @@ class Material(models.Model):
     class Meta:
         verbose_name = "Материал"
         verbose_name_plural = "Материалы"
+
+    def apply_sheet_geometry(self) -> None:
+        """Площадь листа из Д×Ш (мм), как у товара."""
+        self.sheet_area_mm2 = None
+        self.sheet_area_cm2 = None
+        self.area_m2 = None
+        L = self.sheet_length_mm
+        W = self.sheet_width_mm
+        if L is None or W is None:
+            return
+        try:
+            ln = Decimal(str(L))
+            wd = Decimal(str(W))
+        except Exception:
+            return
+        if ln <= 0 or wd <= 0:
+            return
+        mm2 = (ln * wd).quantize(Decimal("0.01"))
+        self.sheet_area_mm2 = mm2
+        self.sheet_area_cm2 = (mm2 / Decimal("100")).quantize(Decimal("0.01"))
+        self.area_m2 = (mm2 / Decimal("1000000")).quantize(Decimal("0.000001"))
+
+    def save(self, *args, **kwargs):
+        for attr in ("sheet_length_mm", "sheet_width_mm"):
+            v = getattr(self, attr, None)
+            if v is not None:
+                setattr(self, attr, Decimal(str(v)).quantize(Decimal("1")))
+        self.apply_sheet_geometry()
+        super().save(*args, **kwargs)
 
     @property
     def average_price(self) -> Decimal | None:

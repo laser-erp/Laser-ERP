@@ -83,6 +83,33 @@
     style.textContent = [
       "#result_list { table-layout: fixed; }",
       "#result_list thead th { position: relative; }",
+      /* Чекбокс действий не сжимается и не прячется под «Наименование» */
+      "#result_list thead th.action-checkbox-column,",
+      "#result_list tbody td.action-checkbox {",
+      "  width: 2.75rem !important;",
+      "  min-width: 2.75rem !important;",
+      "  max-width: 2.75rem !important;",
+      "  box-sizing: border-box;",
+      "  overflow: visible;",
+      "  position: relative;",
+      "  z-index: 2;",
+      "  padding-left: 0.5rem;",
+      "  padding-right: 0.25rem;",
+      "  text-align: center;",
+      "  vertical-align: middle;",
+      "}",
+      "#result_list tbody td.action-checkbox input,",
+      "#result_list thead th.action-checkbox-column input {",
+      "  position: relative;",
+      "  z-index: 3;",
+      "  margin: 0;",
+      "}",
+      /* Длинное наименование обрезается внутри своей ячейки, не наезжает на чекбокс */
+      "#result_list tbody th,",
+      "#result_list tbody td:not(.action-checkbox) {",
+      "  overflow: hidden;",
+      "  text-overflow: ellipsis;",
+      "}",
       ".laser-col-resize-handle {",
       "  position: absolute;",
       "  top: 0;",
@@ -98,6 +125,16 @@
       "}",
     ].join("\n");
     document.head.appendChild(style);
+  }
+
+  function pinActionCheckboxColumn(table) {
+    var th = table.querySelector("thead th.action-checkbox-column");
+    if (!th) {
+      return;
+    }
+    th.style.width = "2.75rem";
+    th.style.minWidth = "2.75rem";
+    th.style.maxWidth = "2.75rem";
   }
 
   function attachHandle(table, headers, th) {
@@ -146,6 +183,7 @@
     }
 
     ensureStyleTag();
+    pinActionCheckboxColumn(table);
     var headers = collectHeaders(table);
     if (!headers.length) {
       return;
@@ -153,6 +191,7 @@
 
     table.style.tableLayout = "fixed";
     applyWidths(headers, readSavedWidths());
+    pinActionCheckboxColumn(table);
     headers.forEach(function (th) {
       attachHandle(table, headers, th);
     });
