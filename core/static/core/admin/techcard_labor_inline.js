@@ -1,6 +1,6 @@
 /**
  * Техкарта — вкладка «Деньги»: ставка нормо-часа из карты этапа (JSON tech-process-stages-data),
- * пересчёт оплаты труда по строке и строка «Итого».
+ * пересчёт оплаты сотрудника и затрат (станок + прочие) по строке и «Итого».
  */
 (function () {
   "use strict";
@@ -515,7 +515,7 @@
     if (tem) tem.textContent = String(round2(sumEmployeeMinutes)) + " мин";
     if (tep) tep.textContent = formatMoney(sumEmployeePay);
     if (to) to.textContent = formatMoney(sumOv);
-    updateUnitCostSummary(sumMachinePay + sumEmployeePay, sumOv);
+    updateUnitCostSummary(sumEmployeePay, sumOv + sumMachinePay);
   }
 
   function materialPriceMap() {
@@ -675,12 +675,20 @@
     var overhead = isFinite(overheadPay) ? overheadPay : 0;
     var hasLabor = isFinite(laborPay);
     var hasOverhead = isFinite(overheadPay);
+    var sb = serverCostBreakdown();
+    var components = null;
+    if (sb && sb.components != null && String(sb.components).trim() !== "") {
+      var compN = parseFloat(String(sb.components).replace(",", "."));
+      if (isFinite(compN) && compN > 0) components = round2(compN);
+    }
     setCostCell(".tc-unit-cost-materials", materials);
+    setCostCell(".tc-unit-cost-components", components);
     setCostCell(".tc-unit-cost-labor", hasLabor ? labor : null);
     setCostCell(".tc-unit-cost-overhead", hasOverhead ? overhead : null);
     setCostCell(".tc-unit-cost-cut", cut);
     var parts = [];
     if (materials != null) parts.push(materials);
+    if (components != null) parts.push(components);
     if (hasLabor) parts.push(labor);
     if (hasOverhead) parts.push(overhead);
     if (cut != null) parts.push(cut);

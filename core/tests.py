@@ -9,6 +9,10 @@ from core.models import (
     AssignmentMaterialReservation,
     Material,
     MaterialBatch,
+    MaterialGroup,
+    MaterialGroupBrand,
+    MaterialGroupColor,
+    MaterialGroupType,
     MaterialReservation,
     MaterialStock,
     Employee,
@@ -635,6 +639,47 @@ class TechCardAdminFormTests(TestCase):
         )
         self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("300.00"))
 
+    def test_purchase_price_counts_when_no_receipts(self):
+        product = Product.objects.create(name="Табличка без приёмки", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP no receipt")
+        stage = ProductionStage.objects.create(name="Шлифование", sequence=1)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage, order=1)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        material = Material.objects.create(
+            name="Круг без приёмки",
+            unit="шт",
+            purchase_price=Decimal("45.50"),
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=stage,
+            item_kind=TechCardItem.KIND_MATERIAL,
+            material=material,
+            quantity=Decimal("0.3000"),
+        )
+        self.assertIsNone(material.average_price)
+        self.assertEqual(material.cost_unit_price, Decimal("45.5000"))
+        self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("13.65"))
+
+    def test_receipt_average_overrides_card_purchase_price(self):
+        material = Material.objects.create(
+            name="Фанера с карточкой и приёмкой",
+            unit="лист",
+            purchase_price=Decimal("100"),
+        )
+        MaterialBatch.objects.create(
+            material=material,
+            movement_type=MaterialBatch.INCOMING,
+            quantity=Decimal("2"),
+            unit_price=Decimal("200"),
+        )
+        self.assertEqual(material.average_price, Decimal("200.0000"))
+        self.assertEqual(material.cost_unit_price, Decimal("200.0000"))
+
     def test_money_tab_json_includes_employee_hourly_rate(self):
         product = Product.objects.create(name="Табличка JSON", min_stock=Decimal("0"))
         tech_process = TechProcess.objects.create(name="TP JSON")
@@ -892,7 +937,7 @@ class TechCardAdminFormTests(TestCase):
         tech_card.refresh_from_db()
         self.assertEqual(tech_card.labor_norm_input_unit, TechCard.LABOR_NORM_INPUT_MINUTES)
 
-    def test_planned_labor_cost_includes_machine_and_employee_time(self):
+    def test_planned_labor_is_employee_machine_goes_to_overhead(self):
         product = Product.objects.create(name="Табличка с трудом", min_stock=Decimal("0"))
         tech_process = TechProcess.objects.create(name="Маршрут с трудом")
         employee = Employee.objects.create(
@@ -922,7 +967,9 @@ class TechCardAdminFormTests(TestCase):
             employee_minutes=Decimal("10"),
         )
 
-        self.assertEqual(tech_card.planned_labor_cost_per_unit(), Decimal("149.97"))
+        self.assertEqual(tech_card.planned_labor_cost_per_unit(), Decimal("83.33"))
+        self.assertEqual(tech_card.planned_machine_cost_per_unit(), Decimal("66.64"))
+        self.assertEqual(tech_card.planned_overhead_per_unit(), Decimal("66.64"))
 
     def test_techcard_planned_total_cost_includes_all_parts(self):
         product = Product.objects.create(name="Табличка полная себест.", min_stock=Decimal("0"))
@@ -965,12 +1012,62 @@ class TechCardAdminFormTests(TestCase):
         )
         self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("50.00"))
         self.assertEqual(tech_card.planned_cut_cost_per_unit(), Decimal("20.00"))
-        self.assertEqual(tech_card.planned_overhead_per_unit(), Decimal("5.00"))
+        self.assertEqual(tech_card.planned_labor_cost_per_unit(), Decimal("83.33"))
+        self.assertEqual(tech_card.planned_overhead_per_unit(), Decimal("85.00"))
         total = tech_card.planned_total_cost_per_unit()
         self.assertEqual(total, Decimal("238.33"))
         tech_card.sync_material_norms_to_product()
         product.refresh_from_db()
         self.assertEqual(product.planned_total_cost, total)
+
+    def test_planned_total_includes_component_tech_card_cost(self):
+        sanded = Product.objects.create(name="Шлифованный лист тест", min_stock=Decimal("0"))
+        primed = Product.objects.create(name="Грунтованный лист тест", min_stock=Decimal("0"))
+        employee = Employee.objects.create(full_name="Мастер сушки", hourly_rate=Decimal("600"))
+        stage_sand = ProductionStage.objects.create(
+            name="Шлиф тест", sequence=1, hourly_rate=Decimal("500"), master=employee
+        )
+        stage_coat = ProductionStage.objects.create(
+            name="Грунт тест", sequence=2, hourly_rate=Decimal("500"), master=employee
+        )
+        process_a = TechProcess.objects.create(name="Процесс шлиф тест")
+        process_b = TechProcess.objects.create(name="Процесс грунт тест")
+        TechProcessStage.objects.create(tech_process=process_a, production_stage=stage_sand, order=1)
+        TechProcessStage.objects.create(tech_process=process_b, production_stage=stage_coat, order=1)
+        card_a = TechCard.objects.create(name="Карта A тест", tech_process=process_a, product=sanded)
+        TechCardLaborLine.objects.create(
+            tech_card=card_a,
+            production_stage=stage_sand,
+            norm_hours=Decimal("0.1"),
+            employee_minutes=Decimal("6"),
+        )
+        card_b = TechCard.objects.create(name="Карта B тест", tech_process=process_b, product=primed)
+        TechCardItem.objects.create(
+            tech_card=card_b,
+            product=sanded,
+            quantity=Decimal("1"),
+            item_kind=TechCardItem.KIND_COMPONENT,
+            component_tech_card=card_a,
+        )
+        TechCardLaborLine.objects.create(
+            tech_card=card_b,
+            production_stage=stage_coat,
+            norm_hours=Decimal("0.05"),
+            overhead_per_unit=Decimal("40"),
+        )
+        sand_cost = card_a.planned_total_cost_per_unit()
+        self.assertGreater(sand_cost, Decimal("0"))
+        self.assertEqual(card_b.planned_component_cost_per_unit(), sand_cost)
+        self.assertEqual(
+            card_b.planned_total_cost_per_unit(),
+            sand_cost
+            + card_b.planned_labor_cost_per_unit()
+            + card_b.planned_overhead_per_unit(),
+        )
+        self.assertEqual(
+            card_b.planned_overhead_per_unit(),
+            Decimal("40.00") + card_b.planned_machine_cost_per_unit(),
+        )
 
 
 class OrderItemAutoPriceTests(TestCase):
@@ -1204,6 +1301,563 @@ class MaterialAdminAutocompleteTests(TestCase):
                 any("упаковочная" in text.casefold() for text in texts),
                 msg=term,
             )
+
+
+class MaterialGroupCardHelpersTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.admin_user = User.objects.create_superuser(
+            username="material_group_admin",
+            email="material_group_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.admin_user)
+        self.plywood = MaterialGroup.objects.create(name="Фанера", has_grade=True)
+        self.acrylic = MaterialGroup.objects.create(name="Акрил", has_grade=False)
+        self.packaging = MaterialGroup.objects.create(
+            name="Упаковка", has_grade=False, has_sheet_size=False
+        )
+        MaterialGroupType.objects.create(group=self.plywood, name="ФК", sort_order=0)
+        MaterialGroupType.objects.create(group=self.plywood, name="ФСФ", sort_order=1)
+        MaterialGroupType.objects.create(group=self.acrylic, name="прозрачный", sort_order=0)
+        MaterialGroupType.objects.create(group=self.packaging, name="плёнка", sort_order=0)
+        MaterialGroupType.objects.create(group=self.packaging, name="скотч", sort_order=1)
+
+    def test_group_autocomplete_suggests_from_first_letter(self):
+        url = reverse("admin:autocomplete")
+        response = self.client.get(
+            url,
+            {
+                "term": "ф",
+                "app_label": "core",
+                "model_name": "material",
+                "field_name": "group",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        texts = [row["text"] for row in response.json()["results"]]
+        self.assertIn("Фанера", texts)
+        self.assertNotIn("Акрил", texts)
+
+    def test_group_meta_returns_types_and_grade_flag(self):
+        url = reverse("admin:core_material_group_meta")
+        plywood = self.client.get(url, {"group_id": self.plywood.pk})
+        self.assertEqual(plywood.status_code, 200)
+        data = plywood.json()
+        self.assertTrue(data["has_grade"])
+        self.assertTrue(data["has_sheet_size"])
+        self.assertEqual(data["types"], ["ФК", "ФСФ"])
+        self.assertIn("2/2", data["grades"])
+
+        acrylic = self.client.get(url, {"group_id": self.acrylic.pk})
+        self.assertEqual(acrylic.json()["has_grade"], False)
+        self.assertEqual(acrylic.json()["types"], ["прозрачный"])
+        self.assertEqual(acrylic.json()["grades"], [])
+        self.assertTrue(acrylic.json()["has_sheet_size"])
+
+        packing = self.client.get(url, {"group_id": self.packaging.pk})
+        pack = packing.json()
+        self.assertFalse(pack["has_grade"])
+        self.assertFalse(pack["has_sheet_size"])
+        self.assertEqual(pack["types"], ["плёнка", "скотч"])
+        self.assertIn("рулон", pack["units"])
+        self.assertIn("л", pack["units"])
+        self.assertNotIn("лист", pack["units"])
+
+        abrasives = MaterialGroup.objects.create(
+            name="Абразивы", has_grade=False, has_sheet_size=False
+        )
+        abrasive_meta = self.client.get(url, {"group_id": abrasives.pk}).json()
+        self.assertFalse(abrasive_meta["has_sheet_size"])
+        self.assertFalse(abrasive_meta["has_grade"])
+        self.assertEqual(abrasive_meta["types"], [])
+        self.assertIn("шт", abrasive_meta["units"])
+        self.assertNotIn("лист", abrasive_meta["units"])
+        self.assertFalse(abrasive_meta["has_brand"])
+        self.assertFalse(abrasive_meta["has_color"])
+        self.assertFalse(abrasive_meta["has_grit"])
+        self.assertFalse(abrasive_meta["has_diameter"])
+        self.assertFalse(abrasive_meta["has_hole_count"])
+        self.assertEqual(abrasive_meta["brands"], [])
+        self.assertEqual(abrasive_meta["colors"], [])
+        self.assertEqual(abrasive_meta["grits"], [])
+        self.assertEqual(abrasive_meta["diameters"], [])
+        self.assertEqual(abrasive_meta["holes"], [])
+
+        coatings = MaterialGroup.objects.create(
+            name="Покрытия",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_color=True,
+        )
+        MaterialGroupType.objects.create(group=coatings, name="морилка водная", sort_order=0)
+        MaterialGroupType.objects.create(group=coatings, name="лак акриловый", sort_order=1)
+        MaterialGroupBrand.objects.create(group=coatings, name="Tury", sort_order=0)
+        MaterialGroupBrand.objects.create(group=coatings, name="Акватекс", sort_order=1)
+        MaterialGroupColor.objects.create(group=coatings, name="Дуб", sort_order=0)
+        MaterialGroupColor.objects.create(group=coatings, name="Сосна", sort_order=1)
+        coat = self.client.get(url, {"group_id": coatings.pk}).json()
+        self.assertTrue(coat["has_brand"])
+        self.assertTrue(coat["has_color"])
+        self.assertFalse(coat["has_grade"])
+        self.assertEqual(coat["brands"], ["Tury", "Акватекс"])
+        self.assertEqual(coat["colors"], ["Дуб", "Сосна"])
+        self.assertIn("морилка водная", coat["types"])
+
+    def test_packaging_form_uses_selects_with_group_choices(self):
+        from core.admin import MaterialAdminForm
+
+        material = Material.objects.create(
+            name="Стретч",
+            unit="м",
+            material_type="плёнка",
+            group=self.packaging,
+        )
+        form = MaterialAdminForm(instance=material)
+        type_values = [choice[0] for choice in form.fields["material_type"].widget.choices]
+        unit_values = [choice[0] for choice in form.fields["unit"].widget.choices]
+        self.assertEqual(form.fields["material_type"].widget.input_type, "select")
+        self.assertEqual(form.fields["unit"].widget.input_type, "select")
+        self.assertIn("плёнка", type_values)
+        self.assertIn("скотч", type_values)
+        self.assertIn("рулон", unit_values)
+        self.assertIn("м", unit_values)
+
+    def test_bound_form_keeps_posted_type_and_unit(self):
+        from core.admin import MaterialAdminForm
+
+        material = Material.objects.create(
+            name="Стретч",
+            unit="м",
+            material_type="плёнка",
+            group=self.packaging,
+        )
+        form = MaterialAdminForm(
+            data={
+                "name": "Стретч",
+                "group": str(self.packaging.pk),
+                "material_type": "плёнка",
+                "unit": "м",
+                "grade": "",
+            },
+            instance=material,
+        )
+        type_values = [choice[0] for choice in form.fields["material_type"].widget.choices]
+        self.assertIn("плёнка", type_values)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        material.refresh_from_db()
+        self.assertEqual(material.unit, "м")
+        self.assertEqual(material.material_type, "плёнка")
+
+    def test_stain_form_builds_name_from_brand_and_color(self):
+        from core.admin import MaterialAdminForm
+
+        coatings = MaterialGroup.objects.create(
+            name="Покрытия",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_color=True,
+        )
+        MaterialGroupType.objects.create(group=coatings, name="морилка водная", sort_order=0)
+        MaterialGroupBrand.objects.create(group=coatings, name="Tury", sort_order=0)
+        MaterialGroupColor.objects.create(group=coatings, name="Дуб", sort_order=0)
+        form = MaterialAdminForm(
+            data={
+                "name": "",
+                "group": str(coatings.pk),
+                "material_type": "морилка водная",
+                "brand": "Tury",
+                "color": "Дуб",
+                "unit": "л",
+                "grade": "",
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        material = form.save()
+        self.assertEqual(material.name, "Морилка водная Tury «Дуб»")
+        self.assertEqual(material.brand, "Tury")
+        self.assertEqual(material.color, "Дуб")
+
+        varnish = MaterialAdminForm(
+            data={
+                "name": "Лак паркетный Акватекс «матовый»",
+                "group": str(coatings.pk),
+                "material_type": "лак акриловый",
+                "brand": "Акватекс",
+                "color": "Дуб",
+                "unit": "л",
+                "grade": "",
+            }
+        )
+        self.assertTrue(varnish.is_valid(), varnish.errors)
+        saved = varnish.save()
+        self.assertEqual(saved.brand, "Акватекс")
+        self.assertEqual(saved.color, "")
+        self.assertEqual(saved.name, "Лак паркетный Акватекс «матовый»")
+
+    def test_abrasive_form_builds_disc_and_belt_names(self):
+        from core.admin import MaterialAdminForm
+        from core.models import MaterialGroupDiameter, MaterialGroupGrit, MaterialGroupHoleCount
+
+        abrasives = MaterialGroup.objects.create(
+            name="Абразивы",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_grit=True,
+            has_diameter=True,
+            has_hole_count=True,
+        )
+        MaterialGroupType.objects.create(group=abrasives, name="эксцентриковый", sort_order=0)
+        MaterialGroupType.objects.create(group=abrasives, name="ленточный", sort_order=1)
+        MaterialGroupBrand.objects.create(group=abrasives, name="Flexione", sort_order=0)
+        MaterialGroupGrit.objects.create(group=abrasives, name="P150", sort_order=0)
+        MaterialGroupDiameter.objects.create(group=abrasives, name="125", sort_order=0)
+        MaterialGroupDiameter.objects.create(group=abrasives, name="150", sort_order=1)
+        MaterialGroupHoleCount.objects.create(group=abrasives, name="8", sort_order=0)
+
+        disc = MaterialAdminForm(
+            data={
+                "name": "",
+                "group": str(abrasives.pk),
+                "material_type": "эксцентриковый",
+                "brand": "Flexione",
+                "grit": "P150",
+                "diameter_mm": "125",
+                "hole_count": "8",
+                "unit": "шт",
+                "grade": "",
+                "color": "",
+            }
+        )
+        self.assertTrue(disc.is_valid(), disc.errors)
+        saved_disc = disc.save()
+        self.assertEqual(saved_disc.name, "Круг шлифовальный Flexione 125мм 8 отв. (P150)")
+        self.assertEqual(saved_disc.grit, "P150")
+        self.assertEqual(saved_disc.diameter_mm, "125")
+        self.assertEqual(saved_disc.hole_count, "8")
+
+        belt = MaterialAdminForm(
+            data={
+                "name": "",
+                "group": str(abrasives.pk),
+                "material_type": "ленточный",
+                "brand": "Flexione",
+                "grit": "p120",
+                "diameter_mm": "125",
+                "hole_count": "8",
+                "unit": "шт",
+                "grade": "",
+                "color": "",
+            }
+        )
+        self.assertTrue(belt.is_valid(), belt.errors)
+        saved_belt = belt.save()
+        self.assertEqual(saved_belt.name, "Лента шлифовальная Flexione (P120)")
+        self.assertEqual(saved_belt.grit, "P120")
+
+        url = reverse("admin:core_material_group_meta")
+        meta = self.client.get(url, {"group_id": abrasives.pk}).json()
+        self.assertTrue(meta["has_brand"])
+        self.assertTrue(meta["has_grit"])
+        self.assertTrue(meta["has_diameter"])
+        self.assertTrue(meta["has_hole_count"])
+        self.assertIn("Flexione", meta["brands"])
+        self.assertIn("P150", meta["grits"])
+        self.assertEqual(meta["diameters"], ["125", "150"])
+        self.assertIn("8", meta["holes"])
+        self.assertIn("эксцентриковый", meta["types"])
+        self.assertIn("ленточный", meta["types"])
+
+    def test_material_group_type_js_defines_stain_name_helper(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        js = Path(settings.BASE_DIR, "core/static/core/admin/material_group_type.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("function looksLikeStainName", js)
+        self.assertIn("is-color-visible", js)
+        self.assertIn("is-grade-visible", js)
+
+    def test_kr_acrylic_primer_is_seeded_with_photo(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        seed = Path(settings.BASE_DIR) / "core" / "seed_media" / "primer_kr.png"
+        self.assertTrue(seed.exists(), "нет файла фото грунта")
+        primer = Material.objects.get(name="Грунт акриловый «глубокого проникновения»")
+        self.assertEqual(primer.material_type, "грунт акриловый")
+        self.assertEqual(primer.brand, "")
+        self.assertEqual(primer.unit, "кг")
+        self.assertEqual(primer.color, "")
+        self.assertTrue(primer.photo)
+        self.assertIn("primer_kr", primer.photo.name)
+
+    def test_plywood_fk_4mm_is_seeded(self):
+        names = [
+            "Фанера ФК 900*600 сорт 2/2 4мм",
+            "Фанера ФК 621*621 сорт 2/2 4мм",
+            "Фанера ФК 317*900 сорт 2/2 4мм",
+        ]
+        rows = list(Material.objects.filter(name__in=names).order_by("name"))
+        self.assertEqual(len(rows), 3)
+        by_name = {row.name: row for row in rows}
+        self.assertEqual(by_name[names[0]].thickness_mm, Decimal("4"))
+        self.assertEqual(by_name[names[0]].sheet_length_mm, Decimal("900"))
+        self.assertEqual(by_name[names[0]].sheet_width_mm, Decimal("600"))
+        self.assertEqual(by_name[names[1]].sheet_length_mm, Decimal("621"))
+        self.assertEqual(by_name[names[2]].sheet_length_mm, Decimal("900"))
+        self.assertEqual(by_name[names[2]].sheet_width_mm, Decimal("317"))
+        for row in rows:
+            self.assertEqual(row.material_type, "Фанера ФК")
+            self.assertEqual(row.unit, "лист")
+
+    def test_fk_900x600x6_sanding_and_primer_tech_cards(self):
+        sanded = Product.objects.get(name="Фанера ФК шлифованный 900×600 6 мм")
+        primed = Product.objects.get(name="Фанера ФК грунтованный 900×600 6 мм")
+        self.assertEqual(sanded.sheet_length_mm, Decimal("900"))
+        self.assertEqual(sanded.sheet_width_mm, Decimal("600"))
+        self.assertEqual(sanded.sheet_thickness_mm, Decimal("6"))
+        self.assertEqual(primed.sheet_thickness_mm, Decimal("6"))
+        self.assertEqual(sanded.product_group.name, "Фанера ФК шлифованный")
+        self.assertEqual(primed.product_group.name, "Фанера ФК грунтованный")
+
+        card_a = TechCard.objects.get(name="Шлифование ФК 900×600×6 Ш2 P120→P180")
+        card_b = TechCard.objects.get(name="Грунтование ФК 900×600×6 Ш2 1 слой")
+        self.assertEqual(card_a.product, sanded)
+        self.assertEqual(card_b.product, primed)
+        self.assertEqual(card_a.tech_process.name, "Шлифование абразивом P120->P180 с двух сторон")
+        stages_a = [row.production_stage.name for row in card_a.tech_process.get_stages_ordered()]
+        self.assertEqual(
+            stages_a,
+            ["Шлифование материала сторона 1", "Шлифование материала сторона 2"],
+        )
+        stages_b = [row.production_stage.name for row in card_b.tech_process.get_stages_ordered()]
+        self.assertEqual(
+            stages_b,
+            [
+                "Нанесение покрытия на материал слой 1 сторона 1",
+                "Просушка нанесённого на материал покрытия сторона 1",
+                "Нанесение покрытия на материал слой 1 сторона 2",
+                "Просушка нанесённого на материал покрытия сторона 2",
+                "Промежуточное шлифование после просушки 1 -го слоя покрытия",
+            ],
+        )
+
+        plywood = Material.objects.get(name="Фанера ФК 900*600 сорт 2/2")
+        p120 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P120)")
+        p180 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P180)")
+        p320 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P320)")
+        primer = Material.objects.get(name="Грунт акриловый «глубокого проникновения»")
+
+        a_qty = card_a.material_quantities_per_unit_by_material_id()
+        self.assertEqual(a_qty[plywood.pk], Decimal("1"))
+        self.assertEqual(a_qty[p120.pk], Decimal("0.6"))
+        self.assertEqual(a_qty[p180.pk], Decimal("0.6"))
+        self.assertEqual(card_a.items.filter(material=plywood).count(), 1)
+        self.assertEqual(card_a.items.filter(material=p120).count(), 2)
+        self.assertEqual(card_a.labor_lines.count(), 2)
+
+        component = card_b.items.get(item_kind=TechCardItem.KIND_COMPONENT)
+        self.assertEqual(component.product, sanded)
+        self.assertEqual(component.component_tech_card, card_a)
+        b_qty = card_b.material_quantities_per_unit_by_material_id()
+        self.assertEqual(b_qty[primer.pk], Decimal("0.10"))
+        self.assertEqual(b_qty[p320.pk], Decimal("0.2"))
+        self.assertEqual(card_b.labor_lines.count(), 5)
+        dry1 = ProductionStage.objects.get(
+            name="Просушка нанесённого на материал покрытия сторона 1"
+        )
+        dry2 = ProductionStage.objects.get(
+            name="Просушка нанесённого на материал покрытия сторона 2"
+        )
+        self.assertEqual(dry1.hourly_rate, Decimal("0"))
+        self.assertEqual(dry2.hourly_rate, Decimal("0"))
+        self.assertEqual(card_b.labor_lines.get(production_stage=dry1).norm_hours, Decimal("1"))
+        self.assertEqual(card_b.labor_lines.get(production_stage=dry2).norm_hours, Decimal("1"))
+        self.assertEqual(
+            card_b.labor_lines.get(production_stage=dry1).overhead_per_unit, Decimal("500")
+        )
+        self.assertEqual(
+            card_b.labor_lines.get(production_stage=dry2).overhead_per_unit, Decimal("500")
+        )
+        self.assertEqual(
+            card_b.planned_overhead_per_unit(),
+            Decimal("1000.00") + card_b.planned_machine_cost_per_unit(),
+        )
+        self.assertEqual(card_b.planned_component_cost_per_unit(), card_a.planned_total_cost_per_unit())
+        self.assertGreater(card_b.planned_total_cost_per_unit(), card_b.planned_overhead_per_unit())
+
+    def test_photo_widget_does_not_show_file_path(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from core.admin import MaterialAdminForm
+
+        png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+            b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        material = Material.objects.create(
+            name="Морилка тест",
+            unit="л",
+            group=self.packaging,
+            photo=SimpleUploadedFile("stain_pine.png", png, content_type="image/png"),
+        )
+        html = str(MaterialAdminForm(instance=material)["photo"])
+        self.assertIn("material-card-photo", html)
+        self.assertIn("material-card-photo-link", html)
+        self.assertIn("Заменить", html)
+        self.assertIn("file-upload-label", html)
+        self.assertIn("laser-file-input-native", html)
+        self.assertNotIn("Choose File", html)
+        self.assertNotIn("No file chosen", html)
+        self.assertNotIn("На данный момент", html)
+        self.assertNotIn("Текущий файл", html)
+
+    def test_photo_widget_empty_uses_russian_file_labels(self):
+        from core.admin import MaterialAdminForm
+
+        html = str(MaterialAdminForm()["photo"])
+        self.assertIn("Выберите файл", html)
+        self.assertIn("Файл не выбран", html)
+        self.assertIn("file-upload-input", html)
+        self.assertNotIn("Choose File", html)
+        self.assertNotIn("No file chosen", html)
+
+    def test_group_field_keeps_label_in_row_not_legend(self):
+        material = Material.objects.create(
+            name="Фанера тест вёрстки",
+            unit="лист",
+            material_type="ФК",
+            group=self.plywood,
+        )
+        url = reverse("admin:core_material_change", args=[material.pk])
+        html = self.client.get(url).content.decode("utf-8")
+        group_chunk = html.split('class="form-row field-group"', 1)[1].split(
+            'class="form-row field-material_type"', 1
+        )[0]
+        self.assertNotIn("laser-related-fieldset", group_chunk)
+        self.assertNotIn("<legend", group_chunk)
+        self.assertIn('for="id_group"', group_chunk)
+        self.assertIn("Группа", group_chunk)
+        self.assertIn("<label", group_chunk)
+        self.assertLess(
+            group_chunk.find("<label"),
+            group_chunk.find("related-widget-wrapper"),
+        )
+        self.assertIn("Выберите файл", html)
+        self.assertIn("Файл не выбран", html)
+        self.assertIn("admin_file_input_ru.js", html)
+        self.assertIn("laser-file-input-native", html)
+
+    def test_admin_file_widget_uses_russian_labels(self):
+        from django.contrib.admin.widgets import AdminFileWidget
+
+        html = AdminFileWidget().render(
+            "invoice_file", None, attrs={"id": "id_invoice_file"}
+        )
+        self.assertIn("Выберите файл", html)
+        self.assertIn("Файл не выбран", html)
+        self.assertIn("laser-file-input-native", html)
+        self.assertNotIn("Choose File", html)
+        self.assertNotIn("No file chosen", html)
+        self.assertNotIn("Currently:", html)
+
+    def test_sheet_size_row_uses_compact_dst_labels(self):
+        material = Material.objects.create(
+            name="Фанера размеры",
+            unit="лист",
+            material_type="ФК",
+            group=self.plywood,
+        )
+        url = reverse("admin:core_material_change", args=[material.pk])
+        html = self.client.get(url).content.decode("utf-8")
+        self.assertIn("Д×Ш×Т", html)
+        self.assertIn('for="id_sheet_length_mm"', html)
+        self.assertIn('for="id_sheet_width_mm"', html)
+        self.assertIn('for="id_thickness_mm"', html)
+        self.assertIn(">Ш:</label>", html)
+        self.assertIn(">Т:</label>", html)
+        self.assertIn(
+            "Укажите Длину, Ширину и Толщину листа для расчёта площади.",
+            html,
+        )
+        self.assertNotIn("Длина, мм:", html)
+        self.assertNotIn("Ширина, мм:", html)
+        self.assertNotIn("Толщина, мм:", html)
+
+    def test_add_brand_and_color_to_group_list(self):
+        coatings = MaterialGroup.objects.create(
+            name="Покрытия",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_color=True,
+        )
+        url = reverse("admin:core_material_group_choice_add")
+        brand = self.client.post(
+            url,
+            {"group_id": coatings.pk, "kind": "brand", "name": "Belinka"},
+        )
+        self.assertEqual(brand.status_code, 200, brand.content)
+        self.assertEqual(brand.json()["name"], "Belinka")
+        self.assertIn("Belinka", brand.json()["brands"])
+        self.assertTrue(MaterialGroupBrand.objects.filter(group=coatings, name="Belinka").exists())
+
+        color = self.client.post(
+            url,
+            {"group_id": coatings.pk, "kind": "color", "name": "Венге"},
+        )
+        self.assertEqual(color.status_code, 200, color.content)
+        self.assertEqual(color.json()["name"], "Венге")
+        self.assertTrue(MaterialGroupColor.objects.filter(group=coatings, name="Венге").exists())
+
+        again = self.client.post(
+            url,
+            {"group_id": coatings.pk, "kind": "brand", "name": "belinka"},
+        )
+        self.assertEqual(again.json()["name"], "Belinka")
+        self.assertEqual(MaterialGroupBrand.objects.filter(group=coatings).count(), 1)
+
+        type_add = self.client.post(
+            url,
+            {"group_id": coatings.pk, "kind": "type", "name": "масло"},
+        )
+        self.assertEqual(type_add.status_code, 200, type_add.content)
+        self.assertIn("масло", type_add.json()["types"])
+        self.assertTrue(MaterialGroupType.objects.filter(group=coatings, name="масло").exists())
+
+        MaterialGroupBrand.objects.create(group=coatings, name="Tury", sort_order=0)
+        Material.objects.create(
+            name="Морилка водная Tury «Дуб»",
+            group=coatings,
+            material_type="морилка водная",
+            brand="Tury",
+            color="Дуб",
+            unit="л",
+        )
+        renamed = self.client.post(
+            url,
+            {
+                "group_id": coatings.pk,
+                "kind": "brand",
+                "action": "rename",
+                "old_name": "Tury",
+                "name": "Tury Wood",
+            },
+        )
+        self.assertEqual(renamed.status_code, 200, renamed.content)
+        self.assertEqual(renamed.json()["name"], "Tury Wood")
+        self.assertFalse(MaterialGroupBrand.objects.filter(group=coatings, name="Tury").exists())
+        self.assertTrue(MaterialGroupBrand.objects.filter(group=coatings, name="Tury Wood").exists())
+        self.assertEqual(Material.objects.get(group=coatings).brand, "Tury Wood")
 
 
 class GoodsReceiptLineUnitDisplayTests(TestCase):

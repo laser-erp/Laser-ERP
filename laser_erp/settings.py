@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.forms',
     'core.apps.CoreConfig',
     'procurement.apps.ProcurementConfig',
     'warehouse.apps.WarehouseConfig',
@@ -78,6 +79,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'laser_erp.wsgi.application'
+
+# Чтобы шаблоны виджетов из templates/ (русские подписи файла) перекрывали встроенные Django.
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 
 # Database
@@ -126,6 +130,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (user uploads)
 MEDIA_URL = 'media/'

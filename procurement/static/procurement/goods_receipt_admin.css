@@ -1,0 +1,29 @@
+/* Компактные числовые колонки строк приёмки */
+#goodsreceipt_form .tabular .field-pack_count input,
+#goodsreceipt_form .tabular .field-qty_in_pack input,
+#goodsreceipt_form .tabular .field-quantity input,
+#goodsreceipt_form .tabular .field-unit_price input,
+#goodsreceipt_form .tabular .field-amount input,
+#goodsreceipt_form .tabular input.laser-gr-num {
+  width: 6.5em;
+  max-width: 8em;
+  min-width: 4em;
+  field-sizing: content;
+}
+
+#goodsreceipt_form .tabular th.column-pack_count,
+#goodsreceipt_form .tabular th.column-qty_in_pack,
+#goodsreceipt_form .tabular th.column-quantity,
+#goodsreceipt_form .tabular th.column-unit_price,
+#goodsreceipt_form .tabular th.column-amount,
+#goodsreceipt_form .tabular th.column-unit_display {
+  white-space: nowrap;
+}
+
+#goodsreceipt_form .goods-receipt-pack-hint {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: #f0f7ff;
+  border-left: 3px solid #417690;
+  max-width: 72rem;
+}

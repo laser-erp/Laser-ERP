@@ -17,6 +17,7 @@ from core.models import Contract, Material, Organization, Product, Warehouse
 from core.services.fns import fetch_contragents
 
 from .models import GoodsReceipt, GoodsReceiptLine, SupplierPurchaseOrder, SupplierPurchaseOrderLine
+from .services.fanera_nest_receipt import build_nest_kits_payload
 
 
 def _parse_dt(s: str) -> timezone.datetime:
@@ -40,6 +41,23 @@ def _dec(s: str) -> Decimal | None:
         return Decimal(s)
     except InvalidOperation:
         return None
+
+
+def _qty_price_from_pack(
+    qty: Decimal | None,
+    price: Decimal | None,
+    pack: Decimal | None,
+    in_pack: Decimal | None,
+    amount: Decimal | None,
+) -> tuple[Decimal | None, Decimal | None]:
+    """Упак. × содержимое и сумма → количество в ед. учёта и цена за ед."""
+    if in_pack is not None and in_pack > 0:
+        packs = pack if pack is not None and pack > 0 else Decimal("1")
+        qty = (packs * in_pack).quantize(Decimal("0.0001"))
+    if qty is not None and qty > 0 and amount is not None and amount > 0:
+        if price is None or price <= 0:
+            price = (amount / qty).quantize(Decimal("0.0001"))
+    return qty, price
 
 
 @login_required
@@ -162,6 +180,7 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
                     "selected_supplier_id": int(sup_id) if sup_id.isdigit() else None,
                     "selected_contract_id": int(contract_id) if contract_id.isdigit() else None,
                     "supplier_inn": supplier_inn,
+                    "fanera_nest_kits_json": build_nest_kits_payload(),
                 },
             )
 
@@ -171,6 +190,9 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
         line_pol = request.POST.getlist("line_po_line")
         line_q = request.POST.getlist("line_qty")
         line_p = request.POST.getlist("line_price")
+        line_pack = request.POST.getlist("line_pack")
+        line_inpack = request.POST.getlist("line_inpack")
+        line_amount = request.POST.getlist("line_amount")
 
         errors: list[str] = []
         if not sup_id.isdigit():
@@ -202,6 +224,9 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
             len(line_pol),
             len(line_q),
             len(line_p),
+            len(line_pack),
+            len(line_inpack),
+            len(line_amount),
         )
         parsed_lines: list[dict] = []
         for i in range(n_rows):
@@ -211,6 +236,10 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
             pol_s = (line_pol[i] if i < len(line_pol) else "").strip()
             q = _dec(line_q[i] if i < len(line_q) else "")
             p = _dec(line_p[i] if i < len(line_p) else "")
+            pack = _dec(line_pack[i] if i < len(line_pack) else "")
+            in_pack = _dec(line_inpack[i] if i < len(line_inpack) else "")
+            amount = _dec(line_amount[i] if i < len(line_amount) else "")
+            q, p = _qty_price_from_pack(q, p, pack, in_pack, amount)
 
             row_label = f"Строка {i + 1}"
 
@@ -347,5 +376,6 @@ def goods_receipt_create(request: HttpRequest) -> HttpResponse:
         "selected_supplier_id": None,
         "selected_contract_id": None,
         "supplier_inn": "",
+        "fanera_nest_kits_json": build_nest_kits_payload(),
     }
     return render(request, "procurement/goods_receipt_create.html", ctx)

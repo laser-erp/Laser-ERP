@@ -1,0 +1,22 @@
+[Unit]
+Description=Laser ERP (Gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=lasererp
+Group=www-data
+WorkingDirectory=/var/www/laser-erp
+EnvironmentFile=/etc/laser-erp.env
+ExecStart=/var/www/laser-erp/.venv/bin/gunicorn laser_erp.wsgi:application \
+  --bind 127.0.0.1:8001 \
+  --workers 3 \
+  --timeout 120 \
+  --access-logfile /var/www/laser-erp/logs/gunicorn_access.log \
+  --error-logfile /var/www/laser-erp/logs/gunicorn_error.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/material_change_form.css' %}?v=21">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/material_sheet_areas.js' %}?v=2" defer></script>
+<script src="{% static 'core/admin/material_group_type.js' %}?v=9" defer></script>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div id="material-group-meta" hidden data-url="{% url 'admin:core_material_group_meta' %}" data-add-url="{% url 'admin:core_material_group_choice_add' %}" data-icon-change="{% static 'admin/img/icon-changelink.svg' %}" data-icon-add="{% static 'admin/img/icon-addlink.svg' %}"></div>
+{% endblock %}

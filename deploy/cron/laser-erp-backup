@@ -1,0 +1,5 @@
+# Ежедневный бэкап Laser ERP (03:15)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+15 3 * * * lasererp cd /var/www/laser-erp && .venv/bin/python tools/backup_server.py >> /var/www/laser-erp/logs/backup.log 2>&1

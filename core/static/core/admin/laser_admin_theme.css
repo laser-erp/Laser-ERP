@@ -280,8 +280,9 @@ body.app-core.model-order .laser-admin-subnav-bar {
   border-bottom-color: #e8ecf1;
 }
 
-/* Файл в админке: без англ. кнопки браузера — только русские подписи из clearable_file_input.html */
-p.file-upload .file-input-wrap {
+/* Файл в админке: без англ. кнопки браузера (Choose File / No file chosen) */
+p.file-upload .file-input-wrap,
+.file-input-wrap {
   position: relative;
   display: inline-flex;
   flex-wrap: wrap;
@@ -292,19 +293,32 @@ p.file-upload .file-input-wrap {
   font-weight: normal;
 }
 
-p.file-upload input[type="file"].file-upload-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+body.change-form #content-main p.file-upload input[type="file"],
+body.add-form #content-main p.file-upload input[type="file"],
+body.change-form #content-main .file-input-wrap input[type="file"],
+body.add-form #content-main .file-input-wrap input[type="file"],
+p.file-upload input[type="file"].file-upload-input,
+p.file-upload input[type="file"].laser-file-input-native,
+.file-input-wrap input[type="file"],
+input[type="file"].file-upload-input,
+input[type="file"].laser-file-input-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
 }
 
-p.file-upload .file-upload-label {
+p.file-upload .file-upload-label,
+.file-input-wrap .file-upload-label {
   cursor: pointer;
   font-weight: 500;
   font-size: 0.8125rem;
@@ -313,16 +327,19 @@ p.file-upload .file-upload-label {
   text-underline-offset: 2px;
 }
 
-p.file-upload .file-upload-label:hover {
+p.file-upload .file-upload-label:hover,
+.file-input-wrap .file-upload-label:hover {
   color: #2563eb;
 }
 
-p.file-upload .file-upload-status {
+p.file-upload .file-upload-status,
+.file-input-wrap .file-upload-status {
   font-size: 0.75rem;
   color: var(--body-quiet-color, #64748b);
 }
 
-p.file-upload .file-input-wrap:focus-within .file-upload-label {
+p.file-upload .file-input-wrap:focus-within .file-upload-label,
+.file-input-wrap:focus-within .file-upload-label {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
   border-radius: 4px;

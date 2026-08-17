@@ -82,7 +82,7 @@ def build_techcard_sidebar_tree():
 
 
 def tech_card_material_cost_estimate(tech_card) -> Decimal:
-    """Оценка по позициям техкарты: цена материала — средневзвешенная по поступлениям (Material.average_price)."""
+    """Оценка по позициям техкарты: цена материала — приёмка или закупочная с карточки."""
     return tech_card.planned_material_cost_per_unit()
 
 

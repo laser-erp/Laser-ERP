@@ -1,0 +1,42 @@
+<p class="file-upload material-photo-widget">
+  {% if widget.preview_url %}
+    <a class="material-card-photo-link" href="{{ widget.preview_url }}" target="_blank" rel="noopener" title="Открыть фото">
+      <img class="material-card-photo" src="{{ widget.preview_url }}" alt="" width="220" height="220">
+    </a>
+  {% else %}
+    <div class="material-card-photo material-card-photo--empty" aria-hidden="true"></div>
+  {% endif %}
+  <span class="file-input-wrap">
+    <label for="{{ widget.attrs.id }}" class="file-upload-label">{% if widget.is_initial %}Заменить{% else %}Выберите файл{% endif %}</label>
+    <span class="file-upload-status" data-empty-text="{% if widget.is_initial %}{% else %}Файл не выбран{% endif %}">{% if not widget.is_initial %}Файл не выбран{% endif %}</span>
+    <input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>
+  </span>
+  {% if widget.is_initial and not widget.required %}
+    <span class="clearable-file-input">
+      <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"{% if widget.attrs.disabled %} disabled{% endif %}>
+      <label for="{{ widget.checkbox_id }}">Удалить</label>
+    </span>
+  {% endif %}
+</p>
+<script>
+(function() {
+  var inps = document.querySelectorAll('input[name="{{ widget.name }}"][type="file"]');
+  var inp = inps[inps.length - 1];
+  if (!inp) return;
+  var wrap = inp.closest('.file-input-wrap');
+  var status = wrap ? wrap.querySelector('.file-upload-status') : null;
+  function updateStatus() {
+    if (!status) return;
+    var emptyText = status.getAttribute('data-empty-text') || '';
+    if (inp.files && inp.files.length) {
+      status.hidden = false;
+      status.textContent = inp.files[0].name;
+    } else {
+      status.textContent = emptyText;
+      status.hidden = !emptyText;
+    }
+  }
+  inp.addEventListener('change', updateStatus);
+  updateStatus();
+})();
+</script>

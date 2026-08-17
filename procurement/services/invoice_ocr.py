@@ -565,7 +565,7 @@ def _classify_expense_category(payment_purpose: str) -> str:
     rules = [
         (SupplierInvoice.EXP_CAT_LOGISTICS, ("доставк", "логист", "перевоз", "транспорт", "курьер", "экспед")),
         (SupplierInvoice.EXP_CAT_RENT, ("аренд", "найм помещ", "лизинг помещ")),
-        (SupplierInvoice.EXP_CAT_UTILITIES, ("электроэнерг", "водоснабж", "отоплен", "коммуналь", "жкх", "газ")),
+        (SupplierInvoice.EXP_CAT_UTILITIES, ("электроэнерг", "электр", "водоснабж", "отоплен", "коммуналь", "жкх", "газ", "эксплуатационн")),
         (SupplierInvoice.EXP_CAT_MARKETING, ("реклам", "маркет", "продвиж", "таргет", "контекст", "smm")),
         (SupplierInvoice.EXP_CAT_IT, ("хостинг", "домен", "лиценз", "программ", "по ", "интернет", "телефон", "связь", "crm")),
         (SupplierInvoice.EXP_CAT_EQUIPMENT, ("оборудован", "станок", "принтер", "компьютер", "оргтехник", "инструмент")),
@@ -696,11 +696,11 @@ def apply_ocr_data_to_supplier_invoice(invoice: SupplierInvoice) -> list[str]:
         changed_fields.append("comment")
 
     category_text = payment_purpose or (invoice.comment or "").strip()
-    # Жесткое бизнес-правило: счета ГСИ с формулировкой "арендной платы" всегда в аренду.
+    # ГСИ «арендная плата» → аренда. СЗУК «эксплуатационные услуги» → коммунальные (электричество).
     forced_category = ""
     forced_subcategory_display = ""
     if _is_szuk_operating_services_case(invoice, category_text):
-        forced_category = SupplierInvoice.EXP_CAT_RENT
+        forced_category = SupplierInvoice.EXP_CAT_UTILITIES
         forced_subcategory_display = "Эксплуатационные услуги"
     elif _is_gsi_rent_case(invoice, category_text):
         forced_category = SupplierInvoice.EXP_CAT_RENT
@@ -708,6 +708,10 @@ def apply_ocr_data_to_supplier_invoice(invoice: SupplierInvoice) -> list[str]:
     if forced_category and invoice.expense_category != forced_category:
         invoice.expense_category = forced_category
         changed_fields.append("expense_category")
+    if _is_szuk_operating_services_case(invoice, category_text):
+        if invoice.expense_subcategory != SupplierInvoice.EXP_SUBCAT_RENT_OPERATING:
+            invoice.expense_subcategory = SupplierInvoice.EXP_SUBCAT_RENT_OPERATING
+            changed_fields.append("expense_subcategory")
     marker_data = dict(invoice.ocr_data or {})
     marker_changed = False
     current_marker = str(marker_data.get("forced_expense_subcategory_display") or "").strip()

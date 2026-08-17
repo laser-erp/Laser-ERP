@@ -1,0 +1,5 @@
+{% if field.is_fieldset %}
+<label{% if field.field.id_for_label %} for="{{ field.field.id_for_label }}"{% endif %}>{{ field.field.label }}:</label>
+{% else %}
+{{ field.label_tag }}
+{% endif %}

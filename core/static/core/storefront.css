@@ -42,3 +42,37 @@ body {
   margin-left: 0.3rem;
   vertical-align: text-top;
 }
+
+/* Без англ. «Choose File» / «No file chosen» — только русские подписи виджета */
+.file-input-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+}
+
+.file-input-wrap input[type="file"],
+input[type="file"].laser-file-input-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  border: 0 !important;
+  opacity: 0 !important;
+}
+
+.file-input-wrap .file-upload-label {
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.file-input-wrap .file-upload-status {
+  font-size: 0.875rem;
+  color: #64748b;
+}

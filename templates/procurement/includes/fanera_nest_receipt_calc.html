@@ -1,0 +1,35 @@
+{% load static i18n %}
+<link rel="stylesheet" href="{% static 'procurement/fanera_nest_receipt_calc.css' %}?v=2">
+{% if fanera_nest_kits_json %}{{ fanera_nest_kits_json|json_script:"fanera-nest-kits-data" }}{% endif %}
+<div class="fanera-nest-calc" data-fanera-nest-calc>
+  <h3>{% translate "Раскрой фанеры 1525×1525 (фанера-piter)" %}</h3>
+  <p class="fanera-nest-note">
+    {% translate "С одного листа: 3×900×600, 621×621 и 317×900. Сумма строк = чеку (лист + 150 ₽ распил)." %}
+  </p>
+  <div class="fanera-nest-calc-row">
+    <div class="fanera-nest-field">
+      <label>{% translate "Толщина" %}</label>
+      <select class="fanera-nest-thickness"></select>
+    </div>
+    <div class="fanera-nest-field fanera-nest-mode">
+      <label>{% translate "Считать от" %}</label>
+      <div>
+        <label><input type="radio" name="fanera_nest_mode" value="sheets" checked> {% translate "листов 1525" %}</label>
+        <label><input type="radio" name="fanera_nest_mode" value="blanks"> {% translate "заготовок 900×600" %}</label>
+      </div>
+    </div>
+    <div class="fanera-nest-field">
+      <label>{% translate "Листов 1525×1525" %}</label>
+      <input type="number" class="fanera-nest-sheets" min="1" step="1" value="4" inputmode="numeric">
+    </div>
+    <div class="fanera-nest-field">
+      <label>{% translate "Нужно 900×600" %}</label>
+      <input type="number" class="fanera-nest-blanks" min="1" step="1" value="10" inputmode="numeric" disabled>
+    </div>
+    <div class="fanera-nest-actions">
+      <button type="button" class="fanera-nest-btn-calc button ms-btn">{% translate "Пересчитать" %}</button>
+      <button type="button" class="fanera-nest-btn-fill button ms-btn ms-btn-green" disabled>{% translate "Добавить строки в приёмку" %}</button>
+    </div>
+  </div>
+  <div class="fanera-nest-preview"></div>
+</div>

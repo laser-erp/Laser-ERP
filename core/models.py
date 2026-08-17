@@ -36,10 +36,97 @@ def operation_type_name_to_result_adjective(operation_name: str) -> str:
     return n
 
 
+PLYWOOD_GRADES = (
+    "E/E",
+    "E/1",
+    "1/1",
+    "1/2",
+    "2/2",
+    "2/3",
+    "3/3",
+    "3/4",
+    "4/4",
+)
+
+PLYWOOD_GROUP_TYPES = (
+    "ФК",
+    "ФСФ",
+    "ФОФ",
+    "ФБ",
+    "ФБС",
+    "ФБВ",
+    "ФКМ",
+    "ламинированная",
+)
+
+PACKAGING_GROUP_TYPES = (
+    "плёнка",
+    "скотч",
+    "короб",
+    "пакет",
+    "бумага",
+    "пупырка",
+)
+
+PACKAGING_UNITS = (
+    "шт",
+    "м",
+    "л",
+    "рулон",
+    "кг",
+    "упак",
+)
+
+SHEET_UNITS = (
+    "лист",
+    "м²",
+    "шт",
+    "кг",
+)
+
+
 class MaterialGroup(models.Model):
     """Группа материалов (например: Фанера, Листы для резки)."""
     name = models.CharField("Наименование", max_length=255)
     description = models.TextField("Описание", blank=True)
+    has_grade = models.BooleanField(
+        "Указывать сорт",
+        default=False,
+        help_text="Включите для фанеры: в карточке материала появится поле «Сорт» (1/2, 2/2, 3/4…).",
+    )
+    has_sheet_size = models.BooleanField(
+        "Размеры листа",
+        default=True,
+        help_text=(
+            "Длина, ширина, толщина и площадь в карточке материала. "
+            "Снимите для упаковки и абразивов — эти поля не нужны."
+        ),
+    )
+    has_brand = models.BooleanField(
+        "Указывать бренд",
+        default=False,
+        help_text="Включите для покрытий и абразивов: в карточке появится список брендов.",
+    )
+    has_color = models.BooleanField(
+        "Указывать цвет",
+        default=False,
+        help_text="Включите для морилки: в карточке появится список цветов. У лака поле скрыто.",
+    )
+    has_grit = models.BooleanField(
+        "Указывать зерно",
+        default=False,
+        help_text="Включите для абразивов: в карточке появится список зерна (P120, P150…).",
+    )
+    has_diameter = models.BooleanField(
+        "Указывать диаметр",
+        default=False,
+        help_text="Включите для кругов: в карточке появится диаметр (125, 150 мм). У ленты поле скрыто.",
+    )
+    has_hole_count = models.BooleanField(
+        "Указывать отверстия",
+        default=False,
+        help_text="Включите для кругов: число отверстий пылеудаления. У ленты поле скрыто.",
+    )
 
     class Meta:
         verbose_name = "Группа материалов"
@@ -49,9 +136,231 @@ class MaterialGroup(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    def is_plywood_name(self) -> bool:
+        return "фанер" in (self.name or "").casefold().replace("ё", "е")
+
+    def is_packaging_name(self) -> bool:
+        return "упаков" in (self.name or "").casefold().replace("ё", "е")
+
+    def is_abrasive_name(self) -> bool:
+        return "абразив" in (self.name or "").casefold().replace("ё", "е")
+
+
+class MaterialGroupType(models.Model):
+    """Допустимый тип материала внутри группы (для фанеры: ФК, ФСФ…)."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="type_choices",
+    )
+    name = models.CharField("Тип", max_length=100)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Тип в группе"
+        verbose_name_plural = "Типы в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_type_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MaterialGroupBrand(models.Model):
+    """Допустимый бренд внутри группы (для покрытий: Master Good, Tury…)."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="brand_choices",
+    )
+    name = models.CharField("Бренд", max_length=100)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Бренд в группе"
+        verbose_name_plural = "Бренды в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_brand_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MaterialGroupColor(models.Model):
+    """Допустимый цвет внутри группы (для морилки: дуб, орех…)."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="color_choices",
+    )
+    name = models.CharField("Цвет", max_length=100)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Цвет в группе"
+        verbose_name_plural = "Цвета в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_color_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MaterialGroupGrit(models.Model):
+    """Зерно абразива в группе (P120, P150…)."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="grit_choices",
+    )
+    name = models.CharField("Зерно", max_length=20)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Зерно в группе"
+        verbose_name_plural = "Зерно в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_grit_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MaterialGroupDiameter(models.Model):
+    """Диаметр круга в группе (125, 150…)."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="diameter_choices",
+    )
+    name = models.CharField("Диаметр, мм", max_length=20)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Диаметр в группе"
+        verbose_name_plural = "Диаметры в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_diameter_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class MaterialGroupHoleCount(models.Model):
+    """Число отверстий пылеудаления в группе."""
+
+    group = models.ForeignKey(
+        MaterialGroup,
+        verbose_name="Группа",
+        on_delete=models.CASCADE,
+        related_name="hole_choices",
+    )
+    name = models.CharField("Отверстия", max_length=20)
+    sort_order = models.PositiveSmallIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Отверстия в группе"
+        verbose_name_plural = "Отверстия в группе"
+        ordering = ["sort_order", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=("group", "name"), name="uniq_material_group_hole_name"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+ABRASIVE_DISC_NAME_RE = re.compile(
+    r"^Круг шлифовальный (.+) (\d+)мм (.+) отв\. \((P\d+)\)$",
+    re.IGNORECASE,
+)
+ABRASIVE_BELT_NAME_RE = re.compile(
+    r"^Лента шлифовальная (.+) \((P\d+)\)$",
+    re.IGNORECASE,
+)
+ABRASIVE_BRAND_CANON = {
+    "flexione": "Flexione",
+    "abraforce": "Abraforce",
+}
+
+
+def normalize_abrasive_grit(value: str) -> str:
+    raw = str(value or "").strip().upper().replace(" ", "")
+    if not raw:
+        return ""
+    if raw.startswith("P") and raw[1:].isdigit():
+        return raw
+    if raw.isdigit():
+        return f"P{raw}"
+    return str(value or "").strip()
+
+
+def canonicalize_abrasive_brand(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    return ABRASIVE_BRAND_CANON.get(raw.casefold(), raw)
+
+
+def looks_like_abrasive_name(value: str) -> bool:
+    name = str(value or "").strip()
+    return bool(ABRASIVE_DISC_NAME_RE.match(name) or ABRASIVE_BELT_NAME_RE.match(name))
+
+
+def build_abrasive_name(
+    *,
+    material_type: str,
+    brand: str,
+    grit: str,
+    diameter_mm: str = "",
+    hole_count: str = "",
+) -> str:
+    """Имя карточки абразива из типа, бренда, зерна, диаметра и отверстий."""
+    kind = str(material_type or "").casefold().replace("ё", "е")
+    brand_n = canonicalize_abrasive_brand(brand)
+    grit_n = normalize_abrasive_grit(grit)
+    diameter_n = str(diameter_mm or "").strip()
+    holes_n = str(hole_count or "").strip()
+    if not brand_n or not grit_n:
+        return ""
+    if "лент" in kind:
+        return f"Лента шлифовальная {brand_n} ({grit_n})"
+    if diameter_n and holes_n and (
+        "эксцентрик" in kind or "круг" in kind or not kind
+    ):
+        return f"Круг шлифовальный {brand_n} {diameter_n}мм {holes_n} отв. ({grit_n})"
+    return ""
+
 
 class Material(models.Model):
-    name = models.CharField("Наименование", max_length=255)
+    name = models.CharField(
+        "Наименование",
+        max_length=255,
+        help_text=(
+            "Как материал будет называться в справочнике, в техкарте и в приёмке. "
+            "Пишите так, чтобы его было легко найти, например: «Фанера ФК 1525×1525×6»."
+        ),
+    )
     group = models.ForeignKey(
         MaterialGroup,
         verbose_name="Группа",
@@ -59,15 +368,70 @@ class Material(models.Model):
         null=True,
         blank=True,
         related_name="materials",
+        help_text=(
+            "Раздел справочника (Фанера, Акрил, Металл и т.п.) — для фильтра в списке "
+            "и в меню склада. Можно не заполнять. Новую группу добавляют кнопкой «+» "
+            "рядом с полем."
+        ),
     )
-    material_type = models.CharField("Тип материала", max_length=100, blank=True)
+    material_type = models.CharField(
+        "Тип материала",
+        max_length=100,
+        blank=True,
+        help_text=(
+            "Короткий тип для поиска и фильтра, не для цены. Например: ФК, ФСФ, акрил, "
+            "сталь. Список типов зависит от выбранной группы. Можно оставить пустым."
+        ),
+    )
+    brand = models.CharField(
+        "Бренд",
+        max_length=100,
+        blank=True,
+        help_text="Для морилки и абразива участвует в наименовании карточки.",
+    )
+    color = models.CharField(
+        "Цвет",
+        max_length=100,
+        blank=True,
+        help_text="Цвет морилки (дуб, орех…). У бесцветного лака не заполняется.",
+    )
+    grit = models.CharField(
+        "Зерно",
+        max_length=20,
+        blank=True,
+        help_text="Зерно абразива по ISO, например P120. Список задаётся у группы.",
+    )
+    diameter_mm = models.CharField(
+        "Диаметр, мм",
+        max_length=20,
+        blank=True,
+        help_text="Диаметр круга в миллиметрах (125, 150). Для ленты не заполняется.",
+    )
+    hole_count = models.CharField(
+        "Отверстия",
+        max_length=20,
+        blank=True,
+        help_text="Число отверстий пылеудаления. Для ленты не заполняется.",
+    )
+    grade = models.CharField(
+        "Сорт",
+        max_length=20,
+        blank=True,
+        help_text=(
+            "Для фанеры: сорт листа по ГОСТ, например 1/2, 2/2, 3/4. "
+            "Поле показывается, если у группы включено «Указывать сорт»."
+        ),
+    )
     thickness_mm = models.DecimalField(
         "Толщина (мм)",
         max_digits=8,
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Толщина в миллиметрах",
+        help_text=(
+            "Толщина листа в миллиметрах. На площадь не влияет — нужна, чтобы отличить "
+            "позиции (6, 10, 18 мм) и для номенклатуры. Можно не заполнять."
+        ),
     )
     sheet_length_mm = models.DecimalField(
         "Длина листа, мм",
@@ -75,7 +439,10 @@ class Material(models.Model):
         decimal_places=0,
         null=True,
         blank=True,
-        help_text="Длина листа/заготовки в мм. Вместе с шириной используется для расчёта площади листа.",
+        help_text=(
+            "Длина листа или заготовки в миллиметрах (целое число). Вместе с шириной "
+            "считает площадь листа. Если материал не листовой — можно не заполнять."
+        ),
     )
     sheet_width_mm = models.DecimalField(
         "Ширина листа, мм",
@@ -83,7 +450,10 @@ class Material(models.Model):
         decimal_places=0,
         null=True,
         blank=True,
-        help_text="Ширина листа/заготовки в мм.",
+        help_text=(
+            "Ширина листа или заготовки в миллиметрах (целое число). Вместе с длиной "
+            "считает площадь листа."
+        ),
     )
     area_m2 = models.DecimalField(
         "Пл. листа, м²",
@@ -91,7 +461,9 @@ class Material(models.Model):
         decimal_places=6,
         null=True,
         blank=True,
-        help_text="Считается из длины × ширины (мм). Для ед. «лист» — площадь одного листа.",
+        help_text=(
+            "Считается автоматически из длины × ширины (мм). Для ед. «лист» — площадь одного листа."
+        ),
     )
     sheet_area_mm2 = models.DecimalField(
         "Пл. листа, мм²",
@@ -112,7 +484,21 @@ class Material(models.Model):
     unit = models.CharField(
         "Ед. измерения",
         max_length=50,
-        help_text="Единица измерения (лист, м2, м, кг и т.п.)",
+        help_text=(
+            "В каких единицах ведёте остаток и расход: лист, м², м, кг. "
+            "Для листовых обычно «лист»: тогда площадь одного листа считается из длины и ширины."
+        ),
+    )
+    purchase_price = models.DecimalField(
+        "Закупочная цена",
+        max_digits=14,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text=(
+            "Цена за единицу с чека или счёта. Пока нет проведённых приёмок, "
+            "техкарта и себестоимость берут эту цену. После приёмки — средняя по поступлениям."
+        ),
     )
     current_stock = models.DecimalField("Текущий остаток", max_digits=12, decimal_places=3, default=0)
     photo = models.ImageField(
@@ -120,6 +506,10 @@ class Material(models.Model):
         upload_to="materials/",
         blank=True,
         null=True,
+        help_text=(
+            "Необязательное фото материала. Показывается в списке и в карточке. "
+            "На остаток и цены не влияет."
+        ),
     )
 
     def __str__(self) -> str:
@@ -155,6 +545,11 @@ class Material(models.Model):
             v = getattr(self, attr, None)
             if v is not None:
                 setattr(self, attr, Decimal(str(v)).quantize(Decimal("1")))
+        grit_n = normalize_abrasive_grit(getattr(self, "grit", "") or "")
+        if grit_n != (self.grit or ""):
+            self.grit = grit_n
+        if self.grit or self.diameter_mm or self.hole_count:
+            self.brand = canonicalize_abrasive_brand(self.brand or "")
         self.apply_sheet_geometry()
         super().save(*args, **kwargs)
 
@@ -173,6 +568,20 @@ class Material(models.Model):
         if not total_qty or not total_cost:
             return None
         return (total_cost / total_qty).quantize(Decimal("0.0001"))
+
+    @property
+    def cost_unit_price(self) -> Decimal | None:
+        """Цена единицы для себестоимости: средняя по приёмкам, иначе закупочная с карточки."""
+        avg = self.average_price
+        if avg is not None:
+            return avg
+        p = self.purchase_price
+        if p is None:
+            return None
+        p = Decimal(str(p))
+        if p <= 0:
+            return None
+        return p.quantize(Decimal("0.0001"))
 
 
 class MaterialBatch(models.Model):
@@ -493,8 +902,9 @@ class Product(models.Model):
     def computed_purchase_cost_from_materials(self):
         """
         Закупочная себестоимость по составу: Σ (средняя цена материала × расход на 1 изделие), ₽.
-        Средняя цена материала — из приёмки (поступления MaterialBatch IN с ценой за единицу);
-        строки без неё в сумму не входят.
+        Средняя цена материала — из приёмки (поступления MaterialBatch IN с ценой за единицу)
+        или закупочная цена с карточки материала, если приёмок ещё нет;
+        строки без цены в сумму не входят.
         """
         total = Decimal("0")
         used = 0
@@ -502,7 +912,7 @@ class Product(models.Model):
             qty = pm.quantity_per_unit
             if qty is None:
                 continue
-            ap = pm.material.average_price
+            ap = pm.material.cost_unit_price
             if ap is None:
                 continue
             total += ap * qty
@@ -725,7 +1135,7 @@ class Product(models.Model):
     def planned_material_cost(self) -> Decimal:
         total = Decimal("0")
         for pm in self.materials.select_related("material"):
-            avg_price = pm.material.average_price
+            avg_price = pm.material.cost_unit_price
             if avg_price is None:
                 continue
             total += pm.quantity_per_unit * avg_price
@@ -736,7 +1146,12 @@ class Product(models.Model):
         if not self.pk:
             return None
         return (
-            self.tech_cards.prefetch_related("labor_lines__production_stage", "items__material")
+            self.tech_cards.prefetch_related(
+                "labor_lines__production_stage",
+                "items__material",
+                "items__product",
+                "items__component_tech_card",
+            )
             .order_by("-pk")
             .first()
         )
@@ -773,6 +1188,9 @@ class Product(models.Model):
 
     @property
     def planned_total_cost(self) -> Decimal:
+        tc = self._primary_tech_card_for_cost()
+        if tc is not None:
+            return tc.planned_total_cost_per_unit()
         return (
             self.planned_material_cost
             + self.planned_labor_cost
@@ -1258,18 +1676,26 @@ class TechCard(models.Model):
             total += Decimal(str(L)) * Decimal(str(r))
         return total.quantize(Decimal("0.01"))
 
+    def planned_machine_cost_per_unit(self) -> Decimal:
+        """Станок/этап на 1 изд.: нормо-часы × ставка этапа."""
+        if not self.pk:
+            return Decimal("0")
+        total = Decimal("0")
+        for line in self.labor_lines.select_related("production_stage"):
+            total += line.machine_pay_per_unit()
+        return total.quantize(Decimal("0.01"))
+
     def planned_labor_cost_per_unit(self) -> Decimal:
         """
-        Оплата на 1 изд.: сумма по строкам «Деньги»
-        (время станка/этапа + труд сотрудника);
-        если строк нет — по нормам времени карточки изделия.
+        Оплата труда сотрудника на 1 изд. по строкам «Деньги».
+        Станок/этап идёт в затраты на производство.
+        Если строк нет — по нормам времени карточки изделия.
         """
-        if self.pk:
+        if self.pk and self.labor_lines.exists():
             total = Decimal("0")
             for line in self.labor_lines.select_related("production_stage"):
-                total += line.total_pay_per_unit()
-            if total > 0 or self.labor_lines.exists():
-                return total.quantize(Decimal("0.01"))
+                total += line.employee_pay_per_unit()
+            return total.quantize(Decimal("0.01"))
         if not self.product_id:
             return Decimal("0")
         total = Decimal("0")
@@ -1280,32 +1706,56 @@ class TechCard(models.Model):
         return total.quantize(Decimal("0.01"))
 
     def planned_overhead_per_unit(self) -> Decimal:
-        if not self.pk:
-            return Decimal("0")
-        from django.db.models import Sum
+        """Затраты на производство: станок/этап + прочие ₽/шт по строкам."""
+        extra = Decimal("0")
+        if self.pk:
+            from django.db.models import Sum
 
-        s = self.labor_lines.aggregate(s=Sum("overhead_per_unit"))["s"]
-        if s is None:
-            return Decimal("0")
-        return Decimal(str(s)).quantize(Decimal("0.01"))
+            s = self.labor_lines.aggregate(s=Sum("overhead_per_unit"))["s"]
+            extra = Decimal(str(s or 0))
+        return (self.planned_machine_cost_per_unit() + extra).quantize(Decimal("0.01"))
 
     def planned_material_cost_per_unit(self) -> Decimal:
-        """Материалы на 1 изд. по строкам техкарты × средняя цена закупки."""
+        """Материалы на 1 изд. по строкам техкарты × цена закупки (приёмка или карточка)."""
         total = Decimal("0")
         for item in self.items.filter(
             material__isnull=False,
             item_kind__in=(TechCardItem.KIND_RAW, TechCardItem.KIND_MATERIAL),
         ).select_related("material"):
-            price = item.material.average_price
+            price = item.material.cost_unit_price
             if price is None:
                 continue
             total += Decimal(str(price)) * Decimal(str(item.quantity))
         return total.quantize(Decimal("0.01"))
 
-    def planned_total_cost_per_unit(self) -> Decimal:
-        """Плановая себестоимость 1 изделия по техкарте: материалы + труд + прочее + рез."""
+    def planned_component_cost_per_unit(self, _seen: set[int] | None = None) -> Decimal:
+        """Себестоимость комплектующих (полуфабрикатов) на 1 изд. по их техкартам."""
+        if not self.pk:
+            return Decimal("0.00")
+        seen = set(_seen or ())
+        if self.pk in seen:
+            return Decimal("0.00")
+        seen.add(self.pk)
+        total = Decimal("0")
+        for item in self.items.filter(
+            item_kind=TechCardItem.KIND_COMPONENT,
+            product__isnull=False,
+        ).select_related("product", "component_tech_card"):
+            qty = Decimal(str(item.quantity or 0))
+            if qty <= 0:
+                continue
+            if item.component_tech_card_id:
+                sub = item.component_tech_card.planned_total_cost_per_unit(_seen=seen)
+            else:
+                sub = item.product.planned_total_cost
+            total += qty * Decimal(str(sub or 0))
+        return total.quantize(Decimal("0.01"))
+
+    def planned_total_cost_per_unit(self, _seen: set[int] | None = None) -> Decimal:
+        """Плановая себестоимость 1 изделия: материалы + комплектующие + труд сотрудника + затраты (станок + прочие) + рез."""
         return (
             self.planned_material_cost_per_unit()
+            + self.planned_component_cost_per_unit(_seen=_seen)
             + self.planned_labor_cost_per_unit()
             + self.planned_overhead_per_unit()
             + self.planned_cut_cost_per_unit()
@@ -1938,7 +2388,7 @@ class TechOperation(models.Model):
         """Сумма себестоимости списываемых материалов (по средней цене)."""
         total = Decimal("0")
         for item in self.materials.select_related("material"):
-            price = item.material.average_price
+            price = item.material.cost_unit_price
             if price is not None:
                 total += item.quantity * price
         return total.quantize(Decimal("0.01"))
@@ -3162,7 +3612,7 @@ class ProductionAssignment(models.Model):
                 need = tc.quantity * item.quantity_planned
                 mid = tc.material_id
                 if mid not in by_mat:
-                    unit = tc.material.average_price or Decimal("0")
+                    unit = tc.material.cost_unit_price or Decimal("0")
                     by_mat[mid] = {
                         "material": tc.material,
                         "planned": Decimal("0"),
@@ -3454,7 +3904,7 @@ class ProductionAssignment(models.Model):
             used = self._material_used_overuse(mid)
             available = stock_qty - res_else - res_here
             deviation = planned - used
-            unit = mat.average_price or Decimal("0")
+            unit = mat.cost_unit_price or Decimal("0")
             line_cost = (planned * unit).quantize(Decimal("0.01")) if unit else Decimal("0.00")
             order_qty = max(Decimal("0"), planned - available)
             rows.append(
@@ -3963,7 +4413,7 @@ class ProductionBatch(models.Model):
     def actual_material_cost(self) -> Decimal:
         total = Decimal("0")
         for usage in self.material_usages.select_related("material"):
-            avg_price = usage.material.average_price
+            avg_price = usage.material.cost_unit_price
             if avg_price is None:
                 continue
             total += usage.quantity * avg_price

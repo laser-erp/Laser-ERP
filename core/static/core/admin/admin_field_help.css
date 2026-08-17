@@ -92,6 +92,23 @@ fieldset.module.aligned .laser-field-main-col .related-widget-wrapper > .related
   flex-shrink: 0;
 }
 
+/*
+ * Django 5.2+/6: RelatedFieldWidgetWrapper.use_fieldset=True рисует <legend> над полем
+ * и раздувает строку (min-inline-size: min-content). Подпись остаётся обычным <label>
+ * в ряду «? | подпись | поле».
+ */
+fieldset.module.aligned .form-row > fieldset.laser-related-fieldset,
+fieldset.module.aligned .form-multiline > fieldset.laser-related-fieldset {
+  display: block;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
 @media (max-width: 600px) {
   fieldset.module.aligned .laser-field-main-col > .flex-container:not(.checkbox-row) {
     flex-direction: column;

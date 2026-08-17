@@ -26,6 +26,7 @@ from core.models import Material, Order, OrderItem, Organization, Product
 from core.services.fns import fetch_contragents
 from core.services.production_stock_reports import pending_production_quantity_subquery
 
+from .services.fanera_nest_receipt import build_nest_kits_payload
 from .services.invoice_ocr import (
     apply_ocr_data_to_supplier_invoice,
     register_invoice_category_feedback,
@@ -69,6 +70,92 @@ class SupplierOrganizationFKMixin:
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+def _positive_decimal(value):
+    if value is None or value == "":
+        return None
+    qty = Decimal(str(value).replace(",", "."))
+    if qty <= 0:
+        return None
+    return qty
+
+
+_GR_NUM_ATTRS = {"class": "vTextField laser-gr-num", "size": "8", "inputmode": "decimal", "autocomplete": "off"}
+
+
+class GoodsReceiptLineForm(forms.ModelForm):
+    """Строка приёмки: рулон/упаковка × содержимое и сумма — без ручного деления цены."""
+
+    pack_count = forms.DecimalField(
+        label="Упак.",
+        required=False,
+        localize=True,
+        widget=forms.TextInput(attrs={**_GR_NUM_ATTRS, "size": "4", "placeholder": "1"}),
+        help_text="Сколько рулонов, коробок или катушек пришло. Пусто = 1, если заполнено «В 1 упак.».",
+    )
+    qty_in_pack = forms.DecimalField(
+        label="В 1 упак.",
+        required=False,
+        localize=True,
+        widget=forms.TextInput(attrs={**_GR_NUM_ATTRS, "size": "6"}),
+        help_text="Сколько единиц учёта в одной упаковке. Рулон 300 м при ед. «м» — 300. Кол-во = упак. × это число.",
+    )
+
+    class Meta:
+        model = GoodsReceiptLine
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, label, help_text in (
+            (
+                "quantity",
+                "Кол-во",
+                "В единицах учёта материала (для стрейча — метры). Можно не считать: заполните «В 1 упак.».",
+            ),
+            (
+                "unit_price",
+                "Цена/ед.",
+                "Цена за 1 ед. учёта (за метр, штуку). Если известна сумма за рулон — укажите сумму, цена посчитается сама.",
+            ),
+            (
+                "amount",
+                "Сумма",
+                "Сумма по накладной за строку (цена рулона или партии). Кол-во + сумма → цена за ед. сама.",
+            ),
+        ):
+            if name in self.fields:
+                self.fields[name].required = False
+                self.fields[name].label = label
+                self.fields[name].help_text = help_text
+                self.fields[name].widget.attrs.update(_GR_NUM_ATTRS)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("DELETE"):
+            return cleaned
+        if not cleaned.get("material") and not cleaned.get("product"):
+            return cleaned
+        pack_count = _positive_decimal(cleaned.get("pack_count"))
+        qty_in_pack = _positive_decimal(cleaned.get("qty_in_pack"))
+        if qty_in_pack is not None:
+            if pack_count is None:
+                pack_count = Decimal("1")
+            cleaned["quantity"] = (pack_count * qty_in_pack).quantize(Decimal("0.0001"))
+        qty = _positive_decimal(cleaned.get("quantity"))
+        price = _positive_decimal(cleaned.get("unit_price"))
+        amount = _positive_decimal(cleaned.get("amount"))
+        if qty is not None and amount is not None and price is None:
+            cleaned["unit_price"] = (amount / qty).quantize(Decimal("0.0001"))
+            price = cleaned["unit_price"]
+        elif qty is not None and price is not None:
+            cleaned["amount"] = (qty * price).quantize(Decimal("0.01"))
+        if cleaned.get("quantity") in (None, ""):
+            self.add_error("quantity", "Укажите количество или «В 1 упак.» (и при необходимости «Упак.»).")
+        if cleaned.get("unit_price") in (None, ""):
+            self.add_error("unit_price", "Укажите цену за ед. или сумму строки.")
+        return cleaned
+
+
 class GoodsReceiptLineFormSet(forms.BaseInlineFormSet):
     def clean(self):
         super().clean()
@@ -91,18 +178,21 @@ class GoodsReceiptLineFormSet(forms.BaseInlineFormSet):
 
 class GoodsReceiptLineInline(admin.TabularInline):
     model = GoodsReceiptLine
+    form = GoodsReceiptLineForm
     formset = GoodsReceiptLineFormSet
-    extra = 1
+    extra = 2
     autocomplete_fields = ("material", "product", "supplier_order_line")
-    readonly_fields = ("unit_display", "amount")
+    readonly_fields = ("unit_display",)
     fields = (
         "material",
         "product",
         "supplier_order_line",
         "unit_display",
+        "pack_count",
+        "qty_in_pack",
         "quantity",
-        "unit_price",
         "amount",
+        "unit_price",
     )
     template = "admin/procurement/goodsreceipt/edit_inline/tabular.html"
 
@@ -651,6 +741,8 @@ class GoodsReceiptAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin, admi
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         obj = form.instance
+        obj.recalc_total_from_lines()
+        GoodsReceipt.objects.filter(pk=obj.pk).update(total_amount=obj.total_amount)
         obj.refresh_from_db()
         if obj.status == GoodsReceipt.STATUS_POSTED and not obj.posted_at:
             obj.conduct()
@@ -687,11 +779,10 @@ class GoodsReceiptAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin, admi
                 .order_by("pk")
             },
         }
+        extra_context["fanera_nest_kits_json"] = build_nest_kits_payload()
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.posted_at:
-            return False
         return super().has_delete_permission(request, obj)
 
     @admin.display(description="Комментарий")

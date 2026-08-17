@@ -443,3 +443,22 @@ table.ms-lines select {
   margin-top: 8px;
   font-size: 12px;
 }
+
+.ms-pack-hint {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: #f0f7ff;
+  border-left: 3px solid var(--ms-blue);
+  color: #444;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ms-lines input.line-pack,
+.ms-lines input.line-inpack,
+.ms-lines input.line-qty,
+.ms-lines input.line-amount,
+.ms-lines input.line-price {
+  width: 100%;
+  min-width: 4em;
+}

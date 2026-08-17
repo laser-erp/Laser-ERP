@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Sum
+from django.db.models.functions import Greatest
 from django.utils import timezone
 
 from core.models import (
@@ -355,7 +356,7 @@ class GoodsReceipt(models.Model):
         default=STATUS_DRAFT,
         help_text="«Проведён» — приход на склад: материалы (движение + остаток материалов) или готовая продукция "
         "(остаток продукции). При указании строки заказа поставщику увеличивается «Получено» по заказу. "
-        "Отменить проведение нельзя.",
+        "Удаление проведённой приёмки откатывает приход со склада.",
     )
     is_sent = models.BooleanField("Отправлено", default=False)
     is_printed = models.BooleanField("Напечатано", default=False)
@@ -396,7 +397,16 @@ class GoodsReceipt(models.Model):
             raise ValidationError({"contract_ref": "Срок действия договора истек. Проведение запрещено."})
 
     def recalc_total_from_lines(self) -> None:
-        agg = self.lines.aggregate(s=Sum("amount"))
+        from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+
+        agg = self.lines.aggregate(
+            s=Sum(
+                ExpressionWrapper(
+                    F("quantity") * F("unit_price"),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                )
+            )
+        )
         s = agg.get("s")
         self.total_amount = (s if s is not None else Decimal("0")).quantize(Decimal("0.01"))
 
@@ -478,9 +488,10 @@ class GoodsReceipt(models.Model):
                 )
                 stock.quantity = (stock.quantity + qty).quantize(Decimal("0.001"))
                 stock.save(update_fields=["quantity"])
-                Material.objects.filter(pk=line.material_id).update(
-                    current_stock=F("current_stock") + qty
-                )
+                stock_update = {"current_stock": F("current_stock") + qty}
+                if up > 0:
+                    stock_update["purchase_price"] = up
+                Material.objects.filter(pk=line.material_id).update(**stock_update)
             elif line.product_id:
                 pstock, _ = ProductStock.objects.get_or_create(
                     warehouse=locked.warehouse,
@@ -495,6 +506,59 @@ class GoodsReceipt(models.Model):
         GoodsReceipt.objects.filter(pk=self.pk).update(posted_at=now)
         self.posted_at = now
 
+    @transaction.atomic
+    def reverse_conduct(self) -> None:
+        """Снять проведение: откатить остатки, «получено» по заказу и движения с комментарием этой приёмки."""
+        locked = GoodsReceipt.objects.select_for_update().get(pk=self.pk)
+        if not locked.posted_at:
+            return
+        ref = (locked.number or "").strip() or f"#{self.pk}"
+        comment_base = (f"Приёмка {ref}")[:255]
+        lines = list(
+            GoodsReceiptLine.objects.filter(goods_receipt_id=self.pk).select_related(
+                "material",
+                "product",
+                "supplier_order_line",
+            )
+        )
+        for line in lines:
+            qty = (line.quantity or Decimal("0")).quantize(Decimal("0.001"))
+            if qty <= 0:
+                continue
+            if line.supplier_order_line_id:
+                SupplierPurchaseOrderLine.objects.filter(pk=line.supplier_order_line_id).update(
+                    quantity_received=Greatest(F("quantity_received") - qty, Decimal("0"))
+                )
+            if line.material_id:
+                MaterialBatch.objects.filter(
+                    material_id=line.material_id,
+                    movement_type=MaterialBatch.INCOMING,
+                    comment=comment_base,
+                ).delete()
+                stock = (
+                    MaterialStock.objects.select_for_update()
+                    .filter(warehouse_id=locked.warehouse_id, material_id=line.material_id)
+                    .first()
+                )
+                if stock:
+                    stock.quantity = max(Decimal("0"), (stock.quantity - qty).quantize(Decimal("0.001")))
+                    stock.save(update_fields=["quantity"])
+                Material.objects.filter(pk=line.material_id).update(
+                    current_stock=Greatest(F("current_stock") - qty, Decimal("0"))
+                )
+            elif line.product_id:
+                pstock = (
+                    ProductStock.objects.select_for_update()
+                    .filter(warehouse_id=locked.warehouse_id, product_id=line.product_id)
+                    .first()
+                )
+                if pstock:
+                    pstock.quantity = max(Decimal("0"), (pstock.quantity - qty).quantize(Decimal("0.001")))
+                    pstock.save(update_fields=["quantity"])
+        GoodsReceipt.objects.filter(pk=self.pk).update(posted_at=None, status=self.STATUS_DRAFT)
+        self.posted_at = None
+        self.status = self.STATUS_DRAFT
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.number:
@@ -504,7 +568,7 @@ class GoodsReceipt(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.posted_at:
-            raise ValidationError("Нельзя удалить проведённую приёмку.")
+            self.reverse_conduct()
         super().delete(*args, **kwargs)
 
 

@@ -7,10 +7,11 @@ from urllib.parse import urlencode
 from django import forms
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.widgets import AdminFileWidget
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Count, DecimalField, F, OuterRef, Prefetch, Q, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, F, Max, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -60,6 +61,12 @@ admin.site.site_title = "Администрирование Laser ERP"
 admin.site.index_title = "Управление данными"
 
 from .models import (
+    PACKAGING_UNITS,
+    PLYWOOD_GRADES,
+    SHEET_UNITS,
+    build_abrasive_name,
+    looks_like_abrasive_name,
+    normalize_abrasive_grit,
     ExpenseLedgerEntry,
     Contract,
     ContractVersion,
@@ -71,6 +78,12 @@ from .models import (
     Material,
     MaterialBatch,
     MaterialGroup,
+    MaterialGroupBrand,
+    MaterialGroupColor,
+    MaterialGroupDiameter,
+    MaterialGroupGrit,
+    MaterialGroupHoleCount,
+    MaterialGroupType,
     MaterialReservation,
     OperationType,
     Order,
@@ -133,15 +146,19 @@ def _organization_supplier_queryset(request, instance_model, supplier_field="sup
 
 def _material_average_unit_prices_map():
     """
-    Средняя цена закупки по материалу для расчёта себестоимости в карточке товара.
-    Источник: приёмка — движения MaterialBatch с типом поступления (IN) и ценой за единицу.
+    Цена закупки по материалу для расчёта себестоимости.
+    Сначала закупочная с карточки, затем средняя по приёмкам (IN) перекрывает её.
     """
+    out = {}
+    for row in Material.objects.exclude(purchase_price__isnull=True).values("id", "purchase_price"):
+        price = row["purchase_price"]
+        if price is not None and price > 0:
+            out[str(row["id"])] = format(Decimal(str(price)).quantize(Decimal("0.0001")), "f")
     rows = (
         MaterialBatch.objects.filter(movement_type=MaterialBatch.INCOMING)
         .values("material_id")
         .annotate(tq=Sum("quantity"), tc=Sum(F("quantity") * F("unit_price")))
     )
-    out = {}
     for row in rows:
         tq, tc = row["tq"], row["tc"]
         if tq and tc:
@@ -183,26 +200,490 @@ def copy_materials(modeladmin, request, queryset):
             sheet_length_mm=material.sheet_length_mm,
             sheet_width_mm=material.sheet_width_mm,
             unit=material.unit,
+            grade=material.grade,
             current_stock=0,
             photo=material.photo,
+            brand=material.brand,
+            color=material.color,
+            grit=material.grit,
+            diameter_mm=material.diameter_mm,
+            hole_count=material.hole_count,
         )
         created += 1
     messages.success(request, f"Создано копий: {created}.")
 
 
+class MaterialPhotoWidget(AdminFileWidget):
+    """Миниатюра и кнопки «Заменить» / «Удалить», без длинного пути к файлу."""
+
+    template_name = "admin/widgets/material_photo.html"
+
+    def build_attrs(self, base_attrs, extra_attrs=None):
+        attrs = super().build_attrs(base_attrs, extra_attrs)
+        css = attrs.get("class", "")
+        extra = "file-upload-input laser-file-input-native"
+        missing = [cls for cls in extra.split() if cls not in css.split()]
+        if missing:
+            attrs["class"] = f"{css} {' '.join(missing)}".strip()
+        return attrs
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        preview_url = ""
+        if value and getattr(value, "name", None):
+            try:
+                preview_url = value.url
+            except (ValueError, OSError):
+                preview_url = ""
+        context["widget"]["preview_url"] = preview_url
+        return context
+
+
+class MaterialAdminForm(forms.ModelForm):
+    class Meta:
+        model = Material
+        exclude = ("current_stock",)
+        widgets = {
+            "photo": MaterialPhotoWidget,
+        }
+        labels = {
+            "material_type": "Тип",
+            "brand": "Бренд",
+            "color": "Цвет",
+            "grit": "Зерно",
+            "diameter_mm": "Диаметр, мм",
+            "hole_count": "Отверстия",
+            "grade": "Сорт",
+            "sheet_length_mm": "Д×Ш×Т",
+            "sheet_width_mm": "Ш",
+            "thickness_mm": "Т",
+        }
+        help_texts = {
+            "name": (
+                "Как материал будет называться в справочнике, в техкарте и в приёмке. "
+                "Для морилки имя собирается из бренда и цвета, например: "
+                "Морилка водная Tury «Дуб»."
+            ),
+            "group": (
+                "Раздел справочника (Фанера, Акрил, Металл и т.п.) — для фильтра в списке "
+                "и в меню склада. Можно не заполнять. Новую группу добавляют кнопкой «+» "
+                "рядом с полем."
+            ),
+            "material_type": (
+                "Короткий тип для поиска и фильтра. Список зависит от группы: "
+                "для фанеры — ФК, ФСФ; для абразивов — эксцентриковый, ленточный."
+            ),
+            "brand": (
+                "Кнопка «+» добавляет бренд в список группы. "
+                "Для морилки и абразива участвует в наименовании карточки."
+            ),
+            "color": (
+                "Цвет морилки (дуб, орех…). Кнопка «+» добавляет цвет в список группы. "
+                "У бесцветного лака поле скрыто."
+            ),
+            "grit": (
+                "Зерно абразива, например P120. Кнопка «+» добавляет значение в список группы."
+            ),
+            "diameter_mm": (
+                "Диаметр круга в миллиметрах (125, 150). Для ленточного типа поле скрыто."
+            ),
+            "hole_count": (
+                "Число отверстий пылеудаления. Для ленточного типа поле скрыто."
+            ),
+            "grade": (
+                "Сорт фанеры по ГОСТ, например 1/2, 2/2, 3/4. "
+                "Поле видно, если у группы включено «Указывать сорт»."
+            ),
+            "unit": (
+                "В каких единицах ведёте остаток и расход. Для упаковки обычно шт, м, рулон, кг. "
+                "Для листовых — лист или м²."
+            ),
+            "purchase_price": (
+                "Цена за единицу с чека. Пока нет проведённых приёмок, техкарта берёт эту цену. "
+                "После приёмки себестоимость считается по средней цене поступлений."
+            ),
+            "sheet_length_mm": (
+                "Укажите Длину, Ширину и Толщину листа для расчёта площади."
+            ),
+            "sheet_width_mm": "",
+            "thickness_mm": "",
+            "sheet_geometry_preview": (
+                "Считается автоматически из длины × ширины. "
+                "Показывается в м², см² и мм². Если длина или ширина не заданы — площадь не считается."
+            ),
+            "photo": (
+                "Необязательное фото материала. Показывается в списке и в карточке. "
+                "На остаток и цены не влияет."
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        group = None
+        if self.is_bound:
+            raw_group = self.data.get(self.add_prefix("group"))
+            if raw_group:
+                try:
+                    group = MaterialGroup.objects.prefetch_related(
+                        "type_choices",
+                        "brand_choices",
+                        "color_choices",
+                        "grit_choices",
+                        "diameter_choices",
+                        "hole_choices",
+                    ).get(pk=int(raw_group))
+                except (TypeError, ValueError, MaterialGroup.DoesNotExist):
+                    group = None
+        elif self.instance and getattr(self.instance, "group_id", None):
+            group = getattr(self.instance, "group", None)
+        type_choices = ()
+        unit_choices = SHEET_UNITS
+        grade_choices = ()
+        brand_choices = ()
+        color_choices = ()
+        grit_choices = ()
+        diameter_choices = ()
+        hole_choices = ()
+        if group is not None:
+            type_choices = tuple(
+                group.type_choices.order_by("sort_order", "name").values_list("name", flat=True)
+            )
+            unit_choices = PACKAGING_UNITS if not group.has_sheet_size else SHEET_UNITS
+            if group.has_grade:
+                grade_choices = PLYWOOD_GRADES
+            if group.has_brand:
+                brand_choices = tuple(
+                    group.brand_choices.order_by("sort_order", "name").values_list("name", flat=True)
+                )
+            if group.has_color:
+                color_choices = tuple(
+                    group.color_choices.order_by("sort_order", "name").values_list("name", flat=True)
+                )
+            if group.has_grit:
+                grit_choices = tuple(
+                    group.grit_choices.order_by("sort_order", "name").values_list("name", flat=True)
+                )
+            if group.has_diameter:
+                diameter_choices = tuple(
+                    group.diameter_choices.order_by("sort_order", "name").values_list("name", flat=True)
+                )
+            if group.has_hole_count:
+                hole_choices = tuple(
+                    group.hole_choices.order_by("sort_order", "name").values_list("name", flat=True)
+                )
+        self._setup_choice_select("material_type", type_choices)
+        self._setup_choice_select("unit", unit_choices)
+        self._setup_choice_select("grade", grade_choices)
+        self._setup_choice_select("brand", brand_choices)
+        self._setup_choice_select("color", color_choices)
+        self._setup_choice_select("grit", grit_choices)
+        self._setup_choice_select("diameter_mm", diameter_choices)
+        self._setup_choice_select("hole_count", hole_choices)
+        if "name" in self.fields:
+            self.fields["name"].required = False
+        if "sheet_length_mm" in self.fields:
+            self.fields["sheet_length_mm"].widget.attrs.setdefault("title", "Длина, мм")
+        if "sheet_width_mm" in self.fields:
+            self.fields["sheet_width_mm"].widget.attrs.setdefault("title", "Ширина, мм")
+        if "thickness_mm" in self.fields:
+            self.fields["thickness_mm"].widget.attrs.setdefault("title", "Толщина, мм")
+
+    def clean(self):
+        cleaned = super().clean()
+        material_type = str(cleaned.get("material_type") or "").strip()
+        brand = str(cleaned.get("brand") or "").strip()
+        color = str(cleaned.get("color") or "").strip()
+        grit = normalize_abrasive_grit(cleaned.get("grit") or "")
+        diameter_mm = str(cleaned.get("diameter_mm") or "").strip()
+        hole_count = str(cleaned.get("hole_count") or "").strip()
+        name = str(cleaned.get("name") or "").strip()
+        type_n = material_type.casefold().replace("ё", "е")
+        is_stain = "морилк" in type_n
+        is_belt = "лент" in type_n
+        group = cleaned.get("group")
+        use_abrasive = bool(group and getattr(group, "has_grit", False))
+        if not is_stain:
+            color = ""
+        auto_name = ""
+        if is_stain and brand and color:
+            auto_name = f"Морилка водная {brand} «{color}»"
+        elif use_abrasive:
+            auto_name = build_abrasive_name(
+                material_type=material_type,
+                brand=brand,
+                grit=grit,
+                diameter_mm="" if is_belt else diameter_mm,
+                hole_count="" if is_belt else hole_count,
+            )
+        stain_like = bool(re.match(r"^Морилка водная .+ «.+»$", name))
+        abrasive_like = looks_like_abrasive_name(name)
+        if auto_name and not name:
+            name = auto_name
+        elif auto_name and (stain_like or abrasive_like):
+            if name.casefold().replace("ё", "е") != auto_name.casefold().replace("ё", "е"):
+                name = auto_name
+        if not name:
+            self.add_error(
+                "name",
+                "Укажите наименование или заполните бренд и зерно (для морилки — бренд и цвет).",
+            )
+        cleaned["brand"] = brand
+        cleaned["color"] = color
+        cleaned["grit"] = grit
+        cleaned["diameter_mm"] = diameter_mm
+        cleaned["hole_count"] = hole_count
+        cleaned["name"] = name
+        return cleaned
+
+    def _setup_choice_select(self, field_name, preset):
+        field = self.fields.get(field_name)
+        if field is None:
+            return
+        current = ""
+        if self.is_bound:
+            current = str(self.data.get(self.add_prefix(field_name)) or "").strip()
+        elif self.instance is not None:
+            current = str(getattr(self.instance, field_name, "") or "").strip()
+        choices = [("", "—")]
+        seen = {""}
+        for value in list(preset or ()) + ([current] if current else []):
+            if value not in seen:
+                seen.add(value)
+                choices.append((value, value))
+        field.widget = forms.Select(attrs={"class": "material-choice-select"})
+        field.widget.choices = choices
+
+
+def _material_group_meta_payload(group=None):
+    """JSON для карточки материала: типы, ед., сорт, бренд, цвет, зерно абразива."""
+    empty = {
+        "types": [],
+        "has_grade": False,
+        "grades": [],
+        "has_sheet_size": True,
+        "units": list(SHEET_UNITS),
+        "has_brand": False,
+        "brands": [],
+        "has_color": False,
+        "colors": [],
+        "has_grit": False,
+        "grits": [],
+        "has_diameter": False,
+        "diameters": [],
+        "has_hole_count": False,
+        "holes": [],
+    }
+    if group is None:
+        return empty
+    has_sheet = bool(group.has_sheet_size)
+    payload = {
+        **empty,
+        "types": list(group.type_choices.order_by("sort_order", "name").values_list("name", flat=True)),
+        "has_grade": bool(group.has_grade),
+        "grades": list(PLYWOOD_GRADES) if group.has_grade else [],
+        "has_sheet_size": has_sheet,
+        "units": list(PACKAGING_UNITS if not has_sheet else SHEET_UNITS),
+        "has_brand": bool(group.has_brand),
+        "has_color": bool(group.has_color),
+        "has_grit": bool(group.has_grit),
+        "has_diameter": bool(group.has_diameter),
+        "has_hole_count": bool(group.has_hole_count),
+    }
+    if group.has_brand:
+        payload["brands"] = list(
+            group.brand_choices.order_by("sort_order", "name").values_list("name", flat=True)
+        )
+    if group.has_color:
+        payload["colors"] = list(
+            group.color_choices.order_by("sort_order", "name").values_list("name", flat=True)
+        )
+    if group.has_grit:
+        payload["grits"] = list(
+            group.grit_choices.order_by("sort_order", "name").values_list("name", flat=True)
+        )
+    if group.has_diameter:
+        payload["diameters"] = list(
+            group.diameter_choices.order_by("sort_order", "name").values_list("name", flat=True)
+        )
+    if group.has_hole_count:
+        payload["holes"] = list(
+            group.hole_choices.order_by("sort_order", "name").values_list("name", flat=True)
+        )
+    return payload
+
+
+_GROUP_CHOICE_MODELS = {
+    "type": (MaterialGroupType, None, "material_type"),
+    "brand": (MaterialGroupBrand, "has_brand", "brand"),
+    "color": (MaterialGroupColor, "has_color", "color"),
+    "grit": (MaterialGroupGrit, "has_grit", "grit"),
+    "diameter": (MaterialGroupDiameter, "has_diameter", "diameter_mm"),
+    "holes": (MaterialGroupHoleCount, "has_hole_count", "hole_count"),
+}
+
+
+def _ensure_material_group_choice(group, kind, name):
+    """Добавляет тип/бренд/цвет в список группы. Возвращает каноническое имя."""
+    label = str(name or "").strip()[:100]
+    if group is None or not label or kind not in _GROUP_CHOICE_MODELS:
+        return ""
+    model, flag_name, _field = _GROUP_CHOICE_MODELS[kind]
+    if flag_name and not getattr(group, flag_name, False):
+        setattr(group, flag_name, True)
+        group.save(update_fields=[flag_name])
+    existing = model.objects.filter(group=group, name__iexact=label).first()
+    if existing:
+        return existing.name
+    max_order = model.objects.filter(group=group).aggregate(m=Max("sort_order"))["m"]
+    model.objects.create(group=group, name=label, sort_order=(max_order or 0) + 1)
+    return label
+
+
+def _rename_material_group_choice(group, kind, old_name, new_name):
+    """Переименовывает пункт списка группы и подтягивает карточки материалов."""
+    old_label = str(old_name or "").strip()[:100]
+    new_label = str(new_name or "").strip()[:100]
+    if group is None or kind not in _GROUP_CHOICE_MODELS or not old_label:
+        return ""
+    if not new_label or old_label.casefold() == new_label.casefold():
+        row = _GROUP_CHOICE_MODELS[kind][0].objects.filter(group=group, name__iexact=old_label).first()
+        return row.name if row else old_label
+    model, _flag, material_field = _GROUP_CHOICE_MODELS[kind]
+    row = model.objects.filter(group=group, name__iexact=old_label).first()
+    if row is None:
+        return _ensure_material_group_choice(group, kind, new_label)
+    clash = model.objects.filter(group=group, name__iexact=new_label).exclude(pk=row.pk).first()
+    canonical = clash.name if clash is not None else new_label
+    Material.objects.filter(group=group).filter(**{f"{material_field}__iexact": old_label}).update(
+        **{material_field: canonical}
+    )
+    if clash is not None:
+        row.delete()
+        return canonical
+    row.name = canonical
+    row.save(update_fields=["name"])
+    return canonical
+
+
+class MaterialGroupTypeInline(admin.TabularInline):
+    model = MaterialGroupType
+    extra = 3
+    fields = ("name", "sort_order")
+    verbose_name = "Тип"
+    verbose_name_plural = "Типы этой группы (список в карточке материала)"
+
+
+class MaterialGroupBrandInline(admin.TabularInline):
+    model = MaterialGroupBrand
+    extra = 2
+    fields = ("name", "sort_order")
+    verbose_name = "Бренд"
+    verbose_name_plural = "Бренды этой группы (список в карточке материала)"
+
+
+class MaterialGroupColorInline(admin.TabularInline):
+    model = MaterialGroupColor
+    extra = 2
+    fields = ("name", "sort_order")
+    verbose_name = "Цвет"
+    verbose_name_plural = "Цвета этой группы (для морилки)"
+
+
+class MaterialGroupGritInline(admin.TabularInline):
+    model = MaterialGroupGrit
+    extra = 3
+    fields = ("name", "sort_order")
+    verbose_name = "Зерно"
+    verbose_name_plural = "Зерно этой группы (P120, P150…)"
+
+
+class MaterialGroupDiameterInline(admin.TabularInline):
+    model = MaterialGroupDiameter
+    extra = 2
+    fields = ("name", "sort_order")
+    verbose_name = "Диаметр"
+    verbose_name_plural = "Диаметры кругов, мм (125, 150…)"
+
+
+class MaterialGroupHoleCountInline(admin.TabularInline):
+    model = MaterialGroupHoleCount
+    extra = 2
+    fields = ("name", "sort_order")
+    verbose_name = "Отверстия"
+    verbose_name_plural = "Отверстия пылеудаления (8, 6…)"
+
+
 @admin.register(MaterialGroup)
 class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("name", "description")
-    search_fields = ("name",)
+    list_display = (
+        "name",
+        "has_grade",
+        "has_sheet_size",
+        "has_brand",
+        "has_color",
+        "has_grit",
+        "has_diameter",
+        "has_hole_count",
+        "description",
+    )
+    list_filter = (
+        "has_grade",
+        "has_sheet_size",
+        "has_brand",
+        "has_color",
+        "has_grit",
+        "has_diameter",
+        "has_hole_count",
+    )
+    search_fields = ("name", "description")
+    inlines = [
+        MaterialGroupTypeInline,
+        MaterialGroupBrandInline,
+        MaterialGroupColorInline,
+        MaterialGroupGritInline,
+        MaterialGroupDiameterInline,
+        MaterialGroupHoleCountInline,
+    ]
+    fields = (
+        "name",
+        "has_grade",
+        "has_sheet_size",
+        "has_brand",
+        "has_color",
+        "has_grit",
+        "has_diameter",
+        "has_hole_count",
+        "description",
+    )
+
+    def get_search_results(self, request, queryset, search_term):
+        term = (search_term or "").strip()
+        if not term:
+            return queryset.order_by("name"), False
+        needle = term.casefold().replace("ё", "е")
+        matched_ids = [
+            group.pk
+            for group in queryset.only("pk", "name")
+            if needle in (group.name or "").casefold().replace("ё", "е")
+        ]
+        return queryset.filter(pk__in=matched_ids).order_by("name"), False
 
 
 @admin.register(Material)
 class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
+    form = MaterialAdminForm
+    change_form_template = "admin/core/material/change_form.html"
     list_display = (
         "name",
         "photo_thumb",
         "group",
         "material_type",
+        "brand",
+        "color",
+        "grit",
+        "diameter_mm",
+        "hole_count",
+        "grade",
         "sheet_length_mm",
         "sheet_width_mm",
         "thickness_mm",
@@ -210,36 +691,46 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         "unit",
         "current_stock",
     )
-    list_filter = ("group", "material_type")
-    search_fields = ("name", "material_type", "unit", "group__name")
+    list_filter = ("group", "material_type", "brand", "color", "grit")
+    search_fields = (
+        "name",
+        "material_type",
+        "brand",
+        "color",
+        "grit",
+        "diameter_mm",
+        "hole_count",
+        "grade",
+        "unit",
+        "group__name",
+    )
     actions = [copy_materials]
     autocomplete_fields = ("group",)
-    readonly_fields = ("area_m2", "sheet_area_cm2", "sheet_area_mm2", "sheet_geometry_preview")
+    readonly_fields = ("sheet_geometry_preview",)
     fieldsets = (
         (
-            "Основное",
+            None,
             {
-                "fields": ("name", "group", "material_type", "unit", "current_stock", "photo"),
-            },
-        ),
-        (
-            "Размеры листа и площадь",
-            {
-                "description": (
-                    "Укажите длину и ширину листа в мм — площадь посчитается автоматически "
-                    "(как у товара). Толщина — отдельно для номенклатуры."
-                ),
+                "classes": ("material-card-compact",),
                 "fields": (
+                    "photo",
+                    "name",
+                    "group",
+                    "material_type",
+                    "brand",
+                    "color",
+                    "grit",
+                    "diameter_mm",
+                    "hole_count",
+                    "grade",
+                    "unit",
+                    "purchase_price",
                     ("sheet_length_mm", "sheet_width_mm", "thickness_mm"),
                     "sheet_geometry_preview",
-                    ("area_m2", "sheet_area_cm2", "sheet_area_mm2"),
                 ),
             },
         ),
     )
-
-    class Media:
-        js = ("core/admin/material_sheet_areas.js",)
 
     @admin.display(description="Пл., м²")
     def area_m2_display(self, obj):
@@ -250,8 +741,8 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     @admin.display(description="Расчёт площади")
     def sheet_geometry_preview(self, obj):
         return mark_safe(
-            '<div id="material-sheet-area-preview" class="material-sheet-area-preview" '
-            'style="font-size:13px;color:#334155;">Задайте длину и ширину листа</div>'
+            '<div id="material-sheet-area-preview" class="material-sheet-area-preview">'
+            "Задайте длину и ширину листа</div>"
         )
 
     @staticmethod
@@ -266,6 +757,12 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 for part in (
                     material.name,
                     material.material_type,
+                    material.brand,
+                    material.color,
+                    material.grit,
+                    material.diameter_mm,
+                    material.hole_count,
+                    material.grade,
                     material.unit,
                     material.group.name if material.group_id else "",
                     material.thickness_mm,
@@ -307,8 +804,101 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.techcard_inline_meta_json),
                 name="%s_%s_techcard_inline_meta" % info,
             ),
+            path(
+                "group-meta/",
+                self.admin_site.admin_view(self.group_meta_json),
+                name="%s_%s_group_meta" % info,
+            ),
+            path(
+                "group-choice-add/",
+                self.admin_site.admin_view(self.group_choice_add_json),
+                name="%s_%s_group_choice_add" % info,
+            ),
         ]
         return custom + super().get_urls()
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "group" and formfield is not None:
+            formfield.widget.attrs["data-ajax--delay"] = "0"
+            formfield.widget.attrs["data-minimum-input-length"] = "0"
+            wrapper = formfield.widget
+            if hasattr(wrapper, "can_view_related"):
+                wrapper.can_view_related = False
+            if hasattr(wrapper, "can_delete_related"):
+                wrapper.can_delete_related = False
+        return formfield
+
+    def group_meta_json(self, request):
+        """Типы, ед., сорт, бренд и цвет для выбранной группы материалов."""
+        if not request.user.is_staff:
+            return JsonResponse({"error": "forbidden"}, status=403)
+        raw = (request.GET.get("group_id") or "").strip()
+        if not raw:
+            return JsonResponse(_material_group_meta_payload())
+        try:
+            group_id = int(raw)
+        except (TypeError, ValueError):
+            return JsonResponse(_material_group_meta_payload())
+        try:
+            group = MaterialGroup.objects.prefetch_related(
+                "type_choices",
+                "brand_choices",
+                "color_choices",
+            ).get(pk=group_id)
+        except MaterialGroup.DoesNotExist:
+            return JsonResponse(_material_group_meta_payload())
+        return JsonResponse(_material_group_meta_payload(group))
+
+    def group_choice_add_json(self, request):
+        """Добавить или переименовать тип/бренд/цвет в списке группы."""
+        if request.method != "POST":
+            return JsonResponse({"error": "method"}, status=405)
+        if not request.user.is_staff:
+            return JsonResponse({"error": "forbidden"}, status=403)
+        if not (
+            request.user.has_perm("core.change_material")
+            or request.user.has_perm("core.change_materialgroup")
+        ):
+            return JsonResponse({"error": "forbidden"}, status=403)
+        kind = (request.POST.get("kind") or "").strip()
+        name = (request.POST.get("name") or "").strip()
+        old_name = (request.POST.get("old_name") or "").strip()
+        action = (request.POST.get("action") or "add").strip()
+        raw = (request.POST.get("group_id") or "").strip()
+        if kind not in _GROUP_CHOICE_MODELS:
+            return JsonResponse({"error": "kind"}, status=400)
+        if not name:
+            return JsonResponse({"error": "name"}, status=400)
+        try:
+            group_id = int(raw)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "group"}, status=400)
+        try:
+            group = MaterialGroup.objects.get(pk=group_id)
+        except MaterialGroup.DoesNotExist:
+            return JsonResponse({"error": "group"}, status=404)
+        if action == "rename" and old_name:
+            saved = _rename_material_group_choice(group, kind, old_name, name)
+        else:
+            saved = _ensure_material_group_choice(group, kind, name)
+        group.refresh_from_db()
+        payload = _material_group_meta_payload(group)
+        payload["name"] = saved
+        payload["kind"] = kind
+        return JsonResponse(payload)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        group = obj.group
+        if group is None:
+            return
+        if obj.material_type:
+            _ensure_material_group_choice(group, "type", obj.material_type)
+        if obj.brand:
+            _ensure_material_group_choice(group, "brand", obj.brand)
+        if obj.color:
+            _ensure_material_group_choice(group, "color", obj.color)
 
     def techcard_inline_meta_json(self, request, object_id):
         """Ед. изм. и габариты листа для зеркала «Норма» в инлайне позиций техкарты."""
@@ -1619,8 +2209,13 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         )
         context.setdefault("material_avg_unit_prices", _material_average_unit_prices_map())
         if obj is not None and obj.pk:
+            tc = obj._primary_tech_card_for_cost()
             context["product_planned_cost_breakdown"] = {
                 "materials": format(obj.planned_material_cost, "f"),
+                "components": format(
+                    tc.planned_component_cost_per_unit() if tc is not None else Decimal("0"),
+                    "f",
+                ),
                 "labor": format(obj.planned_labor_cost, "f"),
                 "overhead": format(obj.planned_overhead_cost, "f"),
                 "cut": format(obj.planned_cut_cost, "f"),

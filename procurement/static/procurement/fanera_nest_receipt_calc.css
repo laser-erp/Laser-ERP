@@ -1,0 +1,101 @@
+.fanera-nest-calc {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  max-width: 920px;
+}
+
+.fanera-nest-calc h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.fanera-nest-calc .fanera-nest-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.fanera-nest-calc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-end;
+  margin-bottom: 10px;
+}
+
+.fanera-nest-field label {
+  display: block;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 3px;
+}
+
+.fanera-nest-field select,
+.fanera-nest-field input[type="text"],
+.fanera-nest-field input[type="number"] {
+  min-width: 88px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
+
+.fanera-nest-mode label {
+  font-size: 12px;
+  margin-right: 10px;
+}
+
+.fanera-nest-preview {
+  margin-top: 8px;
+}
+
+.fanera-nest-preview-empty {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.fanera-nest-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.fanera-nest-preview-table th,
+.fanera-nest-preview-table td {
+  border: 1px solid #e2e8f0;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.fanera-nest-preview-table th {
+  background: #f1f5f9;
+  font-weight: 500;
+}
+
+.fanera-nest-preview-meta {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.fanera-nest-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fanera-nest-actions .button,
+.fanera-nest-actions .ms-btn {
+  font-size: 12px;
+}
+
+body.ms-receipt .fanera-nest-calc {
+  margin: 0 16px 12px;
+}

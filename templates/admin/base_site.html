@@ -6,16 +6,17 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'core/admin/compact_icons.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'core/admin/laser_admin_theme.css' %}?v=10">
+<link rel="stylesheet" href="{% static 'core/admin/laser_admin_theme.css' %}?v=11">
 <link rel="stylesheet" href="{% static 'core/admin/admin_app_list_horizontal.css' %}?v=3">
 <link rel="stylesheet" href="{% static 'core/admin/admin_add_draft.css' %}?v=1">
-<link rel="stylesheet" href="{% static 'core/admin/admin_field_help.css' %}?v=13">
-<link rel="stylesheet" href="{% static 'core/admin/admin_autosize_fields.css' %}?v=6">
+<link rel="stylesheet" href="{% static 'core/admin/admin_field_help.css' %}?v=14">
+<link rel="stylesheet" href="{% static 'core/admin/admin_autosize_fields.css' %}?v=7">
 {% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
 <script src="{% static 'core/admin/admin_autosize_fields.js' %}?v=5" defer></script>
+<script src="{% static 'core/admin/admin_file_input_ru.js' %}?v=1" defer></script>
 <script src="{% static 'core/admin/column_resize.js' %}?v=3" defer></script>
 <script src="{% static 'core/admin/admin_add_draft.js' %}?v=3" defer></script>
 <script src="{% static 'core/admin/admin_field_help.js' %}?v=4" defer></script>

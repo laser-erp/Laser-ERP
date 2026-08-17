@@ -742,7 +742,12 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
             try:
                 obj = (
                     TechCard.objects.filter(pk=int(object_id))
-                    .prefetch_related("items__material", "labor_lines__production_stage")
+                    .prefetch_related(
+                        "items__material",
+                        "items__product",
+                        "items__component_tech_card",
+                        "labor_lines__production_stage",
+                    )
                     .first()
                 )
             except (TypeError, ValueError):
@@ -750,6 +755,7 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         if obj and obj.pk:
             extra["techcard_cost_breakdown"] = {
                 "materials": format(obj.planned_material_cost_per_unit(), "f"),
+                "components": format(obj.planned_component_cost_per_unit(), "f"),
                 "labor": format(obj.planned_labor_cost_per_unit(), "f"),
                 "overhead": format(obj.planned_overhead_per_unit(), "f"),
                 "cut": format(obj.planned_cut_cost_per_unit(), "f"),

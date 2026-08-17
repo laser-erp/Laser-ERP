@@ -1,0 +1,631 @@
+/**
+ * Карточка материала: фото слева, все параметры ровной колонкой справа.
+ * Фото вынесено из сетки (absolute), чтобы не растягивать строки полей.
+ */
+
+body.change-form.model-material #content-main,
+body.add-form.model-material #content-main {
+  max-width: 58rem;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact,
+body.add-form.model-material fieldset.module.material-card-compact {
+  --laser-admin-field-label-width: 9.5rem;
+  --material-photo-col: 15rem;
+  --material-photo-gap: 1.2rem;
+  position: relative;
+  display: block;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem 0.85rem calc(0.9rem + var(--material-photo-col) + var(--material-photo-gap));
+  min-height: 18rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+  overflow: visible;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact > .form-row,
+body.add-form.model-material fieldset.module.material-card-compact > .form-row {
+  display: block;
+  float: none;
+  clear: both;
+  width: auto;
+  margin: 0;
+  padding: 0.28rem 0;
+  border: 0;
+  overflow: visible;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact > .form-row.field-photo,
+body.add-form.model-material fieldset.module.material-card-compact > .form-row.field-photo {
+  position: absolute;
+  left: 0.9rem;
+  top: 0.75rem;
+  width: var(--material-photo-col);
+  margin: 0;
+  padding: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline,
+body.add-form.model-material fieldset.module.material-card-compact .form-row .form-multiline {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline > div,
+body.add-form.model-material fieldset.module.material-card-compact .form-row .form-multiline > div {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-material fieldset.module.material-card-compact .form-row .form-multiline .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline input,
+body.add-form.model-material fieldset.module.material-card-compact .form-row .form-multiline input {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0;
+  field-sizing: unset;
+}
+
+/* Д×Ш×Т: одна подсказка и общая подпись, поля Д / Ш / Т в колонке карточки */
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm {
+  max-width: 100%;
+  min-width: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem 0.45rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div {
+  min-width: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child {
+  flex: 1.7 1 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child),
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child) {
+  flex: 0.85 1 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child) .laser-field-help-col,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child) .laser-field-help-col {
+  display: none;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container > label,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container > label {
+  flex: 0 0 var(--laser-admin-field-label-width);
+  width: var(--laser-admin-field-label-width);
+  min-width: var(--laser-admin-field-label-width);
+  max-width: var(--laser-admin-field-label-width);
+  order: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container::after,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container::after {
+  content: "Д";
+  order: 1;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--body-quiet-color, #64748b);
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container > input,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:first-child .flex-container > input {
+  order: 2;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child) .flex-container > label,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div:not(:first-child) .flex-container > label {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding-right: 0.25rem;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .laser-field-with-help:not(.laser-field-with-help--checkbox),
+body.add-form.model-material fieldset.module.material-card-compact .laser-field-with-help:not(.laser-field-with-help--checkbox) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col,
+body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  width: 100%;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  display: block;
+  float: none;
+  flex: 0 0 var(--laser-admin-field-label-width);
+  width: var(--laser-admin-field-label-width);
+  min-width: var(--laser-admin-field-label-width);
+  max-width: var(--laser-admin-field-label-width);
+  padding: 0 0.4rem 0 0;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--body-quiet-color, #64748b);
+  white-space: nowrap;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label),
+body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > :not(label) {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  display: grid !important;
+  grid-template-columns: var(--laser-admin-field-label-width) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.6rem;
+  width: 100%;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.change-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row) > .related-widget-wrapper,
+body.add-form.model-material fieldset.module.material-card-compact .form-row.field-group .laser-field-main-col > .flex-container:not(.checkbox-row) > .related-widget-wrapper {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0 !important;
+  max-width: 100%;
+  width: 100%;
+}
+
+body.change-form.model-material .form-row.field-name input[type="text"],
+body.add-form.model-material .form-row.field-name input[type="text"],
+body.change-form.model-material .material-choice-select,
+body.add-form.model-material .material-choice-select,
+body.change-form.model-material #id_material_type,
+body.add-form.model-material #id_material_type,
+body.change-form.model-material #id_unit,
+body.add-form.model-material #id_unit,
+body.change-form.model-material #id_grade,
+body.add-form.model-material #id_grade,
+body.change-form.model-material #id_brand,
+body.add-form.model-material #id_brand,
+body.change-form.model-material #id_color,
+body.add-form.model-material #id_color,
+body.change-form.model-material #id_grit,
+body.add-form.model-material #id_grit,
+body.change-form.model-material #id_diameter_mm,
+body.add-form.model-material #id_diameter_mm,
+body.change-form.model-material #id_hole_count,
+body.add-form.model-material #id_hole_count {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0;
+  field-sizing: unset;
+}
+
+body.change-form.model-material .material-choice-with-add,
+body.add-form.model-material .material-choice-with-add {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.change-form.model-material .material-choice-with-add > select,
+body.add-form.model-material .material-choice-with-add > select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body.change-form.model-material .material-choice-add,
+body.add-form.model-material .material-choice-add,
+body.change-form.model-material .material-choice-edit,
+body.add-form.model-material .material-choice-edit {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-left-width: 0;
+  background: #f8fafc;
+  color: #1d4ed8;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.change-form.model-material .material-choice-actions,
+body.add-form.model-material .material-choice-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+body.change-form.model-material .material-choice-edit,
+body.add-form.model-material .material-choice-edit {
+  margin-left: 0.15rem;
+  border-left-width: 1px;
+  border-radius: 4px 0 0 4px;
+}
+
+body.change-form.model-material .material-choice-add,
+body.add-form.model-material .material-choice-add {
+  border-radius: 0 4px 4px 0;
+}
+
+body.change-form.model-material .material-choice-edit:disabled,
+body.add-form.model-material .material-choice-edit:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+body.change-form.model-material .material-choice-add:hover,
+body.add-form.model-material .material-choice-add:hover,
+body.change-form.model-material .material-choice-edit:hover:not(:disabled),
+body.add-form.model-material .material-choice-edit:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+body.change-form.model-material .material-choice-add img,
+body.add-form.model-material .material-choice-add img,
+body.change-form.model-material .material-choice-edit img,
+body.add-form.model-material .material-choice-edit img {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+body.change-form.model-material .material-choice-add-input,
+body.add-form.model-material .material-choice-add-input {
+  flex: 1 1 auto;
+  min-width: 6rem;
+  max-width: 12rem;
+  box-sizing: border-box;
+  height: var(--laser-admin-control-height, 20px);
+  min-height: var(--laser-admin-control-height, 20px);
+  margin: 0;
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper {
+  display: flex !important;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 0.2rem;
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0;
+  padding: 0;
+  float: none;
+  overflow: visible;
+  position: relative;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > select,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > select {
+  order: 0;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .select2-container,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .select2-container,
+body.change-form.model-material .form-row.field-group .select2-container--admin-autocomplete,
+body.add-form.model-material .form-row.field-group .select2-container--admin-autocomplete {
+  display: block;
+  order: 1;
+  flex: 1 1 auto;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+/* Иконки группы — узкая панель той же высоты, что поле, сразу за списком */
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  order: 2;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--laser-admin-control-height, 20px);
+  height: var(--laser-admin-control-height, 20px);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-left-width: 0;
+  background: #f8fafc;
+  opacity: 1;
+  line-height: 0;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.change-related,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.change-related {
+  margin-left: 0.15rem;
+  border-left-width: 1px;
+  border-radius: 4px 0 0 4px;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.add-related,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.add-related {
+  border-radius: 0 4px 4px 0;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.view-related,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.view-related,
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.delete-related,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link.delete-related {
+  display: none !important;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link:hover,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link img,
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link img {
+  width: 12px !important;
+  height: 12px !important;
+  margin: 0;
+  display: block;
+}
+
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[style*="display: none"],
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[style*="display: none"],
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[style*="visibility: hidden"],
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[style*="visibility: hidden"],
+body.change-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[hidden],
+body.add-form.model-material .form-row.field-group .related-widget-wrapper > .related-widget-wrapper-link[hidden] {
+  display: none !important;
+}
+
+body.change-form.model-material .form-row.field-sheet_geometry_preview .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-material .form-row.field-sheet_geometry_preview .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+body.change-form.model-material .material-sheet-area-preview,
+body.add-form.model-material .material-sheet-area-preview {
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--body-quiet-color, #64748b);
+  white-space: nowrap;
+}
+
+body.change-form.model-material .form-row.field-photo .laser-field-with-help,
+body.add-form.model-material .form-row.field-photo .laser-field-with-help {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+body.change-form.model-material .form-row.field-photo .laser-field-main-col,
+body.add-form.model-material .form-row.field-photo .laser-field-main-col {
+  width: 100%;
+}
+
+body.change-form.model-material .form-row.field-photo .laser-field-main-col > .flex-container:not(.checkbox-row),
+body.add-form.model-material .form-row.field-photo .laser-field-main-col > .flex-container:not(.checkbox-row) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+body.change-form.model-material .form-row.field-photo .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+body.add-form.model-material .form-row.field-photo .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+body.change-form.model-material .material-card-photo,
+body.add-form.model-material .material-card-photo {
+  display: block;
+  box-sizing: border-box;
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  object-position: center;
+  padding: 0.4rem;
+  border: 1px solid var(--hairline-color, #e2e8f0);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+body.change-form.model-material a.material-card-photo-link,
+body.add-form.model-material a.material-card-photo-link {
+  display: block;
+  width: 220px;
+  line-height: 0;
+  text-decoration: none;
+}
+
+body.change-form.model-material a.material-card-photo-link:hover .material-card-photo,
+body.add-form.model-material a.material-card-photo-link:hover .material-card-photo {
+  border-color: #93c5fd;
+}
+
+body.change-form.model-material .material-card-photo--empty,
+body.add-form.model-material .material-card-photo--empty {
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+body.change-form.model-material .form-row.field-photo .file-upload,
+body.add-form.model-material .form-row.field-photo .file-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0;
+  width: 100%;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+body.change-form.model-material .form-row.field-photo .file-upload a:not(.material-card-photo-link),
+body.add-form.model-material .form-row.field-photo .file-upload a:not(.material-card-photo-link) {
+  display: none;
+}
+
+body.change-form.model-material .form-row.field-photo .file-upload br,
+body.add-form.model-material .form-row.field-photo .file-upload br {
+  display: none;
+}
+
+body.change-form.model-material .form-row.field-photo .file-upload-status,
+body.add-form.model-material .form-row.field-photo .file-upload-status {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.change-form.model-material .form-row.field-grade:not(.is-grade-visible),
+body.add-form.model-material .form-row.field-grade:not(.is-grade-visible),
+body.change-form.model-material .form-row.field-color:not(.is-color-visible),
+body.add-form.model-material .form-row.field-color:not(.is-color-visible),
+body.change-form.model-material .form-row.field-grade[hidden],
+body.add-form.model-material .form-row.field-grade[hidden],
+body.change-form.model-material .form-row.field-material_type[hidden],
+body.add-form.model-material .form-row.field-material_type[hidden],
+body.change-form.model-material .form-row.field-brand[hidden],
+body.add-form.model-material .form-row.field-brand[hidden],
+body.change-form.model-material .form-row.field-color[hidden],
+body.add-form.model-material .form-row.field-color[hidden],
+body.change-form.model-material .form-row.field-grit[hidden],
+body.add-form.model-material .form-row.field-grit[hidden],
+body.change-form.model-material .form-row.field-diameter_mm[hidden],
+body.add-form.model-material .form-row.field-diameter_mm[hidden],
+body.change-form.model-material .form-row.field-hole_count[hidden],
+body.add-form.model-material .form-row.field-hole_count[hidden],
+body.change-form.model-material .form-row.is-type-hidden,
+body.add-form.model-material .form-row.is-type-hidden,
+body.change-form.model-material .form-row.is-brand-hidden,
+body.add-form.model-material .form-row.is-brand-hidden,
+body.change-form.model-material .form-row.is-color-hidden,
+body.add-form.model-material .form-row.is-color-hidden,
+body.change-form.model-material .form-row.is-grade-hidden,
+body.add-form.model-material .form-row.is-grade-hidden,
+body.change-form.model-material .form-row.is-grit-hidden,
+body.add-form.model-material .form-row.is-grit-hidden,
+body.change-form.model-material .form-row.is-diameter-hidden,
+body.add-form.model-material .form-row.is-diameter-hidden,
+body.change-form.model-material .form-row.is-holes-hidden,
+body.add-form.model-material .form-row.is-holes-hidden,
+body.change-form.model-material .form-multiline > div:has(#id_grade):not(.is-grade-visible),
+body.add-form.model-material .form-multiline > div:has(#id_grade):not(.is-grade-visible) {
+  display: none !important;
+}
+
+body.change-form.model-material .form-row.is-sheet-hidden,
+body.add-form.model-material .form-row.is-sheet-hidden,
+body.change-form.model-material .form-row.is-sheet-hidden[hidden],
+body.add-form.model-material .form-row.is-sheet-hidden[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  body.change-form.model-material fieldset.module.material-card-compact,
+  body.add-form.model-material fieldset.module.material-card-compact {
+    padding: 0.65rem 0.75rem 0.65rem 0.75rem;
+    min-height: 0;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline,
+  body.add-form.model-material fieldset.module.material-card-compact .form-row .form-multiline {
+    flex-wrap: wrap;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact > .form-row.field-photo,
+  body.add-form.model-material fieldset.module.material-card-compact > .form-row.field-photo {
+    position: static;
+    width: auto;
+    margin: 0 0 0.5rem;
+  }
+
+  body.change-form.model-material #content-main,
+  body.add-form.model-material #content-main {
+    max-width: none;
+  }
+}

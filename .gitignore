@@ -13,6 +13,7 @@ db.sqlite3
 *.sqlite3
 debug.log
 *.log
+logs/
 staticfiles/
 media/
 

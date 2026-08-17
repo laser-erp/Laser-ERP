@@ -250,14 +250,17 @@ body.login #content-main input[type="password"] {
   line-height: var(--laser-admin-control-line-height);
 }
 
-/* Скрытые поля не трогаем */
+/* Скрытые поля не трогаем. File input не растягивать — иначе снова видна англ. кнопка браузера. */
 body.change-form #content-main input[type="checkbox"],
 body.change-form #content-main input[type="radio"],
-body.change-form #content-main input[type="file"],
 body.add-form #content-main input[type="checkbox"],
-body.add-form #content-main input[type="radio"],
-body.add-form #content-main input[type="file"] {
+body.add-form #content-main input[type="radio"] {
   field-sizing: fixed;
   width: auto;
   max-width: none;
+}
+
+body.change-form #content-main input[type="file"],
+body.add-form #content-main input[type="file"] {
+  field-sizing: fixed;
 }

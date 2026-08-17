@@ -40,11 +40,10 @@
       var cm2 = round2(mm2 / 100);
       var m2 = round6(mm2 / 1000000);
       preview.textContent =
-        "Площадь листа: " +
         String(m2).replace(".", ",") +
-        " м²  ·  " +
+        " м² · " +
         String(cm2).replace(".", ",") +
-        " см²  ·  " +
+        " см² · " +
         String(mm2) +
         " мм²";
       if (areaEl) areaEl.value = String(m2);

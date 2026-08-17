@@ -195,6 +195,13 @@
           <button type="button" class="ms-btn" id="btn-add-line" style="margin-left:auto">+ Строка</button>
         </div>
 
+        <p class="ms-pack-hint">
+          Рулон стрейча: материал с ед. «м», в «В 1 упак.» — 300, в «Сумма» — цена рулона.
+          «Упак.» можно не заполнять (это 1). Кол-во в метрах и цена за метр посчитаются сами.
+        </p>
+
+        {% include "procurement/includes/fanera_nest_receipt_calc.html" %}
+
         <div class="ms-table-wrap">
           <table class="ms-lines" id="lines-table">
             <thead>
@@ -204,9 +211,11 @@
                 <th>Номенклатура</th>
                 <th>Строка заказа</th>
                 <th style="width:56px">Ед.</th>
+                <th style="width:72px">Упак.</th>
+                <th style="width:88px">В 1 упак.</th>
                 <th style="width:100px">Кол-во</th>
-                <th style="width:100px">Цена</th>
-                <th style="width:110px" class="ms-num">Сумма</th>
+                <th style="width:110px">Сумма</th>
+                <th style="width:100px">Цена/ед.</th>
                 <th class="ms-row-actions"></th>
               </tr>
             </thead>
@@ -362,8 +371,9 @@
       refreshUnitCell(row);
     }
 
-    function fmtMoney(n) {
-      return n.toFixed(2).replace('.', ',');
+    function fmtMoney(n, digits) {
+      var d = digits || 2;
+      return n.toFixed(d).replace('.', ',');
     }
 
     function parseNum(s) {
@@ -372,12 +382,51 @@
       return isNaN(v) ? 0 : v;
     }
 
+    function parseOpt(s) {
+      if (s == null || String(s).trim() === '') return null;
+      const v = parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
+      return isFinite(v) ? v : null;
+    }
+
+    function recalcRow(row, source) {
+      const packEl = row.querySelector('.line-pack');
+      const inPackEl = row.querySelector('.line-inpack');
+      const qtyEl = row.querySelector('.line-qty');
+      const priceEl = row.querySelector('.line-price');
+      const amountEl = row.querySelector('.line-amount');
+      if (!qtyEl || !priceEl || !amountEl) return;
+      let pack = parseOpt(packEl && packEl.value);
+      const inPack = parseOpt(inPackEl && inPackEl.value);
+      if (inPack !== null && source !== 'qty') {
+        if (pack === null) pack = 1;
+        qtyEl.value = String(Math.round(pack * inPack * 10000) / 10000).replace('.', ',');
+      }
+      const qty = parseOpt(qtyEl.value);
+      const price = parseOpt(priceEl.value);
+      const amount = parseOpt(amountEl.value);
+      if (source === 'amount' || source === 'pack' || source === 'inpack') {
+        if (qty && amount !== null) {
+          priceEl.value = fmtMoney(amount / qty, 4);
+        }
+      } else if (source === 'price' && qty !== null && price !== null) {
+        amountEl.value = fmtMoney(qty * price, 2);
+      } else if (qty !== null && amount !== null && (price === null || price === 0)) {
+        priceEl.value = fmtMoney(amount / qty, 4);
+      } else if (qty !== null && price !== null) {
+        amountEl.value = fmtMoney(qty * price, 2);
+      }
+      const cell = row.querySelector('.line-sum');
+      const shownAmount = parseOpt(amountEl.value);
+      if (cell) cell.textContent = shownAmount !== null ? fmtMoney(shownAmount, 2) : '0,00';
+    }
+
     function recalc() {
       let sum = 0;
       tbody.querySelectorAll('tr').forEach(function(row) {
+        const amount = parseOpt(row.querySelector('.line-amount') && row.querySelector('.line-amount').value);
         const q = parseNum(row.querySelector('.line-qty') && row.querySelector('.line-qty').value);
         const p = parseNum(row.querySelector('.line-price') && row.querySelector('.line-price').value);
-        const lineSum = q * p;
+        const lineSum = amount !== null ? amount : q * p;
         sum += lineSum;
         const cell = row.querySelector('.line-sum');
         if (cell) cell.textContent = fmtMoney(lineSum);
@@ -390,7 +439,7 @@
       tbody.querySelectorAll('tr').forEach(refreshPoSelect);
     }
 
-    function addRow() {
+    function addRow(prefill) {
       const ix = tbody.querySelectorAll('tr').length + 1;
       const tr = document.createElement('tr');
       tr.innerHTML =
@@ -403,25 +452,59 @@
         productOptionsHtml() + '</select></td>' +
         '<td><select class="line-po" name="line_po_line">' + poOptionsForRow(tr) + '</select></td>' +
         '<td class="line-unit ms-num">—</td>' +
+        '<td><input type="text" class="line-pack" name="line_pack" inputmode="decimal" placeholder="1"></td>' +
+        '<td><input type="text" class="line-inpack" name="line_inpack" inputmode="decimal" placeholder="300"></td>' +
         '<td><input type="text" class="line-qty" name="line_qty" inputmode="decimal" placeholder="0"></td>' +
+        '<td><input type="text" class="line-amount" name="line_amount" inputmode="decimal" placeholder="сумма"></td>' +
         '<td><input type="text" class="line-price" name="line_price" inputmode="decimal" placeholder="0"></td>' +
-        '<td class="ms-num line-sum">0,00</td>' +
         '<td class="ms-row-actions"><button type="button" class="ms-icon-btn line-del" title="Удалить">×</button></td>';
       tbody.appendChild(tr);
       const typeSel = tr.querySelector('.line-line-type');
       typeSel.addEventListener('change', function() { toggleNomenclature(tr); });
       tr.querySelector('.line-mat').addEventListener('change', function() { refreshPoSelect(tr); refreshUnitCell(tr); });
       tr.querySelector('.line-prod').addEventListener('change', function() { refreshPoSelect(tr); refreshUnitCell(tr); });
-      tr.querySelector('.line-qty').addEventListener('input', recalc);
-      tr.querySelector('.line-price').addEventListener('input', recalc);
+      tr.querySelector('.line-pack').addEventListener('input', function() { recalcRow(tr, 'pack'); recalc(); });
+      tr.querySelector('.line-inpack').addEventListener('input', function() { recalcRow(tr, 'inpack'); recalc(); });
+      tr.querySelector('.line-qty').addEventListener('input', function() { recalcRow(tr, 'qty'); recalc(); });
+      tr.querySelector('.line-amount').addEventListener('input', function() { recalcRow(tr, 'amount'); recalc(); });
+      tr.querySelector('.line-price').addEventListener('input', function() { recalcRow(tr, 'price'); recalc(); });
       tr.querySelector('.line-del').addEventListener('click', function() {
         tr.remove();
         renumber();
         recalc();
       });
       toggleNomenclature(tr);
+      if (prefill && prefill.material_id) {
+        tr.querySelector('.line-mat').value = String(prefill.material_id);
+        refreshPoSelect(tr);
+        refreshUnitCell(tr);
+        if (prefill.quantity != null) {
+          tr.querySelector('.line-qty').value = fmtMoney(Number(prefill.quantity), 4);
+        }
+        if (prefill.amount != null) {
+          tr.querySelector('.line-amount').value = fmtMoney(Number(prefill.amount), 2);
+        }
+        if (prefill.unit_price != null) {
+          tr.querySelector('.line-price').value = fmtMoney(Number(prefill.unit_price), 4);
+        }
+        recalcRow(tr, 'amount');
+      }
       recalc();
+      return tr;
     }
+
+    window.faneraNestReceiptFillLines = function(lines, meta) {
+      if (!lines || !lines.length) return;
+      lines.forEach(function(line) {
+        if (!line.material_id) return;
+        addRow(line);
+      });
+      if (meta && meta.receipt_total != null) {
+        var totalEl = document.querySelector('input[name="total_amount"]');
+        if (totalEl) totalEl.value = fmtMoney(Number(meta.receipt_total), 2);
+        recalc();
+      }
+    };
 
     function renumber() {
       tbody.querySelectorAll('tr').forEach(function(row, i) {
@@ -460,5 +543,6 @@
     addRow();
   })();
   </script>
+  <script src="{% static 'procurement/fanera_nest_receipt_calc.js' %}?v=3" defer></script>
 </body>
 </html>
