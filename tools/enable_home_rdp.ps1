@@ -3,7 +3,8 @@
 $ErrorActionPreference = "Stop"
 
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 0
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "SecurityLayer" -Value 0
 
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
 
@@ -16,4 +17,4 @@ Set-NetFirewallRule -DisplayName "Block RDP inbound (use SSH tunnel)" -Enabled T
 Set-Service TermService -StartupType Automatic
 Start-Service TermService
 
-Write-Host "RDP enabled. Direct inbound 3389 blocked — connect via SSH tunnel only."
+Write-Host "RDP enabled without NLA. Direct inbound 3389 blocked - connect via SSH tunnel only."

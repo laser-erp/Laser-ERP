@@ -106,7 +106,16 @@ if ($sshProc.HasExited) {
 }
 
 Write-Host "Открываю удалённый рабочий стол. Логин: $HomeUser" -ForegroundColor Green
-Start-Process -FilePath "mstsc" -ArgumentList "/v:127.0.0.1:$LocalRdpPort"
+$rdpFile = Join-Path $env:TEMP "home-pc-tunnel.rdp"
+$rdpBody = @"
+full address:s:127.0.0.1:$LocalRdpPort
+prompt for credentials:i:1
+authentication level:i:0
+enablecredsspsupport:i:0
+negotiate security layer:i:1
+"@
+Set-Content -Path $rdpFile -Value $rdpBody -Encoding ASCII
+Start-Process -FilePath "mstsc" -ArgumentList $rdpFile
 
 Write-Host ""
 Write-Host "Не закрывайте это окно PowerShell, пока работаете удаленно." -ForegroundColor Yellow
