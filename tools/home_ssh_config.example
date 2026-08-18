@@ -1,0 +1,23 @@
+# Put this on the laptop: ~/.ssh/config
+# Copy the key first (asks for VPS password once):
+#   scp root@aptown11.fvds.ru:/root/home-pc-ssh/id_ed25519_home ~/.ssh/id_ed25519_home
+# Windows laptop: no chmod needed. Linux/mac: chmod 600 ~/.ssh/id_ed25519_home
+#
+# Then: ssh home-pc
+# Cursor: Remote-SSH -> home-pc
+
+Host laser-vps
+  HostName aptown11.fvds.ru
+  User root
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519_home
+  IdentitiesOnly yes
+
+Host home-pc
+  HostName 127.0.0.1
+  User Жека
+  Port 22022
+  ProxyJump laser-vps
+  IdentityFile ~/.ssh/id_ed25519_home
+  IdentitiesOnly yes
+
