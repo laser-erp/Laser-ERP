@@ -3,18 +3,21 @@
 
 {% block extrahead %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'procurement/goods_receipt_admin.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'procurement/goods_receipt_admin.css' %}?v=4">
 {% if goods_receipt_unit_map %}{{ goods_receipt_unit_map|json_script:"goods-receipt-unit-map" }}{% endif %}
-<script src="{% static 'procurement/goods_receipt_line_inline.js' %}?v=5" defer></script>
-<script src="{% static 'procurement/fanera_nest_receipt_admin.js' %}?v=3" defer></script>
-<script src="{% static 'procurement/fanera_nest_receipt_calc.js' %}?v=3" defer></script>
+<script src="{% static 'procurement/goods_receipt_line_inline.js' %}?v=7" defer></script>
+<script src="{% static 'procurement/fanera_nest_receipt_admin.js' %}?v=4" defer></script>
+<script src="{% static 'procurement/fanera_nest_receipt_calc.js' %}?v=4" defer></script>
+{% endblock %}
+
+{% block after_field_sets %}
+{{ block.super }}
+<p class="help goods-receipt-pack-hint">
+  В строке достаточно <strong>материала, количества и суммы</strong> с накладной — цена за единицу посчитается сама.
+  Рулон стрейча: кнопка «Упаковки, товар, заказ» → «В 1 упак.» 300 и сумма за рулон.
+</p>
 {% endblock %}
 
 {% block after_related_objects %}
 {% include "procurement/includes/fanera_nest_receipt_calc.html" %}
-<p class="help goods-receipt-pack-hint">
-  Быстрый ввод: выберите материал → в «В 1 упак.» содержимое (для стрейча <strong>300</strong> м) →
-  в «Сумма» цену рулона по накладной. «Упак.» можно не заполнять (считается 1).
-  Количество в ед. учёта и цена за метр/штуку заполнятся сами. Листы фанеры: «В 1 упак.» = 1, «Упак.» = число листов, либо сразу «Кол-во».
-</p>
 {% endblock %}

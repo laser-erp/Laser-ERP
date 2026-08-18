@@ -248,7 +248,8 @@ fieldset.module > h2,
   border-radius: 3px;
 }
 
-.laser-admin-subnav-bar a {
+.laser-admin-subnav-bar > a,
+.laser-admin-subnav-bar .laser-subnav-drop-trigger {
   flex: 0 0 auto;
   white-space: nowrap;
   color: #475569 !important;
@@ -261,17 +262,51 @@ fieldset.module > h2,
   border-radius: 4px 4px 0 0;
 }
 
-.laser-admin-subnav-bar a:hover {
+.laser-admin-subnav-bar > a:hover,
+.laser-admin-subnav-bar .laser-subnav-drop-trigger:hover {
   color: #2563eb !important;
   background: rgba(37, 99, 235, 0.06);
 }
 
-.laser-admin-subnav-bar a.laser-subnav-active {
+.laser-admin-subnav-bar > a.laser-subnav-active,
+.laser-admin-subnav-bar .laser-subnav-drop-trigger.laser-subnav-active {
   color: #2563eb !important;
   font-weight: 600;
   border-bottom-color: #2563eb;
   /* как при :hover — явный «активный» подраздел */
   background: rgba(37, 99, 235, 0.08);
+}
+
+.laser-admin-subnav-bar--warehouses {
+  overflow: visible;
+  position: relative;
+  z-index: 120;
+  gap: 8px 16px;
+}
+
+.laser-subnav-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+
+.laser-subnav-drop-trigger::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 6px;
+  vertical-align: middle;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  transform: translateY(2px);
+}
+
+.laser-subnav-dropdown > .laser-topnav-flyout {
+  left: 0;
+  transform: none;
 }
 
 /* Подменю «Продажи» — белая полоса, как у склада */
@@ -343,4 +378,800 @@ p.file-upload .file-input-wrap:focus-within .file-upload-label,
   outline: 2px solid #2563eb;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+:root {
+  --laser-bp-phone: 640px;
+  --laser-bp-tablet: 1024px;
+}
+
+.laser-changelist-filter-toggle {
+  display: none;
+}
+
+.laser-filter-backdrop,
+.laser-filter-modal-bar {
+  display: none;
+}
+
+/* Материалы: карточки на любом экране (фото, имя, параметры группы, остаток) */
+body.change-list.model-material #changelist .results {
+  overflow: visible;
+}
+
+body.change-list.model-material #result_list {
+  min-width: 0 !important;
+}
+
+body.change-list.model-material #result_list,
+body.change-list.model-material #result_list tbody {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+body.change-list.model-material #result_list thead,
+body.change-list.model-material #result_list colgroup {
+  display: none;
+}
+
+body.change-list.model-material #result_list tbody tr {
+  display: grid;
+  grid-template-columns: 22px 72px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "check photo name stock"
+    "check photo group unit"
+    "check photo params params";
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+body.change-list.model-material #result_list tbody tr:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+body.change-list.model-material #result_list th,
+body.change-list.model-material #result_list td {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  white-space: normal;
+  overflow: visible;
+}
+
+body.change-list.model-material #result_list .action-checkbox {
+  grid-area: check;
+  align-self: start;
+  padding-top: 2px;
+}
+
+body.change-list.model-material #result_list .action-checkbox input {
+  width: 18px;
+  height: 18px;
+}
+
+body.change-list.model-material #result_list .field-photo_thumb {
+  grid-area: photo;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+body.change-list.model-material #result_list .field-photo_thumb img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #f8fafc;
+}
+
+body.change-list.model-material #result_list .field-name {
+  grid-area: name;
+  min-width: 0;
+  max-width: none;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+body.change-list.model-material #result_list .field-name a {
+  white-space: normal;
+  color: #0f172a;
+}
+
+body.change-list.model-material #result_list .field-group,
+body.change-list.model-material #result_list .field-unit {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+body.change-list.model-material #result_list .field-group {
+  grid-area: group;
+  min-width: 0;
+}
+
+body.change-list.model-material #result_list .field-unit {
+  grid-area: unit;
+  justify-self: end;
+}
+
+body.change-list.model-material #result_list .field-unit::before {
+  content: "ед. ";
+}
+
+body.change-list.model-material #result_list .field-current_stock::before {
+  content: "ост. ";
+}
+
+body.change-list.model-material #result_list .field-current_stock {
+  grid-area: stock;
+  align-self: start;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+body.change-list.model-material #result_list .field-group_params {
+  grid-area: params;
+  min-width: 0;
+}
+
+body.change-list.model-material #result_list .laser-material-card-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.change-list.model-material #result_list .laser-material-card-params li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+body.change-list.model-material #result_list .laser-material-card-params .k {
+  color: #64748b;
+  font-weight: 500;
+}
+
+body.change-list.model-material #result_list .laser-material-card-params .v {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+@media (min-width: 900px) {
+  body.change-list.model-material #result_list tbody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  body.change-list.model-material #result_list tbody tr {
+    margin: 0;
+    height: 100%;
+  }
+}
+
+/* Телефон: иконки разделов листаются вбок, липкое «Сохранить», фильтры по кнопке */
+@media (max-width: 640px) {
+  #header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand user"
+      "nav nav"
+      "subnav subnav";
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 0;
+    padding: 8px 0 0 !important;
+    flex-direction: unset !important;
+  }
+
+  #branding {
+    grid-area: brand;
+    min-width: 0;
+    padding-left: 12px;
+  }
+
+  #site-name {
+    margin: 0 !important;
+    font-size: 1rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #site-name a {
+    font-size: inherit;
+  }
+
+  #user-tools {
+    grid-area: user;
+    margin: 0 !important;
+    padding-right: 12px;
+    font-size: 0;
+    line-height: 1 !important;
+    text-align: right !important;
+    max-width: 42vw;
+  }
+
+  #user-tools a,
+  #user-tools strong {
+    display: none;
+  }
+
+  #user-tools #logout-form,
+  #user-tools .theme-toggle {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  #user-tools #logout-form button,
+  #user-tools .theme-toggle {
+    font-size: 12px;
+    line-height: 1.3;
+    min-height: 36px;
+  }
+
+  .laser-admin-nav-primary.laser-admin-nav-bar {
+    grid-area: nav;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-end;
+    gap: 4px 12px;
+    width: 100%;
+    margin: 0;
+    padding: 8px 12px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+
+  .laser-admin-nav-primary.laser-admin-nav-bar::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .laser-admin-nav-primary.laser-admin-nav-bar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 2px;
+  }
+
+  .laser-admin-nav-primary.laser-admin-nav-bar a.laser-topnav-item {
+    flex: 0 0 auto;
+  }
+
+  .laser-topnav-dropdown {
+    flex: 0 0 auto;
+  }
+
+  .laser-admin-subnav-bar {
+    grid-area: subnav;
+    width: 100%;
+    margin: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  #nav-sidebar {
+    display: none !important;
+  }
+
+  .change-list .filtered .results,
+  .change-list .filtered .paginator,
+  .filtered #toolbar,
+  .filtered .actions {
+    margin-right: 0 !important;
+  }
+
+  #changelist .changelist-form-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #changelist .changelist-form-container:has(#changelist-filter) > div {
+    max-width: none !important;
+    width: 100%;
+  }
+
+  .laser-changelist-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    order: 0;
+    min-height: 40px;
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .laser-changelist-filter-toggle.is-active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+
+  .laser-filter-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2090;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(15, 23, 42, 0.45);
+    cursor: pointer;
+  }
+
+  body.laser-filters-open {
+    overflow: hidden;
+  }
+
+  body.laser-filters-open .laser-filter-backdrop {
+    display: block;
+  }
+
+  #changelist-filter {
+    display: none;
+    flex: none;
+    order: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
+
+  body.laser-filters-open #changelist-filter {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 2100;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.2);
+  }
+
+  .laser-filter-modal-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 0 8px;
+    padding: 0 0 10px;
+    background: #fff;
+  }
+
+  .laser-filter-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .laser-filter-modal-close {
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #changelist-filter > h2 {
+    display: none;
+  }
+
+  body.change-list.model-material #changelist-filter details:first-of-type ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0 0 12px;
+    border: 0;
+  }
+
+  body.change-list.model-material #changelist-filter details:first-of-type li {
+    margin: 0;
+    padding: 0;
+  }
+
+  body.change-list.model-material #changelist-filter details:first-of-type li.selected {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.change-list.model-material #changelist-filter details:first-of-type a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #fff;
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  body.change-list.model-material #changelist-filter details:first-of-type li.selected a {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+
+  body:not(.popup) .submit-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 80;
+    margin: 16px -15px 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.12);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  body:not(.popup) .submit-row input,
+  body:not(.popup) .submit-row a.button,
+  body:not(.popup) .submit-row a.deletelink {
+    min-height: 40px;
+    flex: 1 1 auto;
+    margin: 0;
+  }
+
+  div.breadcrumbs {
+    padding: 8px 12px !important;
+  }
+
+  #content {
+    padding: 12px 12px 24px !important;
+  }
+
+  body.change-list #content-main {
+    min-width: 0;
+  }
+
+  body.change-list .object-tools {
+    float: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
+  body.change-list .object-tools li {
+    float: none;
+    height: auto;
+  }
+
+  body.change-list .object-tools a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+
+  body.change-list #toolbar {
+    padding: 8px 0;
+  }
+
+  body.change-list #changelist-search > div {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    max-width: none;
+    gap: 8px;
+  }
+
+  body.change-list #toolbar form #searchbar,
+  body.change-list #changelist-search input[type="text"],
+  body.change-list #changelist-search input[type="search"] {
+    width: 100%;
+    max-width: none;
+    min-height: 40px;
+    flex: 1 1 auto;
+    margin: 0;
+  }
+
+  body.change-list #changelist .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  body.change-list #changelist .actions select {
+    min-height: 40px;
+    max-width: 100%;
+  }
+
+  body.change-list .toplinks,
+  body.change-list .xfull {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  body.change-list #changelist .results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body.change-list #result_list:not(.laser-result-cards) {
+    min-width: 36rem;
+  }
+
+  body.change-list #result_list th,
+  body.change-list #result_list td {
+    white-space: nowrap;
+  }
+
+  body.change-list #result_list td.field-name,
+  body.change-list #result_list th.column-name {
+    white-space: normal;
+    min-width: 9rem;
+    max-width: 16rem;
+  }
+
+  body.change-list .paginator {
+    overflow-x: auto;
+  }
+
+  body.change-list:not(.model-material) #changelist .results {
+    overflow: visible;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards,
+  body.change-list:not(.model-material) #result_list.laser-result-cards tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards thead,
+  body.change-list:not(.model-material) #result_list.laser-result-cards colgroup {
+    display: none;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px 12px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards th,
+  body.change-list:not(.model-material) #result_list.laser-result-cards td {
+    border: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    white-space: normal;
+    overflow: visible;
+    max-width: none;
+    min-width: 0;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards .action-checkbox {
+    flex: 0 0 auto;
+    order: 1;
+    padding-top: 2px !important;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards .laser-card-title {
+    flex: 1 1 calc(100% - 36px);
+    order: 2;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards td,
+  body.change-list:not(.model-material) #result_list.laser-result-cards th:not(.laser-card-title) {
+    flex: 1 1 100%;
+    order: 3;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #334155;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0 0 2px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  body.change-list:not(.model-material) #result_list.laser-result-cards .laser-card-empty {
+    display: none !important;
+  }
+
+  body.change-form #content,
+  body.add-form #content,
+  body.change-form #content-main,
+  body.add-form #content-main {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body.change-form .aligned .form-row,
+  body.add-form .aligned .form-row {
+    min-width: 0;
+  }
+
+  body.change-form .related-widget-wrapper,
+  body.add-form .related-widget-wrapper {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body.change-form .select2-container,
+  body.add-form .select2-container {
+    max-width: 100% !important;
+  }
+
+  body.change-form .tabular .laser-tabular-inline-wrapper,
+  body.add-form .tabular .laser-tabular-inline-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  body.change-form .tabular .laser-tabular-inline-wrapper:has(table.laser-inline-cards),
+  body.add-form .tabular .laser-tabular-inline-wrapper:has(table.laser-inline-cards) {
+    overflow: visible;
+  }
+
+  .tabular table.laser-inline-cards,
+  .tabular table.laser-inline-cards tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 0;
+  }
+
+  .tabular table.laser-inline-cards thead {
+    display: none;
+  }
+
+  .tabular table.laser-inline-cards tbody tr.form-row:not(.empty-form) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .tabular table.laser-inline-cards tbody tr.add-row {
+    display: block;
+    border: 0;
+    background: transparent;
+  }
+
+  .tabular table.laser-inline-cards td {
+    flex: 1 1 100%;
+    border: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    white-space: normal;
+    min-width: 0;
+  }
+
+  .tabular table.laser-inline-cards td.original {
+    display: none;
+  }
+
+  .tabular table.laser-inline-cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0 0 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .tabular table.laser-inline-cards .field-pack_count,
+  .tabular table.laser-inline-cards .field-qty_in_pack,
+  .tabular table.laser-inline-cards .field-quantity,
+  .tabular table.laser-inline-cards .field-unit_price,
+  .tabular table.laser-inline-cards .field-amount,
+  .tabular table.laser-inline-cards .field-unit_display {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .tabular table.laser-inline-cards input,
+  .tabular table.laser-inline-cards select,
+  .tabular table.laser-inline-cards textarea,
+  .tabular table.laser-inline-cards .related-widget-wrapper,
+  .tabular table.laser-inline-cards .select2-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .product-changelist-wrap {
+    flex-direction: column;
+  }
+
+  .product-changelist-sidebar {
+    width: 100% !important;
+    max-height: 11rem;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
 }

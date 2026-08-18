@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import json
 import re
 from urllib.parse import urlencode
@@ -17,7 +17,7 @@ from django.http import HttpResponseNotAllowed, HttpResponseRedirect, JsonRespon
 from django.shortcuts import get_object_or_404, render
 from django.urls import NoReverseMatch, path, reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.core.files.base import ContentFile
 
@@ -512,6 +512,102 @@ def _material_group_meta_payload(group=None):
     return payload
 
 
+def _card_param_text(value) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, Decimal):
+        text = format(value, "f")
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text or "0"
+    text = str(value).strip()
+    return text if text else "—"
+
+
+def _card_sheet_size_text(material) -> str:
+    parts = []
+    for value in (material.sheet_length_mm, material.sheet_width_mm, material.thickness_mm):
+        if value is None:
+            continue
+        parts.append(_card_param_text(value))
+    if not parts:
+        return "—"
+    return "×".join(parts) + " мм"
+
+
+def material_card_group_params(material) -> list[tuple[str, str]]:
+    """Параметры карточки списка: те же поля, что у группы на форме материала."""
+    group = getattr(material, "group", None)
+    type_name = str(getattr(material, "material_type", "") or "").strip()
+    type_n = type_name.casefold().replace("ё", "е")
+    is_stain = "морилк" in type_n
+    is_belt = "лент" in type_n
+    items: list[tuple[str, str]] = []
+    if group is None:
+        if type_name:
+            items.append(("тип", type_name))
+        return items
+    items.append(("тип", _card_param_text(type_name)))
+    if group.has_brand:
+        items.append(("бренд", _card_param_text(material.brand)))
+    if group.has_color and is_stain:
+        items.append(("цвет", _card_param_text(material.color)))
+    if group.has_grit:
+        items.append(("зерно", _card_param_text(material.grit)))
+    if group.has_diameter and not is_belt:
+        diameter = _card_param_text(material.diameter_mm)
+        items.append(("Ø", "—" if diameter == "—" else f"{diameter} мм"))
+    if group.has_hole_count and not is_belt:
+        items.append(("отв.", _card_param_text(material.hole_count)))
+    if group.has_grade:
+        items.append(("сорт", _card_param_text(material.grade)))
+    if group.has_sheet_size:
+        items.append(("лист", _card_sheet_size_text(material)))
+        area = getattr(material, "area_m2", None)
+        items.append(
+            (
+                "пл.",
+                "—" if area is None else f"{_card_param_text(area.quantize(Decimal('0.0001')))} м²",
+            )
+        )
+    return items
+
+
+def _product_sheet_size_text(product) -> str:
+    parts = []
+    for value in (
+        getattr(product, "sheet_length_mm", None),
+        getattr(product, "sheet_width_mm", None),
+        getattr(product, "sheet_thickness_mm", None),
+    ):
+        if value is None:
+            continue
+        parts.append(_card_param_text(value))
+    if not parts:
+        return "—"
+    return "×".join(parts) + " мм"
+
+
+def product_card_params(product) -> list[tuple[str, str]]:
+    """Чипы карточки готовой продукции: артикул, лист, площадь, цена."""
+    items: list[tuple[str, str]] = []
+    article = str(getattr(product, "article", "") or "").strip()
+    if article:
+        items.append(("арт.", article))
+    size = _product_sheet_size_text(product)
+    if size != "—":
+        items.append(("лист", size))
+    area = getattr(product, "area_m2_manual", None)
+    if area is not None:
+        items.append(("пл.", f"{_card_param_text(area.quantize(Decimal('0.01')))} м²"))
+    price = getattr(product, "planned_price", None)
+    if price is None:
+        price = getattr(product, "purchase_price", None)
+    if price is not None:
+        items.append(("цена", f"{_card_param_text(price)} ₽"))
+    return items
+
+
 _GROUP_CHOICE_MODELS = {
     "type": (MaterialGroupType, None, "material_type"),
     "brand": (MaterialGroupBrand, "has_brand", "brand"),
@@ -565,76 +661,106 @@ def _rename_material_group_choice(group, kind, old_name, new_name):
     return canonical
 
 
+def material_group_flag_chips(group) -> list[str]:
+    """Подписи включённых полей группы — как чипы на карточке списка."""
+    if group is None:
+        return []
+    chips = []
+    for attr, label in (
+        ("has_grade", "сорт"),
+        ("has_sheet_size", "лист"),
+        ("has_brand", "бренд"),
+        ("has_color", "цвет"),
+        ("has_grit", "зерно"),
+        ("has_diameter", "Ø"),
+        ("has_hole_count", "отв."),
+    ):
+        if getattr(group, attr, False):
+            chips.append(label)
+    return chips
+
+
+class MaterialGroupAdminForm(forms.ModelForm):
+    class Meta:
+        model = MaterialGroup
+        fields = (
+            "name",
+            "has_grade",
+            "has_sheet_size",
+            "has_brand",
+            "has_color",
+            "has_grit",
+            "has_diameter",
+            "has_hole_count",
+            "description",
+        )
+        labels = {
+            "has_grade": "Сорт",
+            "has_sheet_size": "Размеры листа",
+            "has_brand": "Бренд",
+            "has_color": "Цвет",
+            "has_grit": "Зерно",
+            "has_diameter": "Диаметр",
+            "has_hole_count": "Отверстия",
+        }
+
+
 class MaterialGroupTypeInline(admin.TabularInline):
     model = MaterialGroupType
-    extra = 3
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Тип"
-    verbose_name_plural = "Типы этой группы (список в карточке материала)"
+    verbose_name_plural = "Типы"
 
 
 class MaterialGroupBrandInline(admin.TabularInline):
     model = MaterialGroupBrand
-    extra = 2
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Бренд"
-    verbose_name_plural = "Бренды этой группы (список в карточке материала)"
+    verbose_name_plural = "Бренды"
 
 
 class MaterialGroupColorInline(admin.TabularInline):
     model = MaterialGroupColor
-    extra = 2
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Цвет"
-    verbose_name_plural = "Цвета этой группы (для морилки)"
+    verbose_name_plural = "Цвета"
 
 
 class MaterialGroupGritInline(admin.TabularInline):
     model = MaterialGroupGrit
-    extra = 3
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Зерно"
-    verbose_name_plural = "Зерно этой группы (P120, P150…)"
+    verbose_name_plural = "Зерно"
 
 
 class MaterialGroupDiameterInline(admin.TabularInline):
     model = MaterialGroupDiameter
-    extra = 2
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Диаметр"
-    verbose_name_plural = "Диаметры кругов, мм (125, 150…)"
+    verbose_name_plural = "Диаметры"
 
 
 class MaterialGroupHoleCountInline(admin.TabularInline):
     model = MaterialGroupHoleCount
-    extra = 2
-    fields = ("name", "sort_order")
+    extra = 1
+    fields = ("name",)
     verbose_name = "Отверстия"
-    verbose_name_plural = "Отверстия пылеудаления (8, 6…)"
+    verbose_name_plural = "Отверстия"
 
 
 @admin.register(MaterialGroup)
 class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = (
-        "name",
-        "has_grade",
-        "has_sheet_size",
-        "has_brand",
-        "has_color",
-        "has_grit",
-        "has_diameter",
-        "has_hole_count",
-        "description",
-    )
-    list_filter = (
-        "has_grade",
-        "has_sheet_size",
-        "has_brand",
-        "has_color",
-        "has_grit",
-        "has_diameter",
-        "has_hole_count",
-    )
+    form = MaterialGroupAdminForm
+    change_list_template = "admin/core/materialgroup/change_list.html"
+    change_form_template = "admin/core/materialgroup/change_form.html"
+    list_display = ("name", "materials_count", "flag_chips", "types_preview")
+    list_display_links = ("name",)
+    list_filter = ()
     search_fields = ("name", "description")
     inlines = [
         MaterialGroupTypeInline,
@@ -644,17 +770,40 @@ class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         MaterialGroupDiameterInline,
         MaterialGroupHoleCountInline,
     ]
-    fields = (
-        "name",
-        "has_grade",
-        "has_sheet_size",
-        "has_brand",
-        "has_color",
-        "has_grit",
-        "has_diameter",
-        "has_hole_count",
-        "description",
+    fieldsets = (
+        (None, {"fields": ("name",)}),
+        (
+            "Поля в карточке материала",
+            {
+                "classes": ("material-group-flags",),
+                "description": "Включённые поля появятся в карточке материала и в списке.",
+                "fields": (
+                    "has_grade",
+                    "has_sheet_size",
+                    "has_brand",
+                    "has_color",
+                    "has_grit",
+                    "has_diameter",
+                    "has_hole_count",
+                ),
+            },
+        ),
+        (
+            "Описание",
+            {
+                "classes": ("collapse",),
+                "fields": ("description",),
+            },
+        ),
     )
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(_materials_count=Count("materials"))
+            .prefetch_related("type_choices")
+        )
 
     def get_search_results(self, request, queryset, search_term):
         term = (search_term or "").strip()
@@ -663,35 +812,169 @@ class MaterialGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         needle = term.casefold().replace("ё", "е")
         matched_ids = [
             group.pk
-            for group in queryset.only("pk", "name")
+            for group in queryset
             if needle in (group.name or "").casefold().replace("ё", "е")
         ]
         return queryset.filter(pk__in=matched_ids).order_by("name"), False
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if obj is not None:
+            context["materials_of_group_count"] = obj.materials.count()
+            context["materials_of_group_url"] = (
+                reverse("admin:core_material_changelist") + f"?group={obj.pk}"
+            )
+        return super().render_change_form(
+            request, context, add=add, change=change, form_url=form_url, obj=obj
+        )
+
+    @admin.display(description="Карт.")
+    def materials_count(self, obj):
+        count = getattr(obj, "_materials_count", None)
+        if count is None:
+            count = obj.materials.count() if obj and obj.pk else 0
+        return format_html('<span class="mg-card-count">{} карт.</span>', count)
+
+    @admin.display(description="Поля")
+    def flag_chips(self, obj):
+        labels = material_group_flag_chips(obj)
+        if not labels:
+            return mark_safe('<span class="mg-card-empty"></span>')
+        return format_html(
+            '<ul class="mg-card-flags">{}</ul>',
+            format_html_join("", "<li>{}</li>", ((label,) for label in labels)),
+        )
+
+    @admin.display(description="Типы")
+    def types_preview(self, obj):
+        names = [
+            (choice.name or "").strip()
+            for choice in obj.type_choices.all()
+            if (choice.name or "").strip()
+        ]
+        if not names:
+            return mark_safe('<span class="mg-card-empty"></span>')
+        return format_html('<div class="mg-card-types">{}</div>', " · ".join(names))
+
+
+class MaterialMultiListFilter(admin.SimpleListFilter):
+    """Несколько значений одного фильтра: ?group=1,6&brand=Tury,Flexione."""
+
+    template = "admin/core/material/multi_filter.html"
+
+    def value_list(self):
+        raw = self.value()
+        if not raw:
+            return []
+        return [part for part in str(raw).split(",") if part.strip()]
+
+    def queryset(self, request, queryset):
+        values = self.value_list()
+        if not values:
+            return queryset
+        return self.filter_queryset(queryset, values)
+
+    def filter_queryset(self, queryset, values):
+        raise NotImplementedError
+
+    def choices(self, changelist):
+        selected = set(self.value_list())
+        for lookup, title in self.lookup_choices:
+            key = str(lookup)
+            yield {
+                "selected": key in selected,
+                "display": title,
+                "value": key,
+            }
+
+
+class MaterialGroupMultiFilter(MaterialMultiListFilter):
+    title = "Группа"
+    parameter_name = "group"
+
+    def lookups(self, request, model_admin):
+        return list(
+            MaterialGroup.objects.filter(materials__isnull=False)
+            .distinct()
+            .order_by("name")
+            .values_list("pk", "name")
+        )
+
+    def filter_queryset(self, queryset, values):
+        ids = []
+        for raw in values:
+            try:
+                ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        if not ids:
+            return queryset
+        return queryset.filter(group_id__in=ids)
+
+
+class MaterialCharMultiFilter(MaterialMultiListFilter):
+    field_name = ""
+
+    def lookups(self, request, model_admin):
+        if not self.field_name:
+            return []
+        empty = {self.field_name: ""}
+        values = (
+            Material.objects.exclude(**empty)
+            .exclude(**{self.field_name: None})
+            .order_by(self.field_name)
+            .values_list(self.field_name, flat=True)
+            .distinct()
+        )
+        return [(value, value) for value in values if str(value).strip()]
+
+    def filter_queryset(self, queryset, values):
+        return queryset.filter(**{f"{self.field_name}__in": values})
+
+
+class MaterialTypeMultiFilter(MaterialCharMultiFilter):
+    title = "Тип"
+    parameter_name = "material_type"
+    field_name = "material_type"
+
+
+class MaterialBrandMultiFilter(MaterialCharMultiFilter):
+    title = "Бренд"
+    parameter_name = "brand"
+    field_name = "brand"
+
+
+class MaterialColorMultiFilter(MaterialCharMultiFilter):
+    title = "Цвет"
+    parameter_name = "color"
+    field_name = "color"
+
+
+class MaterialGritMultiFilter(MaterialCharMultiFilter):
+    title = "Зерно"
+    parameter_name = "grit"
+    field_name = "grit"
 
 
 @admin.register(Material)
 class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     form = MaterialAdminForm
     change_form_template = "admin/core/material/change_form.html"
+    change_list_template = "admin/core/material/change_list.html"
     list_display = (
-        "name",
         "photo_thumb",
+        "name",
         "group",
-        "material_type",
-        "brand",
-        "color",
-        "grit",
-        "diameter_mm",
-        "hole_count",
-        "grade",
-        "sheet_length_mm",
-        "sheet_width_mm",
-        "thickness_mm",
-        "area_m2_display",
+        "group_params",
         "unit",
         "current_stock",
     )
-    list_filter = ("group", "material_type", "brand", "color", "grit")
+    list_filter = (
+        MaterialGroupMultiFilter,
+        MaterialTypeMultiFilter,
+        MaterialBrandMultiFilter,
+        MaterialColorMultiFilter,
+        MaterialGritMultiFilter,
+    )
     search_fields = (
         "name",
         "material_type",
@@ -785,16 +1068,30 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                     for material in rows
                     if all(token in self._material_search_haystack(material) for token in tokens)
                 ]
-                return queryset.model.objects.filter(pk__in=matched_ids).order_by("name"), False
+                return queryset.model.objects.filter(pk__in=matched_ids).select_related("group").order_by("name"), False
         return super().get_search_results(request, queryset, search_term)
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related("group")
         # Автодополнение в техкарте: пустой поиск отдаёт первую страницу (20 шт.) — порядок по имени,
         # чтобы подгружаемые страницы и полнотекстовый поиск были предсказуемы.
         if "/autocomplete/" in request.path:
             return qs.order_by("name")
         return qs
+
+    @admin.display(description="Параметры")
+    def group_params(self, obj):
+        items = material_card_group_params(obj)
+        if not items:
+            return "—"
+        return format_html(
+            '<ul class="laser-material-card-params">{}</ul>',
+            format_html_join(
+                "",
+                '<li><span class="k">{}</span> <span class="v">{}</span></li>',
+                items,
+            ),
+        )
 
     def get_urls(self):
         info = self.model._meta.app_label, self.model._meta.model_name
@@ -933,7 +1230,7 @@ class MaterialAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         except (ValueError, OSError):
             return "—"
         return format_html(
-            '<img src="{}" width="50" height="50" style="object-fit: cover;" />',
+            '<img src="{}" width="72" height="72" alt="" />',
             url,
         )
 
@@ -1952,10 +2249,175 @@ _PRODUCT_MAIN_FIELDSET_GROUP_HEADING = mark_safe(
 )
 
 
+class WarehouseNavFlagFilter(admin.SimpleListFilter):
+    """Флаг меню «Склады» в URL (?wh=1). Не фильтрует записи и скрыт в сайдбаре."""
+
+    title = "nav"
+    parameter_name = "wh"
+
+    def lookups(self, request, model_admin):
+        return (("1", "1"),)
+
+    def queryset(self, request, queryset):
+        return queryset
+
+    def has_output(self):
+        return False
+
+
+class ProductKindNavFilter(admin.SimpleListFilter):
+    """Сохраняет ?product_kind= в карточном списке ГП, в модалке не показывается."""
+
+    title = "kind"
+    parameter_name = "product_kind"
+
+    def lookups(self, request, model_admin):
+        return ((Product.PRODUCT_KIND_GOODS, Product.PRODUCT_KIND_GOODS),)
+
+    def queryset(self, request, queryset):
+        return queryset
+
+    def has_output(self):
+        return False
+
+
+class ProductGroupMultiFilter(MaterialMultiListFilter):
+    title = "Группа"
+    parameter_name = "product_group"
+
+    def lookups(self, request, model_admin):
+        return list(
+            ProductGroup.objects.filter(products__product_kind=Product.PRODUCT_KIND_GOODS)
+            .distinct()
+            .order_by("name")
+            .values_list("pk", "name")
+        )
+
+    def filter_queryset(self, queryset, values):
+        ids = []
+        for raw in values:
+            try:
+                ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        if not ids:
+            return queryset
+        return queryset.filter(product_group_id__in=ids)
+
+
+class ProductThicknessMultiFilter(MaterialMultiListFilter):
+    title = "Толщина"
+    parameter_name = "sheet_thickness_mm"
+
+    def lookups(self, request, model_admin):
+        values = (
+            Product.objects.filter(product_kind=Product.PRODUCT_KIND_GOODS)
+            .exclude(sheet_thickness_mm=None)
+            .order_by("sheet_thickness_mm")
+            .values_list("sheet_thickness_mm", flat=True)
+            .distinct()
+        )
+        choices = []
+        for value in values:
+            if value is None:
+                continue
+            if value == value.to_integral_value():
+                label = f"{value.quantize(Decimal('1'))} мм"
+            else:
+                label = f"{value.normalize()} мм"
+            choices.append((format(value, "f"), label))
+        return choices
+
+    def filter_queryset(self, queryset, values):
+        parsed = []
+        for raw in values:
+            try:
+                parsed.append(Decimal(str(raw).replace(",", ".")))
+            except (InvalidOperation, TypeError, ValueError):
+                continue
+        if not parsed:
+            return queryset
+        return queryset.filter(sheet_thickness_mm__in=parsed)
+
+
 @admin.register(ProductGroup)
 class ProductGroupAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("name", "description")
-    search_fields = ("name",)
+    change_list_template = "admin/core/productgroup/change_list.html"
+    change_form_template = "admin/core/productgroup/change_form.html"
+    list_display = ("name", "products_count", "description_short")
+    list_display_links = ("name",)
+    search_fields = ("name", "description")
+    list_filter = (WarehouseNavFlagFilter,)
+    fieldsets = (
+        (None, {"fields": ("name",)}),
+        (
+            "Описание",
+            {
+                "classes": ("collapse",),
+                "fields": ("description",),
+            },
+        ),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _products_count=Count(
+                "products",
+                filter=Q(products__product_kind=Product.PRODUCT_KIND_GOODS),
+            )
+        )
+
+    def get_search_results(self, request, queryset, search_term):
+        term = (search_term or "").strip()
+        if not term:
+            return queryset.order_by("name"), False
+        needle = term.casefold().replace("ё", "е")
+        matched_ids = [
+            group.pk
+            for group in queryset
+            if needle in (group.name or "").casefold().replace("ё", "е")
+            or needle in (group.description or "").casefold().replace("ё", "е")
+        ]
+        return queryset.filter(pk__in=matched_ids).order_by("name"), False
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["productgroup_wh"] = request.GET.get("wh", "")
+        return super().changelist_view(request, extra_context)
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if obj is not None:
+            count = obj.products.filter(product_kind=Product.PRODUCT_KIND_GOODS).count()
+            params = {"product_kind": Product.PRODUCT_KIND_GOODS, "product_group": obj.pk}
+            if request.GET.get("wh"):
+                params["wh"] = request.GET.get("wh")
+            context["products_of_group_count"] = count
+            context["products_of_group_url"] = (
+                reverse("admin:core_product_changelist") + "?" + urlencode(params)
+            )
+        return super().render_change_form(
+            request, context, add=add, change=change, form_url=form_url, obj=obj
+        )
+
+    @admin.display(description="Карт.", ordering="_products_count")
+    def products_count(self, obj):
+        count = getattr(obj, "_products_count", None)
+        if count is None:
+            count = (
+                obj.products.filter(product_kind=Product.PRODUCT_KIND_GOODS).count()
+                if obj and obj.pk
+                else 0
+            )
+        return format_html('<span class="mg-card-count">{} карт.</span>', count)
+
+    @admin.display(description="Описание")
+    def description_short(self, obj):
+        text = (obj.description or "").strip() if obj else ""
+        if not text:
+            return mark_safe('<span class="mg-card-empty"></span>')
+        if len(text) > 80:
+            text = text[:79] + "…"
+        return format_html('<div class="mg-card-types">{}</div>', text)
 
 
 @admin.register(ServiceGroup)
@@ -2111,8 +2573,17 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         "min_stock",
         "photo_thumb",
     )
-    list_filter = ("product_kind", "track_lots")
-    search_fields = ("name", "category", "article", "code", "external_code", "barcodes__value")
+    list_display_links = ("name",)
+    list_filter = ("product_kind", "track_lots", WarehouseNavFlagFilter)
+    search_fields = (
+        "name",
+        "category",
+        "article",
+        "code",
+        "external_code",
+        "barcodes__value",
+        "product_group__name",
+    )
     autocomplete_fields = ("supplier",)
     inlines = [ProductGalleryImageInline, ProductModificationInline, ProductAnalogInline, ProductBarcodeInline]
     readonly_fields = (
@@ -2277,18 +2748,37 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
             return annotate_catalog_material_pk(qs)
 
         # по умолчанию и при product_kind=goods — только товары
-        qs = qs.filter(product_kind=Product.PRODUCT_KIND_GOODS)
-        pg = request.GET.get("product_group")
-        if pg == "" or pg == "none":
-            return qs.filter(product_group__isnull=True)
-        if pg:
-            try:
-                return qs.filter(product_group_id=int(pg))
-            except (ValueError, TypeError):
-                pass
-        return qs
+        qs = qs.filter(product_kind=Product.PRODUCT_KIND_GOODS).select_related("product_group")
+        return qs.annotate(
+            _stock_qty=Coalesce(
+                Sum("warehouse_stocks__quantity"),
+                Value(0),
+                output_field=DecimalField(max_digits=16, decimal_places=3),
+            )
+        )
+
+    def get_list_filter(self, request):
+        kind = request.GET.get("product_kind")
+        if kind not in (Product.PRODUCT_KIND_SERVICE, Product.PRODUCT_KIND_MATERIAL):
+            return (
+                ProductKindNavFilter,
+                ProductGroupMultiFilter,
+                ProductThicknessMultiFilter,
+                WarehouseNavFlagFilter,
+            )
+        return ("product_kind", "track_lots", WarehouseNavFlagFilter)
 
     def get_list_display(self, request):
+        kind = request.GET.get("product_kind")
+        if kind not in (Product.PRODUCT_KIND_SERVICE, Product.PRODUCT_KIND_MATERIAL):
+            return (
+                "photo_thumb",
+                "name",
+                "product_group",
+                "group_params",
+                "unit",
+                "stock_qty",
+            )
         cols = list(super().get_list_display(request))
         if request.GET.get("product_kind") == Product.PRODUCT_KIND_MATERIAL:
             try:
@@ -2311,6 +2801,10 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         extra_context["current_material_group"] = request.GET.get("material_group")
         extra_context["current_service_group"] = request.GET.get("service_group")
         extra_context["current_product_kind"] = request.GET.get("product_kind")
+        extra_context["product_list_as_cards"] = request.GET.get("product_kind") not in (
+            Product.PRODUCT_KIND_SERVICE,
+            Product.PRODUCT_KIND_MATERIAL,
+        )
         return super().changelist_view(request, extra_context)
 
     @admin.display(description="Справочник", ordering="_catalog_material_pk")
@@ -2446,6 +2940,24 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         if obj.apply_composed_goods_identity():
             obj.save()
 
+    @admin.display(description="Параметры")
+    def group_params(self, obj):
+        items = product_card_params(obj)
+        if not items:
+            return "—"
+        return format_html(
+            '<ul class="laser-product-card-params">{}</ul>',
+            format_html_join(
+                "",
+                '<li><span class="k">{}</span> <span class="v">{}</span></li>',
+                items,
+            ),
+        )
+
+    @admin.display(description="Ост.", ordering="_stock_qty")
+    def stock_qty(self, obj):
+        return _card_param_text(getattr(obj, "_stock_qty", None))
+
     @admin.display(description="Пл. в м²")
     def area_m2_display(self, obj):
         if not obj or obj.area_m2_manual is None:
@@ -2462,7 +2974,7 @@ class ProductAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         except (ValueError, OSError):
             return "—"
         return format_html(
-            '<img src="{}" width="40" height="40" style="object-fit: cover;" />',
+            '<img src="{}" width="72" height="72" alt="" />',
             url,
         )
 

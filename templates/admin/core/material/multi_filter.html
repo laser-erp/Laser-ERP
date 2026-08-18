@@ -1,0 +1,13 @@
+{% if choices %}
+<details class="material-filter-facet" data-filter-param="{{ spec.parameter_name }}" open>
+  <summary>{{ spec.title }}</summary>
+  <div class="material-filter-options">
+    {% for choice in choices %}
+    <label class="material-filter-chip{% if choice.selected %} is-selected{% endif %}">
+      <input type="checkbox" value="{{ choice.value }}"{% if choice.selected %} checked{% endif %}>
+      <span>{{ choice.display }}</span>
+    </label>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}

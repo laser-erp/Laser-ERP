@@ -363,3 +363,31 @@
 .techcard-cl-root > h1 {
   display: none;
 }
+
+@media (max-width: 640px) {
+  .techcard-cl-toolbar {
+    padding: 10px 12px 12px;
+  }
+
+  .techcard-cl-title {
+    font-size: 18px;
+  }
+
+  .techcard-cl-layout {
+    flex-direction: column;
+  }
+
+  .techcard-cl-sidebar {
+    flex: none;
+    width: 100%;
+    max-width: none;
+    max-height: 11rem;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .techcard-cl-table-wrap {
+    padding: 0 12px 12px;
+    overflow: visible;
+  }
+}

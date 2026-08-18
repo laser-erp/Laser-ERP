@@ -1,4 +1,9 @@
-/* Компактные числовые колонки строк приёмки */
+/* Компактная приёмка: меньше колонок, упаковки/товар — по кнопке */
+
+#goodsreceipt_form .gr-main-fields .form-row {
+  max-width: 42rem;
+}
+
 #goodsreceipt_form .tabular .field-pack_count input,
 #goodsreceipt_form .tabular .field-qty_in_pack input,
 #goodsreceipt_form .tabular .field-quantity input,
@@ -20,10 +25,298 @@
   white-space: nowrap;
 }
 
+#goodsreceipt_form .tabular .laser-help-trigger {
+  display: none;
+}
+
+#goodsreceipt_form .tabular .column-product,
+#goodsreceipt_form .tabular .field-product,
+#goodsreceipt_form .tabular .column-supplier_order_line,
+#goodsreceipt_form .tabular .field-supplier_order_line,
+#goodsreceipt_form .tabular .column-pack_count,
+#goodsreceipt_form .tabular .field-pack_count,
+#goodsreceipt_form .tabular .column-qty_in_pack,
+#goodsreceipt_form .tabular .field-qty_in_pack {
+  display: none;
+}
+
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .column-product,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-product,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .column-supplier_order_line,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-supplier_order_line,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .column-pack_count,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-pack_count,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .column-qty_in_pack,
+body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-qty_in_pack {
+  display: table-cell;
+}
+
+#goodsreceipt_form .tabular .field-unit_price input {
+  color: #64748b;
+}
+
+#goodsreceipt_form,
+#goodsreceipt_form .inline-group,
+#goodsreceipt_form .tabular .laser-tabular-inline-wrapper {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#goodsreceipt_form .tabular .laser-tabular-inline-wrapper {
+  overflow-x: auto;
+}
+
+#goodsreceipt_form .tabular table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: auto;
+}
+
+#goodsreceipt_form .tabular th.original,
+#goodsreceipt_form .tabular td.original {
+  display: none;
+}
+
+#goodsreceipt_form .tabular .field-material {
+  width: 42%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#goodsreceipt_form .tabular .related-widget-wrapper {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#goodsreceipt_form .tabular .select2-container,
+#goodsreceipt_form .tabular .select2-container--admin-autocomplete,
+#goodsreceipt_form .gr-main-fields .select2-container,
+#goodsreceipt_form .gr-main-fields .select2-container--admin-autocomplete {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#goodsreceipt_form .gr-main-fields .related-widget-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#goodsreceipt_form .form-row .datetime {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  max-width: 100%;
+}
+
+.gr-line-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.gr-toggle-extra-cols {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gr-toggle-extra-cols.is-on {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
 #goodsreceipt_form .goods-receipt-pack-hint {
   margin: 0 0 10px;
   padding: 8px 12px;
   background: #f0f7ff;
   border-left: 3px solid #417690;
-  max-width: 72rem;
+  max-width: 42rem;
+}
+
+@media (max-width: 1400px) {
+  #goodsreceipt_form .tabular .laser-tabular-inline-wrapper {
+    overflow: visible;
+  }
+
+  #goodsreceipt_form .tabular table,
+  #goodsreceipt_form .tabular table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border: 0;
+  }
+
+  #goodsreceipt_form .tabular thead {
+    display: none;
+  }
+
+  #goodsreceipt_form .tabular tbody tr.form-row:not(.empty-form) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "mat mat"
+      "qty amount"
+      "unit price"
+      "del del";
+    gap: 8px 12px;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 0 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  body.gr-show-extra-line-cols #goodsreceipt_form .tabular tbody tr.form-row:not(.empty-form) {
+    grid-template-areas:
+      "mat mat"
+      "qty amount"
+      "unit price"
+      "pack inpack"
+      "prod prod"
+      "po po"
+      "del del";
+  }
+
+  #goodsreceipt_form .tabular tbody tr.add-row {
+    display: block;
+    border: 0;
+    background: transparent;
+    padding: 0 4px 8px;
+  }
+
+  #goodsreceipt_form .tabular td {
+    border: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    min-width: 0;
+  }
+
+  #goodsreceipt_form .tabular td.original {
+    display: none;
+  }
+
+  #goodsreceipt_form .tabular td.delete {
+    grid-area: del;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+  }
+
+  #goodsreceipt_form .tabular td.delete::before {
+    content: "Удалить строку";
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  #goodsreceipt_form .tabular .field-material {
+    grid-area: mat;
+  }
+
+  #goodsreceipt_form .tabular .field-quantity {
+    grid-area: qty;
+  }
+
+  #goodsreceipt_form .tabular .field-amount {
+    grid-area: amount;
+  }
+
+  #goodsreceipt_form .tabular .field-unit_display {
+    grid-area: unit;
+  }
+
+  #goodsreceipt_form .tabular .field-unit_price {
+    grid-area: price;
+  }
+
+  #goodsreceipt_form .tabular .field-pack_count {
+    grid-area: pack;
+  }
+
+  #goodsreceipt_form .tabular .field-qty_in_pack {
+    grid-area: inpack;
+  }
+
+  #goodsreceipt_form .tabular .field-product {
+    grid-area: prod;
+  }
+
+  #goodsreceipt_form .tabular .field-supplier_order_line {
+    grid-area: po;
+  }
+
+  body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-product,
+  body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-supplier_order_line,
+  body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-pack_count,
+  body.gr-show-extra-line-cols #goodsreceipt_form .tabular .field-qty_in_pack {
+    display: block;
+  }
+
+  #goodsreceipt_form .tabular .field-material::before,
+  #goodsreceipt_form .tabular .field-quantity::before,
+  #goodsreceipt_form .tabular .field-amount::before,
+  #goodsreceipt_form .tabular .field-unit_display::before,
+  #goodsreceipt_form .tabular .field-unit_price::before,
+  #goodsreceipt_form .tabular .field-pack_count::before,
+  #goodsreceipt_form .tabular .field-qty_in_pack::before,
+  #goodsreceipt_form .tabular .field-product::before,
+  #goodsreceipt_form .tabular .field-supplier_order_line::before {
+    display: block;
+    margin: 0 0 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  #goodsreceipt_form .tabular .field-material::before { content: "Материал"; }
+  #goodsreceipt_form .tabular .field-quantity::before { content: "Кол-во"; }
+  #goodsreceipt_form .tabular .field-amount::before { content: "Сумма"; }
+  #goodsreceipt_form .tabular .field-unit_display::before { content: "Ед."; }
+  #goodsreceipt_form .tabular .field-unit_price::before { content: "Цена/ед."; }
+  #goodsreceipt_form .tabular .field-pack_count::before { content: "Упак."; }
+  #goodsreceipt_form .tabular .field-qty_in_pack::before { content: "В 1 упак."; }
+  #goodsreceipt_form .tabular .field-product::before { content: "Товар"; }
+  #goodsreceipt_form .tabular .field-supplier_order_line::before { content: "Заказ поставщику"; }
+
+  #goodsreceipt_form .tabular .field-material {
+    width: auto;
+  }
+
+  #goodsreceipt_form .tabular .related-widget-wrapper {
+    flex-wrap: wrap;
+  }
+
+  #goodsreceipt_form .tabular .field-quantity input,
+  #goodsreceipt_form .tabular .field-amount input,
+  #goodsreceipt_form .tabular .field-unit_price input,
+  #goodsreceipt_form .tabular .field-pack_count input,
+  #goodsreceipt_form .tabular .field-qty_in_pack input,
+  #goodsreceipt_form .tabular input.laser-gr-num,
+  #goodsreceipt_form .tabular .related-widget-wrapper,
+  #goodsreceipt_form .tabular .select2-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #goodsreceipt_form .goods-receipt-pack-hint {
+    max-width: none;
+  }
 }

@@ -905,3 +905,25 @@
   font-weight: 700;
   color: #b45309;
 }
+
+@media (max-width: 640px) {
+  .production-assignment-doc #content-main,
+  .pa-supply-page {
+    max-width: none;
+  }
+
+  .pa-doc-toolbar,
+  .pa-doc-head-main {
+    padding-left: 12px;
+    padding-right: 40px;
+  }
+
+  .pa-head-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .pa-supply-head {
+    flex-direction: column;
+  }
+}

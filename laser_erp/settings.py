@@ -71,6 +71,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.admin_product_groups',
+                'core.context_processors.admin_warehouse_nav',
                 'core.context_processors.storefront_cart_meta',
                 'core.context_processors.storefront_user_role',
             ],

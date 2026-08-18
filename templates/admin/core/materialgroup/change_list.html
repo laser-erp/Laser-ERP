@@ -1,0 +1,35 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content_title %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/material_changelist.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'core/admin/materialgroup_changelist.css' %}?v=2">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/materialgroup_changelist.js' %}?v=2" defer></script>
+{% endblock %}
+
+{% block object-tools %}{% endblock %}
+
+{% block search %}
+<header class="material-cl-toolbar" aria-label="Группы материалов — поиск">
+  <div class="material-cl-search">
+    {% search_form cl %}
+  </div>
+  <div class="material-cl-actions">
+    {% if has_add_permission %}
+    <a href="{% url 'admin:core_materialgroup_add' %}" class="material-cl-btn material-cl-btn-add">
+      <span class="material-cl-plus" aria-hidden="true">+</span>
+      Группа
+    </a>
+    {% endif %}
+  </div>
+</header>
+{% endblock %}
+
+{% block filters %}{% endblock %}

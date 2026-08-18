@@ -26,4 +26,17 @@
   } else {
     bind();
   }
+
+  function initGoodsSearchPlaceholder() {
+    var search = document.querySelector(".product-changelist-wrap--cards input#searchbar");
+    if (search && !search.getAttribute("placeholder")) {
+      search.setAttribute("placeholder", "Поиск товара…");
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initGoodsSearchPlaceholder);
+  } else {
+    initGoodsSearchPlaceholder();
+  }
 })();

@@ -180,19 +180,19 @@ class GoodsReceiptLineInline(admin.TabularInline):
     model = GoodsReceiptLine
     form = GoodsReceiptLineForm
     formset = GoodsReceiptLineFormSet
-    extra = 2
+    extra = 1
     autocomplete_fields = ("material", "product", "supplier_order_line")
     readonly_fields = ("unit_display",)
     fields = (
         "material",
-        "product",
-        "supplier_order_line",
         "unit_display",
-        "pack_count",
-        "qty_in_pack",
         "quantity",
         "amount",
         "unit_price",
+        "pack_count",
+        "qty_in_pack",
+        "product",
+        "supplier_order_line",
     )
     template = "admin/procurement/goodsreceipt/edit_inline/tabular.html"
 
@@ -737,6 +737,42 @@ class GoodsReceiptAdmin(SupplierOrganizationFKMixin, ReturnToReferrerMixin, admi
     readonly_fields = ("number", "total_amount", "posted_at")
     date_hierarchy = "received_at"
     inlines = [GoodsReceiptLineInline]
+    fieldsets = (
+        (
+            None,
+            {
+                "classes": ("gr-main-fields",),
+                "fields": (
+                    "warehouse",
+                    "supplier",
+                    "contract_ref",
+                    "received_at",
+                    "status",
+                    "total_amount",
+                ),
+            },
+        ),
+        (
+            "Документ поставщика",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "our_organization",
+                    "incoming_number",
+                    "incoming_document_date",
+                    "paid_amount",
+                    "comment",
+                ),
+            },
+        ),
+        (
+            "Служебное",
+            {
+                "classes": ("collapse",),
+                "fields": ("number", "posted_at"),
+            },
+        ),
+    )
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

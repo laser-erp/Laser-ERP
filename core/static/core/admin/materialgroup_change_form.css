@@ -1,0 +1,145 @@
+/* Карточка группы: чипы полей и списки только для включённых флагов */
+
+body.change-form.model-materialgroup #content,
+body.add-form.model-materialgroup #content,
+body.change-form.model-productgroup #content,
+body.add-form.model-productgroup #content {
+  max-width: 720px;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags,
+body.add-form.model-materialgroup fieldset.material-group-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 16px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags h2,
+body.add-form.model-materialgroup fieldset.material-group-flags h2 {
+  flex: 1 0 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .description,
+body.add-form.model-materialgroup fieldset.material-group-flags .description {
+  flex: 1 0 100%;
+  margin: 0 0 6px;
+  padding: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .form-row,
+body.add-form.model-materialgroup fieldset.material-group-flags .form-row {
+  float: none;
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .laser-checkbox-help-row,
+body.add-form.model-materialgroup fieldset.material-group-flags .laser-checkbox-help-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .form-row:has(input:checked) .laser-checkbox-help-row,
+body.add-form.model-materialgroup fieldset.material-group-flags .form-row:has(input:checked) .laser-checkbox-help-row {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags label,
+body.add-form.model-materialgroup fieldset.material-group-flags label {
+  float: none;
+  width: auto;
+  padding: 0;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .form-row:has(input:checked) label,
+body.add-form.model-materialgroup fieldset.material-group-flags .form-row:has(input:checked) label {
+  color: #1d4ed8;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .laser-field-with-help,
+body.add-form.model-materialgroup fieldset.material-group-flags .laser-field-with-help,
+body.change-form.model-materialgroup fieldset.material-group-flags .laser-field-main-col,
+body.add-form.model-materialgroup fieldset.material-group-flags .laser-field-main-col {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+}
+
+body.change-form.model-materialgroup fieldset.material-group-flags .flex-container,
+body.add-form.model-materialgroup fieldset.material-group-flags .flex-container {
+  float: none;
+  width: auto;
+}
+
+body.change-form.model-materialgroup .inline-group[hidden],
+body.add-form.model-materialgroup .inline-group[hidden] {
+  display: none !important;
+}
+
+body.change-form.model-materialgroup .inline-group,
+body.add-form.model-materialgroup .inline-group {
+  margin: 0 0 16px;
+  padding: 12px 16px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+body.change-form.model-materialgroup .inline-group h2,
+body.add-form.model-materialgroup .inline-group h2 {
+  margin: 0 0 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+body.change-form.model-materialgroup .inline-group thead,
+body.add-form.model-materialgroup .inline-group thead {
+  display: none;
+}
+
+.mg-form-materials-link {
+  margin: 0 0 12px;
+}
+
+.mg-form-materials-link a {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+}

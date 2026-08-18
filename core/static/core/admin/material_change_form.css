@@ -606,10 +606,29 @@ body.add-form.model-material .form-row.is-sheet-hidden[hidden] {
 }
 
 @media (max-width: 700px) {
+  body.change-form.model-material #content,
+  body.add-form.model-material #content,
+  body.change-form.model-material #content-main,
+  body.add-form.model-material #content-main {
+    max-width: none;
+    overflow-x: hidden;
+  }
+
+  body.change-form.model-material .aligned .form-row > div,
+  body.add-form.model-material .aligned .form-row > div,
+  body.change-form.model-material .aligned .form-row,
+  body.add-form.model-material .aligned .form-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
   body.change-form.model-material fieldset.module.material-card-compact,
   body.add-form.model-material fieldset.module.material-card-compact {
-    padding: 0.65rem 0.75rem 0.65rem 0.75rem;
+    padding: 0.65rem 0.75rem;
     min-height: 0;
+    overflow: visible;
   }
 
   body.change-form.model-material fieldset.module.material-card-compact .form-row .form-multiline,
@@ -621,11 +640,50 @@ body.add-form.model-material .form-row.is-sheet-hidden[hidden] {
   body.add-form.model-material fieldset.module.material-card-compact > .form-row.field-photo {
     position: static;
     width: auto;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.75rem;
   }
 
-  body.change-form.model-material #content-main,
-  body.add-form.model-material #content-main {
+  body.change-form.model-material fieldset.module.material-card-compact .form-row.field-photo img,
+  body.add-form.model-material fieldset.module.material-card-compact .form-row.field-photo img {
+    max-width: 100%;
+    height: auto;
+    max-height: 180px;
+    object-fit: contain;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row),
+  body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > label,
+  body.add-form.model-material fieldset.module.material-card-compact .laser-field-main-col > .flex-container:not(.checkbox-row) > label {
+    width: 100%;
+    min-width: 0;
     max-width: none;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact select,
+  body.add-form.model-material fieldset.module.material-card-compact select,
+  body.change-form.model-material fieldset.module.material-card-compact input,
+  body.add-form.model-material fieldset.module.material-card-compact input,
+  body.change-form.model-material fieldset.module.material-card-compact .select2-container,
+  body.add-form.model-material fieldset.module.material-card-compact .select2-container,
+  body.change-form.model-material fieldset.module.material-card-compact .related-widget-wrapper,
+  body.add-form.model-material fieldset.module.material-card-compact .related-widget-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline,
+  body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline {
+    flex-wrap: wrap;
+  }
+
+  body.change-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div,
+  body.add-form.model-material fieldset.module.material-card-compact .form-row.field-sheet_length_mm .form-multiline > div {
+    flex: 1 1 100%;
   }
 }

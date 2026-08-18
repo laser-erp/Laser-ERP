@@ -1,0 +1,215 @@
+/* Справочник готовой продукции — карточки, как у материалов */
+
+body.change-list.model-product:has(.product-changelist-wrap--cards) #content > h1,
+body.change-list.model-product:has(.product-changelist-wrap--cards) .object-tools {
+  display: none;
+}
+
+.product-changelist-wrap--cards {
+  display: block;
+}
+
+.product-changelist-wrap--cards .product-changelist-main {
+  min-width: 0;
+}
+
+.product-changelist-wrap--cards .product-title-row {
+  display: none;
+}
+
+.product-changelist-wrap--cards #changelist.filtered {
+  padding-right: 0 !important;
+}
+
+.product-changelist-wrap--cards #changelist .changelist-form-container {
+  display: block;
+}
+
+.product-changelist-wrap--cards #changelist .filtered .results,
+.product-changelist-wrap--cards .filtered #toolbar,
+.product-changelist-wrap--cards .filtered .actions,
+.product-changelist-wrap--cards .filtered .paginator {
+  margin-right: 0 !important;
+}
+
+.product-changelist-wrap--cards #changelist .results {
+  overflow: visible;
+}
+
+.product-changelist-wrap--cards #result_list {
+  min-width: 0 !important;
+}
+
+.product-changelist-wrap--cards #result_list,
+.product-changelist-wrap--cards #result_list tbody {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.product-changelist-wrap--cards #result_list thead,
+.product-changelist-wrap--cards #result_list colgroup {
+  display: none;
+}
+
+.product-changelist-wrap--cards #result_list tbody tr {
+  display: grid;
+  grid-template-columns: 22px 72px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "check photo name stock"
+    "check photo group unit"
+    "check photo params params";
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.product-changelist-wrap--cards #result_list tbody tr:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.product-changelist-wrap--cards #result_list th,
+.product-changelist-wrap--cards #result_list td {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  white-space: normal;
+  overflow: visible;
+}
+
+.product-changelist-wrap--cards #result_list .action-checkbox {
+  grid-area: check;
+  align-self: start;
+  padding-top: 2px;
+}
+
+.product-changelist-wrap--cards #result_list .action-checkbox input {
+  width: 18px;
+  height: 18px;
+}
+
+.product-changelist-wrap--cards #result_list .field-photo_thumb {
+  grid-area: photo;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.product-changelist-wrap--cards #result_list .field-photo_thumb img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #f8fafc;
+}
+
+.product-changelist-wrap--cards #result_list .field-name {
+  grid-area: name;
+  min-width: 0;
+  max-width: none;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.product-changelist-wrap--cards #result_list .field-name a {
+  white-space: normal;
+  color: #0f172a;
+}
+
+.product-changelist-wrap--cards #result_list .field-product_group,
+.product-changelist-wrap--cards #result_list .field-unit {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.product-changelist-wrap--cards #result_list .field-product_group {
+  grid-area: group;
+  min-width: 0;
+}
+
+.product-changelist-wrap--cards #result_list .field-unit {
+  grid-area: unit;
+  justify-self: end;
+}
+
+.product-changelist-wrap--cards #result_list .field-unit::before {
+  content: "ед. ";
+}
+
+.product-changelist-wrap--cards #result_list .field-stock_qty::before {
+  content: "ост. ";
+}
+
+.product-changelist-wrap--cards #result_list .field-stock_qty {
+  grid-area: stock;
+  align-self: start;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.product-changelist-wrap--cards #result_list .field-group_params {
+  grid-area: params;
+  min-width: 0;
+}
+
+.product-changelist-wrap--cards #result_list .laser-product-card-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-changelist-wrap--cards #result_list .laser-product-card-params li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.product-changelist-wrap--cards #result_list .laser-product-card-params .k {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.product-changelist-wrap--cards #result_list .laser-product-card-params .v {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+@media (min-width: 900px) {
+  .product-changelist-wrap--cards #result_list tbody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .product-changelist-wrap--cards #result_list tbody tr {
+    margin: 0;
+    height: 100%;
+  }
+}

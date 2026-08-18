@@ -120,6 +120,7 @@
   }
 
   function recalcRow(tr, source) {
+    if (!tr || tr.getAttribute("data-gr-filling") === "1") return;
     var packEl = field(tr, "pack_count");
     var inPackEl = field(tr, "qty_in_pack");
     var qtyEl = field(tr, "quantity");
@@ -129,8 +130,14 @@
 
     var pack = parseNum(packEl);
     var inPack = parseNum(inPackEl);
-    if (inPack !== null && source !== "quantity") {
-      if (pack === null) pack = 1;
+    if (
+      inPack !== null &&
+      inPack > 0 &&
+      source !== "quantity" &&
+      source !== "amount" &&
+      source !== "unit_price"
+    ) {
+      if (pack === null || pack <= 0) pack = 1;
       qtyEl.value = formatQty(pack * inPack);
     }
 
@@ -197,7 +204,33 @@
     });
   }
 
+  function initExtraColsToggle() {
+    var group = document.getElementById("lines-group") || document.getElementById("goodsreceiptline_set-group");
+    if (!group) {
+      return;
+    }
+    var prev = group.previousElementSibling;
+    if (prev && prev.classList.contains("gr-line-tools")) {
+      return;
+    }
+    var bar = document.createElement("div");
+    bar.className = "gr-line-tools";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "gr-toggle-extra-cols";
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = "Упаковки, товар, заказ";
+    btn.addEventListener("click", function () {
+      var on = document.body.classList.toggle("gr-show-extra-line-cols");
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.classList.toggle("is-on", on);
+    });
+    bar.appendChild(btn);
+    group.parentNode.insertBefore(bar, group);
+  }
+
   function init() {
+    initExtraColsToggle();
     document.querySelectorAll(".inline-group table").forEach(bindTable);
     recalcReceiptTotal();
   }
@@ -235,9 +268,9 @@
 
   document.addEventListener("fanera-nest:lines-filled", function () {
     receiptLineRows().forEach(function (tr) {
+      if (tr.classList.contains("empty-form")) return;
       updateRowUnit(tr);
       bindRow(tr);
-      recalcRow(tr, "amount");
     });
     recalcReceiptTotal();
   });

@@ -127,7 +127,7 @@
   function syncFillButton(root, lastResult) {
     var btnFill = root.querySelector(".fanera-nest-btn-fill");
     if (!btnFill) return;
-    btnFill.disabled = !(lastResult && canFillLines());
+    btnFill.disabled = !lastResult;
   }
 
   function ensurePanelReady(root, config) {

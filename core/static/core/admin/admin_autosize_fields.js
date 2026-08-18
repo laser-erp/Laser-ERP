@@ -32,6 +32,7 @@
       return true;
     }
     if (el.name === "csrfmiddlewaretoken") return true;
+    if (el.closest && el.closest(".material-cl-search")) return true;
     if (el.disabled) return true;
     return false;
   }

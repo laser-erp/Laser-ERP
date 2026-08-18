@@ -72,12 +72,18 @@ class NestReceiptLine:
         }
 
 
+def _norm_catalog_text(value: str) -> str:
+    return (value or "").casefold().replace("ё", "е").replace("×", "*").replace(" ", "")
+
+
 def _find_material(name_parts: tuple[str, ...]):
     Material = apps.get_model("core", "Material")
-    qs = Material.objects.filter(name__icontains="Фанера ФК")
-    for part in name_parts:
-        qs = qs.filter(name__icontains=part)
-    return qs.order_by("pk").first()
+    needles = [_norm_catalog_text(part) for part in name_parts if part]
+    for material in Material.objects.filter(name__icontains="Фанера ФК").order_by("pk"):
+        haystack = _norm_catalog_text(material.name)
+        if all(needle in haystack for needle in needles):
+            return material
+    return None
 
 
 def _piece_unit_price(
@@ -91,11 +97,12 @@ def _piece_unit_price(
 
 
 def _piece_area_from_markers(name_parts: tuple[str, ...]) -> Decimal:
-    if "900*600" in name_parts[0] or "900×600" in name_parts[0]:
+    marker = _norm_catalog_text(name_parts[0] if name_parts else "")
+    if "900*600" in marker:
         return Decimal("900") * Decimal("600")
-    if "621*621" in name_parts[0]:
+    if "621*621" in marker:
         return Decimal("621") * Decimal("621")
-    if "317*900" in name_parts[0]:
+    if "317*900" in marker:
         return Decimal("317") * Decimal("900")
     return Decimal("0")
 

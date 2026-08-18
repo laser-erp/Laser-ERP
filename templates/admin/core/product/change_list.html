@@ -6,6 +6,10 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'core/admin/product_changelist_tree.css' %}?v=2">
+{% if product_list_as_cards %}
+<link rel="stylesheet" href="{% static 'core/admin/material_changelist.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'core/admin/product_changelist_cards.css' %}?v=2">
+{% else %}
 <style>
   .product-changelist-wrap { display: flex; gap: 0; min-height: 400px; }
   .product-changelist-sidebar {
@@ -62,15 +66,82 @@
   }
   .product-changelist-main .object-tools { display: none; }
 </style>
+{% endif %}
 {% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
-<script src="{% static 'core/admin/product_changelist_tree.js' %}?v=1" defer></script>
+<script src="{% static 'core/admin/product_changelist_tree.js' %}?v=2" defer></script>
+{% if product_list_as_cards %}
+<script src="{% static 'core/admin/material_changelist.js' %}?v=2" defer></script>
+{% endif %}
+{% endblock %}
+
+{% block object-tools %}
+{% if not product_list_as_cards %}{{ block.super }}{% endif %}
+{% endblock %}
+
+{% block search %}
+{% if product_list_as_cards %}
+<header class="material-cl-toolbar" aria-label="Готовая продукция — поиск и фильтры">
+  <div class="material-cl-search">
+    {% search_form cl %}
+  </div>
+  <div class="material-cl-actions">
+    {% if has_add_permission %}
+    <a href="{% url 'admin:core_product_add' %}?product_kind=goods{% if request.GET.wh %}&amp;wh={{ request.GET.wh|urlencode }}{% endif %}" class="material-cl-btn material-cl-btn-add">
+      <span class="material-cl-plus" aria-hidden="true">+</span>
+      Товар
+    </a>
+    {% endif %}
+    {% if cl.has_filters %}
+    <button type="button" class="material-cl-btn material-cl-btn-filter{% if cl.has_active_filters %} is-active{% endif %}" id="material-filter-toggle" aria-expanded="false" aria-controls="material-filter-modal">
+      Фильтр
+      <span class="material-cl-filter-badge" hidden>0</span>
+    </button>
+    {% endif %}
+  </div>
+</header>
+{% else %}
+{{ block.super }}
+{% endif %}
+{% endblock %}
+
+{% block filters %}
+{% if product_list_as_cards %}
+  {% if cl.has_filters %}
+  <button type="button" class="material-filter-backdrop" id="material-filter-backdrop" hidden aria-label="Закрыть фильтры"></button>
+  <div id="material-filter-modal" class="material-filter-modal" hidden>
+    <div class="material-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="material-filter-title">
+      <div class="material-filter-bar">
+        <div class="material-filter-title" id="material-filter-title">Фильтры</div>
+        <button type="button" class="material-cl-btn" id="material-filter-close">Закрыть</button>
+      </div>
+      <p class="material-filter-hint">Можно отметить несколько значений в одном или разных списках, затем «Применить».</p>
+      <search id="changelist-filter" aria-labelledby="material-filter-title">
+        {% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+      </search>
+      <div class="material-filter-footer">
+        <a class="material-cl-btn" id="material-filter-clear" href="?product_kind=goods{% if request.GET.wh %}&amp;wh={{ request.GET.wh|urlencode }}{% endif %}{% if cl.query %}&amp;q={{ cl.query|urlencode }}{% endif %}">Сбросить</a>
+        <button type="button" class="material-cl-btn material-cl-btn-primary" id="material-filter-apply">Применить</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% else %}
+{{ block.super }}
+{% endif %}
 {% endblock %}
 
 {% block content %}
-{% with q=request.GET.q %}
+{% with q=request.GET.q wh=request.GET.wh %}
+{% if product_list_as_cards %}
+<div class="product-changelist-wrap product-changelist-wrap--cards">
+  <div class="product-changelist-main">
+    {{ block.super }}
+  </div>
+</div>
+{% else %}
 <div class="product-changelist-wrap">
   <aside class="product-changelist-sidebar" aria-label="{% translate 'Дерево групп' %}">
     <ul class="product-tree" role="tree">
@@ -79,15 +150,15 @@
           <button type="button" class="product-tree-toggle" id="product-tree-btn-goods" aria-controls="product-tree-panel-goods" aria-expanded="{% if current_product_kind != 'service' and current_product_kind != 'material' %}true{% else %}false{% endif %}" title="{% translate 'Показать или скрыть группы товаров' %}">
             <span class="product-tree-chevron" aria-hidden="true"></span>
           </button>
-          <a href="{{ request.path }}?product_kind=goods{% if q %}&q={{ q|urlencode }}{% endif %}"
+          <a href="{{ request.path }}?product_kind=goods{% if q %}&q={{ q|urlencode }}{% endif %}{% if wh %}&wh={{ wh|urlencode }}{% endif %}"
              class="product-tree-head{% if current_product_kind != 'service' and current_product_kind != 'material' %} is-active{% endif %}">Товары</a>
         </div>
         <div id="product-tree-panel-goods" class="product-tree-panel" role="group" aria-labelledby="product-tree-btn-goods" {% if current_product_kind == 'service' or current_product_kind == 'material' %}hidden{% endif %}>
           {% for g in product_groups %}
-            <a href="{{ request.path }}?product_kind=goods&product_group={{ g.pk }}{% if q %}&q={{ q|urlencode }}{% endif %}"
+            <a href="{{ request.path }}?product_kind=goods&product_group={{ g.pk }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if wh %}&wh={{ wh|urlencode }}{% endif %}"
                class="product-tree-leaf{% if current_product_kind != 'service' and current_product_kind != 'material' and current_product_group == g.pk|stringformat:'s' %} is-active{% endif %}">{{ g.name }}</a>
           {% endfor %}
-          <a href="{{ request.path }}?product_kind=goods&product_group=none{% if q %}&q={{ q|urlencode }}{% endif %}"
+          <a href="{{ request.path }}?product_kind=goods&product_group=none{% if q %}&q={{ q|urlencode }}{% endif %}{% if wh %}&wh={{ wh|urlencode }}{% endif %}"
              class="product-tree-leaf{% if current_product_kind != 'service' and current_product_kind != 'material' and current_product_group == 'none' %} is-active{% endif %}">Без группы</a>
         </div>
       </li>
@@ -153,5 +224,6 @@
     {{ block.super }}
   </div>
 </div>
+{% endif %}
 {% endwith %}
 {% endblock %}

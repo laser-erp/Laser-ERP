@@ -20,6 +20,7 @@ from core.models import (
     Order,
     OrderItem,
     Product,
+    ProductGroup,
     ProductMaterial,
     ProductModification,
     ProductStock,
@@ -1303,6 +1304,164 @@ class MaterialAdminAutocompleteTests(TestCase):
             )
 
 
+class MaterialAdminFilterTests(TestCase):
+    def test_group_filter_is_multi_select(self):
+        from core.admin import MaterialAdmin, MaterialGroupMultiFilter
+
+        self.assertEqual(MaterialAdmin.list_filter[0], MaterialGroupMultiFilter)
+
+    def test_changelist_toolbar_and_multi_group_filter(self):
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="material_filter_admin",
+            email="material_filter_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        plywood = MaterialGroup.objects.create(name="Фанера фильтр", has_grade=True)
+        packing = MaterialGroup.objects.create(
+            name="Упаковка фильтр", has_grade=False, has_sheet_size=False
+        )
+        other = MaterialGroup.objects.create(name="Акрил фильтр", has_grade=False)
+        Material.objects.create(name="Лист фильтр А", unit="лист", group=plywood, material_type="ФК")
+        Material.objects.create(name="Плёнка фильтр Б", unit="м", group=packing, material_type="плёнка")
+        Material.objects.create(name="Акрил фильтр В", unit="лист", group=other, material_type="прозрачный")
+
+        url = reverse("admin:core_material_changelist")
+        page = self.client.get(url)
+        self.assertEqual(page.status_code, 200)
+        html = page.content.decode()
+        self.assertIn("material-cl-toolbar", html)
+        self.assertIn("material-filter-modal", html)
+        self.assertIn('id="searchbar"', html)
+        self.assertIn("material-filter-chip", html)
+
+        filtered = self.client.get(url, {"group": f"{plywood.pk},{packing.pk}"})
+        self.assertEqual(filtered.status_code, 200)
+        body = filtered.content.decode()
+        self.assertIn("Лист фильтр А", body)
+        self.assertIn("Плёнка фильтр Б", body)
+        self.assertNotIn("Акрил фильтр В", body)
+        self.assertIn(f'value="{plywood.pk}"', body)
+        self.assertIn("checked", body)
+
+
+class MaterialGroupAdminUiTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.admin_user = User.objects.create_superuser(
+            username="material_group_ui_admin",
+            email="material_group_ui_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.admin_user)
+        self.coatings = MaterialGroup.objects.create(
+            name="Покрытия UI",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_color=True,
+        )
+        self.abrasives = MaterialGroup.objects.create(
+            name="Абразивы UI",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_grit=True,
+            has_diameter=True,
+            has_hole_count=True,
+        )
+        self.packing = MaterialGroup.objects.create(
+            name="Упаковка UI",
+            has_grade=False,
+            has_sheet_size=False,
+        )
+        MaterialGroupType.objects.create(group=self.coatings, name="морилка водная")
+        MaterialGroupType.objects.create(group=self.abrasives, name="эксцентриковый")
+        Material.objects.create(name="Морилка UI", unit="л", group=self.coatings)
+        Material.objects.create(name="Круг UI", unit="шт", group=self.abrasives)
+
+    def test_flag_chips_follow_group_flags(self):
+        from core.admin import material_group_flag_chips
+
+        self.assertEqual(material_group_flag_chips(self.coatings), ["бренд", "цвет"])
+        self.assertEqual(
+            material_group_flag_chips(self.abrasives),
+            ["бренд", "зерно", "Ø", "отв."],
+        )
+        self.assertEqual(material_group_flag_chips(self.packing), [])
+
+    def test_changelist_renders_cards_and_toolbar(self):
+        url = reverse("admin:core_materialgroup_changelist")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("material-cl-toolbar", html)
+        self.assertIn("Покрытия UI", html)
+        self.assertIn("1 карт.", html)
+        self.assertIn("бренд", html)
+        self.assertIn("цвет", html)
+        self.assertIn("морилка водная", html)
+        self.assertNotIn('name="has_grade"', html)
+
+    def test_change_form_has_flag_chips_and_materials_link(self):
+        url = reverse("admin:core_materialgroup_change", args=[self.coatings.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("material-group-flags", html)
+        self.assertIn("Поля в карточке материала", html)
+        self.assertIn("Открыть материалы этой группы (1)", html)
+        self.assertIn("id_has_brand", html)
+        self.assertIn("brand_choices-group", html)
+        self.assertIn("color_choices-group", html)
+
+
+
+class ProductGroupAdminUiTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="product_group_ui_admin",
+            email="product_group_ui_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        self.group = ProductGroup.objects.create(
+            name="Фанера ФК шлифованный",
+            description="Листы после шлифования",
+        )
+        Product.objects.create(
+            name="Фанера ФК 900×600 сорт 2/2 6 мм шлифованный",
+            product_kind=Product.PRODUCT_KIND_GOODS,
+            product_group=self.group,
+            unit="шт",
+            min_stock=Decimal("0"),
+        )
+
+    def test_changelist_renders_cards_and_toolbar(self):
+        url = reverse("admin:core_productgroup_changelist")
+        response = self.client.get(url, {"wh": "1"})
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("material-cl-toolbar", html)
+        self.assertIn("Фанера ФК шлифованный", html)
+        self.assertIn("1 карт.", html)
+        self.assertIn("Листы после шлифования", html)
+        self.assertIn("material-cl-btn-add", html)
+        self.assertIn("Группа", html)
+        self.assertIn("wh=1", html)
+
+    def test_change_form_has_products_link(self):
+        url = reverse("admin:core_productgroup_change", args=[self.group.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("Открыть товары этой группы (1)", html)
+        self.assertIn("product_kind=goods", html)
+        self.assertIn(f"product_group={self.group.pk}", html)
+
+
 class MaterialGroupCardHelpersTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -1404,6 +1563,109 @@ class MaterialGroupCardHelpersTests(TestCase):
         self.assertEqual(coat["brands"], ["Tury", "Акватекс"])
         self.assertEqual(coat["colors"], ["Дуб", "Сосна"])
         self.assertIn("морилка водная", coat["types"])
+
+    def test_changelist_card_params_follow_group_flags(self):
+        from core.admin import material_card_group_params
+
+        sheet = Material.objects.create(
+            name="Фанера ФК 900×600×6",
+            unit="лист",
+            material_type="ФК",
+            group=self.plywood,
+            grade="2/2",
+            sheet_length_mm=900,
+            sheet_width_mm=600,
+            thickness_mm=6,
+        )
+        sheet_params = dict(material_card_group_params(sheet))
+        self.assertEqual(sheet_params["тип"], "ФК")
+        self.assertEqual(sheet_params["сорт"], "2/2")
+        self.assertEqual(sheet_params["лист"], "900×600×6 мм")
+        self.assertIn("пл.", sheet_params)
+        self.assertNotIn("бренд", sheet_params)
+        self.assertNotIn("зерно", sheet_params)
+
+        pack = Material.objects.create(
+            name="Стретч карт",
+            unit="м",
+            material_type="плёнка",
+            group=self.packaging,
+        )
+        self.assertEqual(dict(material_card_group_params(pack)), {"тип": "плёнка"})
+
+        coatings = MaterialGroup.objects.create(
+            name="Покрытия карт",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_color=True,
+        )
+        stain = Material.objects.create(
+            name="Морилка карт",
+            unit="л",
+            material_type="морилка водная",
+            group=coatings,
+            brand="Tury",
+            color="Дуб",
+        )
+        stain_params = dict(material_card_group_params(stain))
+        self.assertEqual(stain_params["бренд"], "Tury")
+        self.assertEqual(stain_params["цвет"], "Дуб")
+
+        varnish = Material.objects.create(
+            name="Лак карт",
+            unit="л",
+            material_type="лак акриловый",
+            group=coatings,
+            brand="Акватекс",
+            color="Дуб",
+        )
+        varnish_params = dict(material_card_group_params(varnish))
+        self.assertEqual(varnish_params["бренд"], "Акватекс")
+        self.assertNotIn("цвет", varnish_params)
+
+        abrasives = MaterialGroup.objects.create(
+            name="Абразивы карт",
+            has_grade=False,
+            has_sheet_size=False,
+            has_brand=True,
+            has_grit=True,
+            has_diameter=True,
+            has_hole_count=True,
+        )
+        disc = Material.objects.create(
+            name="Круг карт",
+            unit="шт",
+            material_type="эксцентриковый",
+            group=abrasives,
+            brand="Flexione",
+            grit="P120",
+            diameter_mm="125",
+            hole_count="8",
+        )
+        disc_params = dict(material_card_group_params(disc))
+        self.assertEqual(disc_params["зерно"], "P120")
+        self.assertEqual(disc_params["Ø"], "125 мм")
+        self.assertEqual(disc_params["отв."], "8")
+
+        belt = Material.objects.create(
+            name="Лента карт",
+            unit="шт",
+            material_type="ленточный",
+            group=abrasives,
+            brand="Flexione",
+            grit="P80",
+            diameter_mm="125",
+            hole_count="8",
+        )
+        belt_params = dict(material_card_group_params(belt))
+        self.assertEqual(belt_params["зерно"], "P80")
+        self.assertNotIn("Ø", belt_params)
+        self.assertNotIn("отв.", belt_params)
+
+        html = self.client.get(reverse("admin:core_material_changelist")).content.decode()
+        self.assertIn("laser-material-card-params", html)
+        self.assertIn("900×600×6 мм", html)
 
     def test_packaging_form_uses_selects_with_group_choices(self):
         from core.admin import MaterialAdminForm
@@ -1601,9 +1863,9 @@ class MaterialGroupCardHelpersTests(TestCase):
 
     def test_plywood_fk_4mm_is_seeded(self):
         names = [
-            "Фанера ФК 900*600 сорт 2/2 4мм",
-            "Фанера ФК 621*621 сорт 2/2 4мм",
-            "Фанера ФК 317*900 сорт 2/2 4мм",
+            "Фанера ФК 900×600 сорт 2/2 4 мм",
+            "Фанера ФК 621×621 сорт 2/2 4 мм",
+            "Фанера ФК 317×900 сорт 2/2 4 мм",
         ]
         rows = list(Material.objects.filter(name__in=names).order_by("name"))
         self.assertEqual(len(rows), 3)
@@ -1612,15 +1874,16 @@ class MaterialGroupCardHelpersTests(TestCase):
         self.assertEqual(by_name[names[0]].sheet_length_mm, Decimal("900"))
         self.assertEqual(by_name[names[0]].sheet_width_mm, Decimal("600"))
         self.assertEqual(by_name[names[1]].sheet_length_mm, Decimal("621"))
-        self.assertEqual(by_name[names[2]].sheet_length_mm, Decimal("900"))
-        self.assertEqual(by_name[names[2]].sheet_width_mm, Decimal("317"))
+        self.assertEqual(by_name[names[2]].sheet_length_mm, Decimal("317"))
+        self.assertEqual(by_name[names[2]].sheet_width_mm, Decimal("900"))
         for row in rows:
             self.assertEqual(row.material_type, "Фанера ФК")
             self.assertEqual(row.unit, "лист")
+            self.assertEqual(row.grade, "2/2")
 
     def test_fk_900x600x6_sanding_and_primer_tech_cards(self):
-        sanded = Product.objects.get(name="Фанера ФК шлифованный 900×600 6 мм")
-        primed = Product.objects.get(name="Фанера ФК грунтованный 900×600 6 мм")
+        sanded = Product.objects.get(name="Фанера ФК 900×600 сорт 2/2 6 мм шлифованный")
+        primed = Product.objects.get(name="Фанера ФК 900×600 сорт 2/2 6 мм грунтованный")
         self.assertEqual(sanded.sheet_length_mm, Decimal("900"))
         self.assertEqual(sanded.sheet_width_mm, Decimal("600"))
         self.assertEqual(sanded.sheet_thickness_mm, Decimal("6"))
@@ -1650,7 +1913,7 @@ class MaterialGroupCardHelpersTests(TestCase):
             ],
         )
 
-        plywood = Material.objects.get(name="Фанера ФК 900*600 сорт 2/2")
+        plywood = Material.objects.get(name="Фанера ФК 900×600 сорт 2/2 6 мм")
         p120 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P120)")
         p180 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P180)")
         p320 = Material.objects.get(name="Круг шлифовальный FLEXIONE 125мм 8 отв. (P320)")
@@ -1693,6 +1956,68 @@ class MaterialGroupCardHelpersTests(TestCase):
         )
         self.assertEqual(card_b.planned_component_cost_per_unit(), card_a.planned_total_cost_per_unit())
         self.assertGreater(card_b.planned_total_cost_per_unit(), card_b.planned_overhead_per_unit())
+
+    def test_fk_317x900x4_sanded_and_primed_goods(self):
+        sanded = Product.objects.get(name="Фанера ФК 317×900 сорт 2/2 4 мм шлифованный")
+        primed = Product.objects.get(name="Фанера ФК 317×900 сорт 2/2 4 мм грунтованный")
+        self.assertEqual(sanded.product_group.name, "Фанера ФК шлифованный")
+        self.assertEqual(primed.product_group.name, "Фанера ФК грунтованный")
+        self.assertEqual(sanded.sheet_length_mm, Decimal("317"))
+        self.assertEqual(sanded.sheet_width_mm, Decimal("900"))
+        self.assertEqual(sanded.sheet_thickness_mm, Decimal("4"))
+        self.assertEqual(primed.sheet_thickness_mm, Decimal("4"))
+        self.assertEqual(sanded.unit, "шт")
+        self.assertTrue(Material.objects.filter(name="Фанера ФК 317×900 сорт 2/2 4 мм").exists())
+
+    def test_fk_621x621_sanded_and_primed_goods(self):
+        for thick in (3, 4, 6):
+            sanded = Product.objects.get(
+                name=f"Фанера ФК 621×621 сорт 2/2 {thick} мм шлифованный"
+            )
+            primed = Product.objects.get(
+                name=f"Фанера ФК 621×621 сорт 2/2 {thick} мм грунтованный"
+            )
+            self.assertEqual(sanded.product_group.name, "Фанера ФК шлифованный")
+            self.assertEqual(primed.product_group.name, "Фанера ФК грунтованный")
+            self.assertEqual(sanded.sheet_length_mm, Decimal("621"))
+            self.assertEqual(sanded.sheet_width_mm, Decimal("621"))
+            self.assertEqual(sanded.sheet_thickness_mm, Decimal(str(thick)))
+            self.assertEqual(primed.sheet_thickness_mm, Decimal(str(thick)))
+            self.assertTrue(
+                Material.objects.filter(name=f"Фанера ФК 621×621 сорт 2/2 {thick} мм").exists()
+            )
+
+    def test_fk_3mm_sanded_and_primed_goods(self):
+        rows = (
+            ("900×600", Decimal("900"), Decimal("600")),
+            ("317×900", Decimal("317"), Decimal("900")),
+            ("621×621", Decimal("621"), Decimal("621")),
+        )
+        for size, length, width in rows:
+            sanded = Product.objects.get(name=f"Фанера ФК {size} сорт 2/2 3 мм шлифованный")
+            primed = Product.objects.get(name=f"Фанера ФК {size} сорт 2/2 3 мм грунтованный")
+            self.assertEqual(sanded.sheet_length_mm, length)
+            self.assertEqual(sanded.sheet_width_mm, width)
+            self.assertEqual(sanded.sheet_thickness_mm, Decimal("3"))
+            self.assertEqual(primed.sheet_thickness_mm, Decimal("3"))
+            self.assertEqual(sanded.product_group.name, "Фанера ФК шлифованный")
+            self.assertEqual(primed.product_group.name, "Фанера ФК грунтованный")
+
+    def test_legacy_cutting_sheet_material_groups_removed(self):
+        leftover_groups = {
+            "лист шлифованный",
+            "лист грунтованный",
+            "лист тонированый",
+            "лист тонированный",
+        }
+        for group in MaterialGroup.objects.all():
+            name = (group.name or "").casefold().replace("ё", "е").strip()
+            self.assertNotIn(name, leftover_groups)
+        leftover_names = [
+            (material.name or "").casefold().replace("ё", "е")
+            for material in Material.objects.all()
+        ]
+        self.assertFalse(any(name.startswith("лист для резки") for name in leftover_names))
 
     def test_photo_widget_does_not_show_file_path(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1879,3 +2204,154 @@ class GoodsReceiptLineUnitDisplayTests(TestCase):
         inline = GoodsReceiptLineInline(GoodsReceiptLine, admin.site)
         self.assertEqual(inline.unit_display(line), "м")
         self.assertIn("unit_display", GoodsReceiptLineInline.fields)
+
+
+class WarehouseAdminNavTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.admin_user = User.objects.create_superuser(
+            username="wh_nav_admin",
+            email="wh_nav_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.admin_user)
+        org = Organization.objects.create(name="Nav Org")
+        self.finished_wh = Warehouse.objects.create(
+            name="Склад Готовой Продукции",
+            organization=org,
+        )
+        Warehouse.objects.create(name="Склад Материалов", organization=org)
+
+    def test_materials_page_has_two_warehouse_dropdowns(self):
+        response = self.client.get(reverse("admin:core_material_changelist"))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertIn(">Склады<", html)
+        self.assertIn("Склад материалов", html)
+        self.assertIn("Склад готовой продукции", html)
+        self.assertIn("Справочник материалов", html)
+        self.assertIn("Группы материалов", html)
+        self.assertIn("Справочник готовой продукции", html)
+        self.assertIn("Группы готовой продукции", html)
+        self.assertIn("Остатки готовой продукции", html)
+        self.assertNotIn("Полуфабрикаты", html)
+        self.assertNotIn("Движения по материалам", html)
+        self.assertIn(f"warehouse__id__exact={self.finished_wh.pk}", html)
+        self.assertIn('aria-label="Склады"', html)
+
+    def test_no_semifinished_warehouse_after_migrations(self):
+        leftover = [
+            warehouse.name
+            for warehouse in Warehouse.objects.all()
+            if "полуфабрик" in (warehouse.name or "").casefold().replace("ё", "е")
+        ]
+        self.assertEqual(leftover, [])
+
+    def test_goods_catalog_from_warehouse_keeps_warehouse_subnav(self):
+        response = self.client.get(
+            reverse("admin:core_product_changelist"),
+            {"product_kind": "goods", "wh": "1"},
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertIn("Склад готовой продукции", html)
+        self.assertIn('aria-label="Склады"', html)
+        self.assertNotIn('aria-label="Товары и справочники"', html)
+
+    def test_goods_catalog_from_products_keeps_product_subnav(self):
+        response = self.client.get(
+            reverse("admin:core_product_changelist"),
+            {"product_kind": "goods"},
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertIn("Товары и услуги", html)
+        self.assertIn('aria-label="Товары и справочники"', html)
+        self.assertNotIn('aria-label="Склады"', html)
+
+
+class ProductGoodsCardTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        admin_user = User.objects.create_superuser(
+            username="goods_card_admin",
+            email="goods_card_admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        self.group = ProductGroup.objects.create(name="Фанера ФК шлифованный")
+        self.product = Product.objects.create(
+            name="Фанера ФК шлифованный 900×600 6 мм",
+            product_kind=Product.PRODUCT_KIND_GOODS,
+            product_group=self.group,
+            unit="шт",
+            article="ART-TEST",
+            sheet_length_mm=Decimal("900"),
+            sheet_width_mm=Decimal("600"),
+            sheet_thickness_mm=Decimal("6"),
+            planned_price=Decimal("1500.00"),
+            min_stock=Decimal("0"),
+        )
+        org = Organization.objects.create(name="Card Org")
+        warehouse = Warehouse.objects.create(name="Склад Готовой Продукции", organization=org)
+        ProductStock.objects.create(warehouse=warehouse, product=self.product, quantity=Decimal("4"))
+
+    def test_goods_changelist_renders_cards(self):
+        response = self.client.get(
+            reverse("admin:core_product_changelist"),
+            {"product_kind": "goods"},
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertIn("product-changelist-wrap--cards", html)
+        self.assertIn("laser-product-card-params", html)
+        self.assertIn("field-stock_qty", html)
+        self.assertIn("material-cl-btn-add", html)
+        self.assertIn("Товар", html)
+        self.assertIn("material-filter-modal", html)
+        self.assertIn("material-filter-chip", html)
+        self.assertNotIn("product-tree", html)
+        self.assertNotIn("aria-label=\"Дерево групп\"", html)
+
+    def test_goods_changelist_filters_by_group(self):
+        other_group = ProductGroup.objects.create(name="Фанера ФК грунтованный")
+        Product.objects.create(
+            name="Фанера ФК 900×600 сорт 2/2 6 мм грунтованный",
+            product_kind=Product.PRODUCT_KIND_GOODS,
+            product_group=other_group,
+            unit="шт",
+            min_stock=Decimal("0"),
+        )
+        url = reverse("admin:core_product_changelist")
+        filtered = self.client.get(
+            url,
+            {"product_kind": "goods", "product_group": str(self.group.pk)},
+        )
+        self.assertEqual(filtered.status_code, 200)
+        body = filtered.content.decode("utf-8")
+        self.assertIn(self.product.name, body)
+        self.assertNotIn("Фанера ФК 900×600 сорт 2/2 6 мм грунтованный", body)
+
+    def test_service_changelist_stays_table(self):
+        Product.objects.create(
+            name="Лазерная резка",
+            product_kind=Product.PRODUCT_KIND_SERVICE,
+            unit="шт",
+            min_stock=Decimal("0"),
+        )
+        response = self.client.get(
+            reverse("admin:core_product_changelist"),
+            {"product_kind": "service"},
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+        self.assertNotIn("product-changelist-wrap--cards", html)
+        self.assertNotIn("laser-product-card-params", html)
+
+    def test_card_params_include_size_and_article(self):
+        from core.admin import product_card_params
+
+        params = dict(product_card_params(self.product))
+        self.assertEqual(params["арт."], "ART-TEST")
+        self.assertEqual(params["лист"], "900×600×6 мм")
+        self.assertIn("цена", params)

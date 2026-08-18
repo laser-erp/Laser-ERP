@@ -1,0 +1,20 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/materialgroup_change_form.css' %}?v=2">
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'core/admin/materialgroup_change_form.js' %}?v=1" defer></script>
+{% endblock %}
+
+{% block after_related_objects %}
+{% if original and materials_of_group_url %}
+<p class="mg-form-materials-link">
+  <a href="{{ materials_of_group_url }}">Открыть материалы этой группы ({{ materials_of_group_count }})</a>
+</p>
+{% endif %}
+{% endblock %}

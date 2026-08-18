@@ -397,7 +397,7 @@
       if (!qtyEl || !priceEl || !amountEl) return;
       let pack = parseOpt(packEl && packEl.value);
       const inPack = parseOpt(inPackEl && inPackEl.value);
-      if (inPack !== null && source !== 'qty') {
+      if (inPack !== null && inPack > 0 && source !== 'qty' && source !== 'amount' && source !== 'price') {
         if (pack === null) pack = 1;
         qtyEl.value = String(Math.round(pack * inPack * 10000) / 10000).replace('.', ',');
       }
@@ -479,7 +479,10 @@
         refreshPoSelect(tr);
         refreshUnitCell(tr);
         if (prefill.quantity != null) {
-          tr.querySelector('.line-qty').value = fmtMoney(Number(prefill.quantity), 4);
+          var qtyStr = String(Math.round(Number(prefill.quantity) * 10000) / 10000).replace('.', ',');
+          tr.querySelector('.line-pack').value = qtyStr;
+          tr.querySelector('.line-inpack').value = '1';
+          tr.querySelector('.line-qty').value = qtyStr;
         }
         if (prefill.amount != null) {
           tr.querySelector('.line-amount').value = fmtMoney(Number(prefill.amount), 2);
@@ -543,6 +546,6 @@
     addRow();
   })();
   </script>
-  <script src="{% static 'procurement/fanera_nest_receipt_calc.js' %}?v=3" defer></script>
+  <script src="{% static 'procurement/fanera_nest_receipt_calc.js' %}?v=4" defer></script>
 </body>
 </html>

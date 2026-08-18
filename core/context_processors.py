@@ -1,5 +1,7 @@
 """Контекст-процессоры проекта."""
-from .models import ProductGroup
+from django.urls import NoReverseMatch, reverse
+
+from .models import ProductGroup, Warehouse
 from .email_verification import is_email_verified
 from .storefront_roles import (
     ALLOWED_PREVIEW_ROLES,
@@ -20,6 +22,30 @@ def admin_product_groups(request):
         return {"product_groups": ProductGroup.objects.all().order_by("name")}
     except Exception:
         return {"product_groups": []}
+
+
+def admin_warehouse_nav(request):
+    """Ссылка остатков ГП для серой строки «Склады»."""
+    if not getattr(request, "path", "").startswith("/admin/"):
+        return {}
+    try:
+        warehouses = list(Warehouse.objects.only("id", "name"))
+    except Exception:
+        warehouses = []
+    finished_id = None
+    for warehouse in warehouses:
+        name = (warehouse.name or "").casefold().replace("ё", "е")
+        if "готов" in name:
+            finished_id = warehouse.pk
+            break
+    try:
+        stock_url = reverse("admin:warehouse_productstockproxy_changelist")
+    except NoReverseMatch:
+        stock_url = "/admin/warehouse/productstockproxy/"
+    finished_url = f"{stock_url}?warehouse__id__exact={finished_id}" if finished_id else stock_url
+    return {
+        "nav_finished_goods_stock_url": finished_url,
+    }
 
 
 def storefront_cart_meta(request):
