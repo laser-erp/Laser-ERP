@@ -136,25 +136,28 @@ def main() -> None:
         ssh_exec(ssh, f"chown -R {shlex.quote(app_user)}:www-data {shlex.quote(app_dir)}")
 
         # Prefer explicit Postgres env from /etc/laser-erp.env (Ubuntu sudo -E drops vars).
-        migrate_cmd = (
-            f"set -a; source /etc/laser-erp.env; set +a; "
-            f"cd {shlex.quote(app_dir)}; "
-            f"sudo -u {shlex.quote(app_user)} env "
-            f"DJANGO_SETTINGS_MODULE=\"$DJANGO_SETTINGS_MODULE\" "
-            f"DJANGO_SECRET_KEY=\"$DJANGO_SECRET_KEY\" "
-            f"DJANGO_ALLOWED_HOSTS=\"$DJANGO_ALLOWED_HOSTS\" "
-            f"DJANGO_DEBUG=\"${{DJANGO_DEBUG:-0}}\" "
-            f"DJANGO_USE_HTTPS=\"${{DJANGO_USE_HTTPS:-1}}\" "
-            f"POSTGRES_DB=\"$POSTGRES_DB\" "
-            f"POSTGRES_USER=\"$POSTGRES_USER\" "
-            f"POSTGRES_PASSWORD=\"$POSTGRES_PASSWORD\" "
-            f"POSTGRES_HOST=\"${{POSTGRES_HOST:-127.0.0.1}}\" "
-            f"POSTGRES_PORT=\"${{POSTGRES_PORT:-5432}}\" "
-            f".venv/bin/python manage.py {{action}}"
-        )
-        ssh_exec(ssh, f"/bin/bash -lc {shlex.quote(migrate_cmd.format(action='check'))}")
-        ssh_exec(ssh, f"/bin/bash -lc {shlex.quote(migrate_cmd.format(action='migrate --noinput'))}")
-        ssh_exec(ssh, f"/bin/bash -lc {shlex.quote(migrate_cmd.format(action='collectstatic --noinput'))}")
+        def django_cmd(action: str) -> str:
+            body = (
+                "set -a; source /etc/laser-erp.env; set +a; "
+                f"cd {shlex.quote(app_dir)}; "
+                f"sudo -u {shlex.quote(app_user)} env "
+                'DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" '
+                'DJANGO_SECRET_KEY="$DJANGO_SECRET_KEY" '
+                'DJANGO_ALLOWED_HOSTS="$DJANGO_ALLOWED_HOSTS" '
+                'DJANGO_DEBUG="${DJANGO_DEBUG:-0}" '
+                'DJANGO_USE_HTTPS="${DJANGO_USE_HTTPS:-1}" '
+                'POSTGRES_DB="$POSTGRES_DB" '
+                'POSTGRES_USER="$POSTGRES_USER" '
+                'POSTGRES_PASSWORD="$POSTGRES_PASSWORD" '
+                'POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}" '
+                'POSTGRES_PORT="${POSTGRES_PORT:-5432}" '
+                f".venv/bin/python manage.py {action}"
+            )
+            return f"/bin/bash -lc {shlex.quote(body)}"
+
+        ssh_exec(ssh, django_cmd("check"))
+        ssh_exec(ssh, django_cmd("migrate --noinput"))
+        ssh_exec(ssh, django_cmd("collectstatic --noinput"))
         ssh_exec(ssh, "systemctl restart laser-erp")
         ssh_exec(ssh, "systemctl --no-pager --full status laser-erp | sed -n '1,20p'", check=False)
         print("SYNC OK")
