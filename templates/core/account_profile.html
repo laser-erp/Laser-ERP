@@ -1,0 +1,114 @@
+{% extends "core/base.html" %}
+{% block title %}Кабинет{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="mb-1">Кабинет</h1>
+        <p class="text-muted mb-0">Контакты, аватар и настройки доступа.</p>
+      </div>
+      <a href="{% url 'account_password_change' %}" class="btn btn-outline-secondary">Изменить пароль</a>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body text-center">
+            {% if profile.avatar %}
+            <img src="{{ profile.avatar.url }}" alt="Аватар" class="img-fluid rounded-circle mb-3 profile-avatar-image">
+            {% else %}
+            <div class="profile-avatar-fallback mx-auto mb-3" aria-hidden="true">
+              <span class="profile-avatar-beam profile-avatar-beam--left"></span>
+              <span class="profile-avatar-beam profile-avatar-beam--top"></span>
+              <span class="profile-avatar-beam profile-avatar-beam--diag"></span>
+              <span class="profile-avatar-stroke profile-avatar-stroke--l1"></span>
+              <span class="profile-avatar-stroke profile-avatar-stroke--l2"></span>
+              <span class="profile-avatar-stroke profile-avatar-stroke--e1"></span>
+              <span class="profile-avatar-stroke profile-avatar-stroke--e2"></span>
+              <span class="profile-avatar-stroke profile-avatar-stroke--e3"></span>
+            </div>
+            {% endif %}
+            <h5 class="mb-1">
+              {% if user.last_name or user.first_name or profile.middle_name %}
+                {{ user.last_name }} {{ user.first_name }} {{ profile.middle_name }}
+              {% else %}
+                {{ user.get_username }}
+              {% endif %}
+            </h5>
+            <div class="text-muted small mb-1">@{{ user.get_username }}</div>
+            <div class="text-muted small mb-3">
+              {% if user.is_superuser %}
+              Суперпользователь
+              {% elif user.is_staff %}
+              Администратор
+              {% else %}
+              Пользователь
+              {% endif %}
+            </div>
+            <div class="small text-muted">Логин менять нельзя.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              <div class="mb-3">
+                <label class="form-label">Логин</label>
+                <input type="text" class="form-control" value="{{ user.get_username }}" readonly>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.last_name.label }}</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors }}</div>{% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.first_name.label }}</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors }}</div>{% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.middle_name.label }}</label>
+                {{ form.middle_name }}
+                {% if form.middle_name.errors %}<div class="text-danger small mt-1">{{ form.middle_name.errors }}</div>{% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">{{ form.phone.label }}</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors }}</div>{% endif %}
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label">{{ form.avatar.label }}</label>
+                {{ form.avatar }}
+                {% if form.avatar.errors %}<div class="text-danger small mt-1">{{ form.avatar.errors }}</div>{% endif %}
+              </div>
+
+              <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

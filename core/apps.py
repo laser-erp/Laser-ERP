@@ -34,6 +34,7 @@ class CoreConfig(AppConfig):
 
     def ready(self) -> None:
         from core.admin_numeric_locale import patch_admin_numeric_locale
+        import core.signals  # noqa: F401
 
         patch_admin_numeric_locale()
         _patch_admin_file_widget()

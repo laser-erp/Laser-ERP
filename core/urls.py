@@ -1,11 +1,25 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.urls import reverse_lazy
 
 from . import views
+from .forms import AccountPasswordChangeForm
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("account/login/", views.account_login, name="account_login"),
     path("account/register/", views.account_register, name="account_register"),
+    path("account/profile/", views.account_profile, name="account_profile"),
+    path(
+        "account/password-change/",
+        auth_views.PasswordChangeView.as_view(
+            form_class=AccountPasswordChangeForm,
+            template_name="core/account_password_change.html",
+            success_url=reverse_lazy("account_profile"),
+        ),
+        name="account_password_change",
+    ),
+    path("account/invite/<str:token>/", views.account_admin_invite_accept, name="account_admin_invite_accept"),
     path("account/verify-email/<str:token>/", views.account_verify_email, name="account_verify_email"),
     path("account/resend-verification/", views.account_resend_verification, name="account_resend_verification"),
     path("account/logout/", views.account_logout, name="account_logout"),

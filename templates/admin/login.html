@@ -1,0 +1,119 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Log in" %} | Laser ERP{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/admin/admin_login.css' %}?v=2">
+{% endblock %}
+
+{% block bodyclass %}login laser-admin-login-page laser-admin-login-motion-{{ request.GET.motion|default:"1" }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">Laser ERP</a></div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="laser-login-shell">
+  <div class="laser-login-backdrop" aria-hidden="true">
+    <span class="laser-login-orb laser-login-orb--violet"></span>
+    <span class="laser-login-orb laser-login-orb--cyan"></span>
+    <span class="laser-login-grid"></span>
+    <span class="laser-login-workline laser-login-workline--x"></span>
+    <span class="laser-login-workline laser-login-workline--y"></span>
+  </div>
+
+  <div class="laser-login-layout">
+    <section class="laser-login-hero" aria-label="Laser ERP">
+      <div class="laser-login-kicker">laser-erp</div>
+      <div class="laser-login-logo-stage" aria-hidden="true">
+        <span class="laser-login-logo-beam laser-login-logo-beam--left"></span>
+        <span class="laser-login-logo-beam laser-login-logo-beam--top"></span>
+        <span class="laser-login-logo-beam laser-login-logo-beam--diag"></span>
+        <div class="laser-login-logo-mark">
+          <span class="laser-login-logo-stroke laser-login-logo-stroke--l1"></span>
+          <span class="laser-login-logo-stroke laser-login-logo-stroke--l2"></span>
+          <span class="laser-login-logo-stroke laser-login-logo-stroke--e1"></span>
+          <span class="laser-login-logo-stroke laser-login-logo-stroke--e2"></span>
+          <span class="laser-login-logo-stroke laser-login-logo-stroke--e3"></span>
+        </div>
+      </div>
+      <h1>Админка для производства, склада и заказов.</h1>
+      <p>
+        Единое рабочее пространство для материалов, готовой продукции, закупок,
+        техкарт и управления производством.
+      </p>
+      <ul class="laser-login-features">
+        <li>Склад и остатки</li>
+        <li>Техкарты и этапы</li>
+        <li>Закупки и документы</li>
+      </ul>
+    </section>
+
+    <section class="laser-login-panel">
+      <div class="laser-login-panel__inner">
+        <div class="laser-login-brand">laser-erp <span>/ админка</span></div>
+
+        {% if form.errors and not form.non_field_errors %}
+        <p class="errornote">
+          {% if form.errors.items|length == 1 %}{% translate "Please correct the error below." %}{% else %}{% translate "Please correct the errors below." %}{% endif %}
+        </p>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="laser-login-errors">
+          {% for error in form.non_field_errors %}
+          <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <p class="errornote">
+          {% blocktranslate trimmed %}
+            You are authenticated as {{ username }}, but are not authorized to access this page.
+            Would you like to login to a different account?
+          {% endblocktranslate %}
+        </p>
+        {% endif %}
+
+        <form action="{{ app_path }}" method="post" id="login-form" class="laser-login-form">
+          {% csrf_token %}
+          <div class="form-row">
+            {{ form.username.errors }}
+            <label for="{{ form.username.id_for_label }}">Логин</label>
+            {{ form.username }}
+          </div>
+          <div class="form-row">
+            {{ form.password.errors }}
+            <label for="{{ form.password.id_for_label }}">Пароль</label>
+            {{ form.password }}
+          </div>
+
+          {% url 'admin_password_reset' as password_reset_url %}
+          {% if password_reset_url %}
+          <div class="password-reset-link">
+            <a href="{{ password_reset_url }}">Забыли пароль?</a>
+          </div>
+          {% endif %}
+
+          <div class="submit-row">
+            <input type="submit" value="Войти" />
+          </div>
+
+          {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

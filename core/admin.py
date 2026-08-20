@@ -72,6 +72,7 @@ from .models import (
     ContractVersion,
     BankPaymentOrder,
     CustomerInvoice,
+    AdminInvite,
     EmailVerification,
     Employee,
     LaborTimeLog,
@@ -119,6 +120,7 @@ from .models import (
     TechOperation,
     TechProcess,
     TechProcessStage,
+    UserProfile,
     Warehouse,
 )
 from procurement.models import GoodsReceipt, ReceivedVatInvoice, SupplierInvoice
@@ -3262,6 +3264,30 @@ class EmailVerificationAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     list_display = ("id", "user", "is_verified", "sent_at", "verified_at", "updated_at")
     list_filter = ("is_verified", "sent_at", "verified_at")
     search_fields = ("user__username", "user__email")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(AdminInvite)
+class AdminInviteAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
+    list_display = ("id", "email", "role", "sent_at", "accepted_at", "created_at", "updated_at")
+    list_filter = ("role", "sent_at", "accepted_at")
+    search_fields = ("email",)
+    readonly_fields = ("token", "sent_at", "accepted_at", "created_at", "updated_at")
+
+    def save_model(self, request, obj, form, change):
+        is_new = not change
+        super().save_model(request, obj, form, change)
+        if is_new and obj.sent_at is None:
+            from .admin_invite import send_admin_invite_email
+
+            send_admin_invite_email(request, obj)
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
+    list_display = ("id", "user", "phone", "updated_at")
+    search_fields = ("user__username", "user__email", "phone")
+    autocomplete_fields = ("user",)
     readonly_fields = ("created_at", "updated_at")
 
 

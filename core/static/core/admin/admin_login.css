@@ -1,0 +1,729 @@
+body.login.laser-admin-login-page {
+  --laser-login-bg-1: #071124;
+  --laser-login-bg-2: #24124d;
+  --laser-login-bg-3: #082846;
+  --laser-login-line: rgba(93, 213, 255, 0.14);
+  --laser-login-panel: rgba(7, 18, 36, 0.66);
+  --laser-login-panel-border: rgba(135, 220, 255, 0.26);
+  --laser-login-text: #e9f3ff;
+  --laser-login-muted: rgba(226, 238, 255, 0.76);
+  --laser-login-accent: #56d7ff;
+  --laser-login-accent-2: #ba6fff;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 16% 20%, rgba(186, 111, 255, 0.34), transparent 24%),
+    radial-gradient(circle at 82% 24%, rgba(86, 215, 255, 0.24), transparent 26%),
+    linear-gradient(135deg, var(--laser-login-bg-1) 0%, var(--laser-login-bg-2) 42%, var(--laser-login-bg-3) 100%);
+  color: var(--laser-login-text);
+}
+
+body.login.laser-admin-login-page #header,
+body.login.laser-admin-login-page .breadcrumbs,
+body.login.laser-admin-login-page #nav-sidebar,
+body.login.laser-admin-login-page .toggle-nav-sidebar,
+body.login.laser-admin-login-page .laser-admin-nav-bar,
+body.login.laser-admin-login-page .laser-admin-subnav-bar {
+  display: none !important;
+}
+
+body.login.laser-admin-login-page #container {
+  min-height: 100vh;
+  background: transparent;
+}
+
+body.login.laser-admin-login-page #content {
+  padding: 0;
+}
+
+body.login.laser-admin-login-page #content-main {
+  width: 100%;
+}
+
+body.login.laser-admin-login-page #footer {
+  display: none;
+}
+
+.laser-login-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.laser-login-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.laser-login-orb {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  filter: blur(12px);
+}
+
+.laser-login-orb--violet {
+  top: 9%;
+  left: -5%;
+  width: 34rem;
+  height: 34rem;
+  background: radial-gradient(circle, rgba(186, 111, 255, 0.42) 0%, rgba(186, 111, 255, 0) 70%);
+}
+
+.laser-login-orb--cyan {
+  right: -8%;
+  bottom: -8%;
+  width: 42rem;
+  height: 42rem;
+  background: radial-gradient(circle, rgba(86, 215, 255, 0.3) 0%, rgba(86, 215, 255, 0) 72%);
+}
+
+.laser-login-grid {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 42%;
+  background:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to top, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent 92%);
+  transform: perspective(900px) rotateX(74deg) scale(1.2);
+  transform-origin: bottom center;
+}
+
+.laser-login-workline {
+  position: absolute;
+  display: block;
+  background: linear-gradient(90deg, rgba(86, 215, 255, 0), rgba(86, 215, 255, 0.3), rgba(86, 215, 255, 0));
+  opacity: 0.34;
+}
+
+.laser-login-workline--x {
+  left: 0;
+  right: 0;
+  bottom: 17%;
+  height: 1px;
+}
+
+.laser-login-workline--y {
+  top: 0;
+  bottom: 0;
+  left: 26%;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(186, 111, 255, 0), rgba(186, 111, 255, 0.3), rgba(186, 111, 255, 0));
+}
+
+.laser-login-layout {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) minmax(23rem, 31rem);
+  gap: 3rem;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3.5rem 2rem;
+}
+
+.laser-login-hero {
+  color: var(--laser-login-text);
+}
+
+.laser-login-kicker {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgba(135, 220, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 25, 45, 0.35);
+  color: var(--laser-login-accent);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  margin-bottom: 1.25rem;
+}
+
+.laser-login-logo-stage {
+  position: relative;
+  width: min(24rem, 72vw);
+  height: 10rem;
+  margin: 0 0 1.4rem;
+}
+
+.laser-login-logo-beam {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  transform-origin: left center;
+}
+
+.laser-login-logo-beam--left {
+  left: 0;
+  top: 4.5rem;
+  width: 10.2rem;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(86, 215, 255, 0), rgba(86, 215, 255, 0.95));
+  box-shadow: 0 0 14px rgba(86, 215, 255, 0.44);
+}
+
+.laser-login-logo-beam--top {
+  left: 7.7rem;
+  top: 0.7rem;
+  width: 7rem;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(186, 111, 255, 0), rgba(186, 111, 255, 0.95));
+  box-shadow: 0 0 14px rgba(186, 111, 255, 0.45);
+}
+
+.laser-login-logo-beam--diag {
+  left: 2rem;
+  top: 7rem;
+  width: 8rem;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(186, 111, 255, 0), rgba(86, 215, 255, 0.92));
+  box-shadow: 0 0 12px rgba(110, 194, 255, 0.35);
+  transform: rotate(-24deg);
+}
+
+.laser-login-logo-mark {
+  position: absolute;
+  left: 8rem;
+  top: 1.35rem;
+  width: 7.2rem;
+  height: 7.2rem;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(135, 220, 255, 0.18);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.08), rgba(7, 18, 36, 0.08));
+  box-shadow: inset 0 0 24px rgba(86, 215, 255, 0.06);
+}
+
+.laser-login-logo-stroke {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.laser-login-logo-stroke--l1 {
+  left: 1.2rem;
+  top: 1.05rem;
+  width: 4px;
+  height: 4.8rem;
+  color: #56d7ff;
+  background: currentColor;
+}
+
+.laser-login-logo-stroke--l2 {
+  left: 1.2rem;
+  top: 5.45rem;
+  width: 2.6rem;
+  height: 4px;
+  color: #56d7ff;
+  background: currentColor;
+}
+
+.laser-login-logo-stroke--e1,
+.laser-login-logo-stroke--e2,
+.laser-login-logo-stroke--e3 {
+  left: 4.25rem;
+  width: 1.9rem;
+  height: 4px;
+  color: #ba6fff;
+  background: currentColor;
+}
+
+.laser-login-logo-stroke--e1 {
+  top: 1.15rem;
+}
+
+.laser-login-logo-stroke--e2 {
+  top: 3.2rem;
+  width: 1.55rem;
+}
+
+.laser-login-logo-stroke--e3 {
+  top: 5.25rem;
+}
+
+.laser-login-hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 3vw, 3.5rem);
+  line-height: 1.05;
+  color: #fff;
+  max-width: 11ch;
+}
+
+.laser-login-hero p {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 1.04rem;
+  line-height: 1.7;
+  color: var(--laser-login-muted);
+}
+
+.laser-login-features {
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.laser-login-features li {
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8fbff;
+  font-size: 0.92rem;
+}
+
+.laser-login-panel {
+  position: relative;
+}
+
+.laser-login-panel__inner {
+  position: relative;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  background: linear-gradient(180deg, rgba(12, 29, 53, 0.78), var(--laser-login-panel));
+  border: 1px solid var(--laser-login-panel-border);
+  border-radius: 28px;
+  box-shadow:
+    0 24px 80px rgba(1, 8, 20, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  padding: 2rem;
+}
+
+.laser-login-panel__inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  padding: 1px;
+  background: linear-gradient(145deg, rgba(186, 111, 255, 0.65), rgba(86, 215, 255, 0.5), rgba(255, 255, 255, 0.12));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.laser-login-brand {
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.9rem, 2.2vw, 2.8rem);
+  line-height: 1.1;
+  font-weight: 700;
+  color: #fff;
+}
+
+.laser-login-brand span {
+  color: rgba(233, 243, 255, 0.78);
+  font-weight: 400;
+}
+
+.laser-login-form .form-row {
+  margin-bottom: 1.1rem;
+}
+
+.laser-login-form label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #fff;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+body.login.laser-admin-login-page .laser-login-form input[type="text"],
+body.login.laser-admin-login-page .laser-login-form input[type="password"],
+body.login.laser-admin-login-page .laser-login-form input[type="email"] {
+  width: 100%;
+  box-sizing: border-box;
+  height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(145, 190, 255, 0.2);
+  background: rgba(9, 23, 42, 0.72);
+  color: #fff;
+  padding: 0 1rem;
+  font-size: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.login.laser-admin-login-page .laser-login-form input[type="text"]:focus,
+body.login.laser-admin-login-page .laser-login-form input[type="password"]:focus,
+body.login.laser-admin-login-page .laser-login-form input[type="email"]:focus {
+  border-color: rgba(86, 215, 255, 0.75);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(86, 215, 255, 0.12);
+}
+
+body.login.laser-admin-login-page .submit-row {
+  padding: 0;
+  margin: 1.35rem 0 0;
+  background: transparent;
+  border: 0;
+}
+
+body.login.laser-admin-login-page .submit-row input[type="submit"] {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(90deg, var(--laser-login-accent-2), var(--laser-login-accent));
+  color: #06101f;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 18px 40px rgba(86, 215, 255, 0.16);
+}
+
+body.login.laser-admin-login-page .submit-row input[type="submit"]:hover {
+  filter: brightness(1.06);
+}
+
+.laser-login-errors,
+body.login.laser-admin-login-page p.errornote {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(133, 28, 28, 0.32);
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  color: #ffe2e2;
+}
+
+body.login.laser-admin-login-page ul.errorlist {
+  margin: 0.35rem 0 0.2rem;
+  padding: 0;
+  list-style: none;
+  color: #ffd0d0;
+  font-size: 0.88rem;
+}
+
+.password-reset-link {
+  margin-top: 0.35rem;
+  text-align: right;
+}
+
+.password-reset-link a {
+  color: var(--laser-login-accent) !important;
+}
+
+@media (max-width: 920px) {
+  .laser-login-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem 1rem 2rem;
+  }
+
+  .laser-login-hero {
+    order: 2;
+  }
+
+  .laser-login-panel {
+    order: 1;
+  }
+
+  .laser-login-hero h1 {
+    max-width: none;
+  }
+}
+
+@keyframes laserOrbV1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: translate3d(16px, -26px, 0) scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes laserOrbC1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.84;
+  }
+  50% {
+    transform: translate3d(-18px, 24px, 0) scale(1.085);
+    opacity: 1;
+  }
+}
+
+@keyframes laserGrid1 {
+  0%,
+  100% {
+    transform: perspective(900px) rotateX(74deg) scale(1.2) translateY(0);
+    opacity: 0.92;
+  }
+  50% {
+    transform: perspective(900px) rotateX(72deg) scale(1.24) translateY(-18px);
+    opacity: 1;
+  }
+}
+
+@keyframes laserWorkline1 {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes laserButtonShimmer1 {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 18px 40px rgba(86, 215, 255, 0.16);
+  }
+  50% {
+    filter: brightness(1.08);
+    box-shadow: 0 22px 54px rgba(86, 215, 255, 0.22);
+  }
+}
+
+@keyframes laserOrbV2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -28px, 0) scale(1.06);
+  }
+}
+
+@keyframes laserOrbC2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 26px, 0) scale(1.06);
+  }
+}
+
+@keyframes laserGrid2 {
+  0%,
+  100% {
+    transform: perspective(900px) rotateX(74deg) scale(1.25) translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: perspective(900px) rotateX(70deg) scale(1.28) translateY(-18px);
+    opacity: 0.9;
+  }
+}
+
+@keyframes laserWorkline2 {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes laserButtonShimmer2 {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 18px 40px rgba(86, 215, 255, 0.16);
+  }
+  35% {
+    filter: brightness(1.14);
+    box-shadow: 0 26px 70px rgba(186, 111, 255, 0.22);
+  }
+  65% {
+    filter: brightness(1.06);
+  }
+}
+
+@keyframes laserBeamDraw1 {
+  0%,
+  14% {
+    opacity: 0;
+    transform: scaleX(0.1);
+  }
+  30%,
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes laserBeamDraw2 {
+  0%,
+  24% {
+    opacity: 0;
+    transform: scaleX(0.08);
+  }
+  42%,
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes laserBeamPulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes laserStrokeDrawY {
+  0%,
+  18% {
+    opacity: 0;
+    transform: scaleY(0.08);
+  }
+  36%,
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes laserStrokeDrawX {
+  0%,
+  36% {
+    opacity: 0;
+    transform: scaleX(0.08);
+  }
+  58%,
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes laserStrokeGlow {
+  0%,
+  100% {
+    opacity: 0.92;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.24);
+  }
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-orb--violet {
+  animation: laserOrbV1 7s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-orb--cyan {
+  animation: laserOrbC1 8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-grid {
+  animation: laserGrid1 11s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-workline {
+  animation: laserWorkline1 4.6s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .submit-row input[type="submit"] {
+  animation: laserButtonShimmer1 2.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-logo-beam--left {
+  animation: laserBeamDraw1 3.6s ease-out infinite, laserBeamPulse 2.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-logo-beam--top {
+  animation: laserBeamDraw2 3.6s ease-out infinite, laserBeamPulse 3s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-logo-beam--diag {
+  animation: laserBeamDraw2 3.6s ease-out infinite, laserBeamPulse 2.4s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-logo-stroke--l1 {
+  transform-origin: top center;
+  animation: laserStrokeDrawY 3.6s ease-out infinite, laserStrokeGlow 2.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-1 .laser-login-logo-stroke--l2,
+body.login.laser-admin-login-motion-1 .laser-login-logo-stroke--e1,
+body.login.laser-admin-login-motion-1 .laser-login-logo-stroke--e2,
+body.login.laser-admin-login-motion-1 .laser-login-logo-stroke--e3 {
+  transform-origin: left center;
+  animation: laserStrokeDrawX 3.6s ease-out infinite, laserStrokeGlow 2.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-orb--violet {
+  animation: laserOrbV2 6s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-orb--cyan {
+  animation: laserOrbC2 7s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-grid {
+  animation: laserGrid2 10s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-workline {
+  animation: laserWorkline2 3.1s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .submit-row input[type="submit"] {
+  animation: laserButtonShimmer2 2s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-logo-beam--left {
+  animation: laserBeamDraw1 2.5s ease-out infinite, laserBeamPulse 1.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-logo-beam--top,
+body.login.laser-admin-login-motion-2 .laser-login-logo-beam--diag {
+  animation: laserBeamDraw2 2.5s ease-out infinite, laserBeamPulse 1.8s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-logo-stroke--l1 {
+  transform-origin: top center;
+  animation: laserStrokeDrawY 2.5s ease-out infinite, laserStrokeGlow 1.9s ease-in-out infinite;
+}
+
+body.login.laser-admin-login-motion-2 .laser-login-logo-stroke--l2,
+body.login.laser-admin-login-motion-2 .laser-login-logo-stroke--e1,
+body.login.laser-admin-login-motion-2 .laser-login-logo-stroke--e2,
+body.login.laser-admin-login-motion-2 .laser-login-logo-stroke--e3 {
+  transform-origin: left center;
+  animation: laserStrokeDrawX 2.5s ease-out infinite, laserStrokeGlow 1.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.login.laser-admin-login-motion-1 .laser-login-orb--violet,
+  body.login.laser-admin-login-motion-1 .laser-login-orb--cyan,
+  body.login.laser-admin-login-motion-1 .laser-login-grid,
+  body.login.laser-admin-login-motion-1 .laser-login-workline,
+  body.login.laser-admin-login-motion-1 .laser-login-logo-beam,
+  body.login.laser-admin-login-motion-1 .laser-login-logo-stroke,
+  body.login.laser-admin-login-motion-1 .submit-row input[type="submit"],
+  body.login.laser-admin-login-motion-2 .laser-login-orb--violet,
+  body.login.laser-admin-login-motion-2 .laser-login-orb--cyan,
+  body.login.laser-admin-login-motion-2 .laser-login-grid,
+  body.login.laser-admin-login-motion-2 .laser-login-workline,
+  body.login.laser-admin-login-motion-2 .laser-login-logo-beam,
+  body.login.laser-admin-login-motion-2 .laser-login-logo-stroke,
+  body.login.laser-admin-login-motion-2 .submit-row input[type="submit"] {
+    animation: none !important;
+  }
+}
+

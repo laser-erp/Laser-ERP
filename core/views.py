@@ -7,6 +7,8 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import F, Sum
 from django.db.models import Q
@@ -18,6 +20,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
 from .email_verification import is_email_verified, issue_email_verification
+from .forms import UserProfileForm
 from .services.file_security import (
     rescan_quarantined_layout_file,
     scan_and_handle_layout_file,
@@ -28,6 +31,7 @@ from .models import (
     Contract,
     ContractVersion,
     CustomerInvoice,
+    AdminInvite,
     EmailVerification,
     Employee,
     LaborTimeLog,
@@ -37,6 +41,7 @@ from .models import (
     Product,
     ProductionRequest,
     ProductionRequestMessage,
+    UserProfile,
 )
 from .storefront_roles import (
     ALLOWED_PREVIEW_ROLES,
@@ -179,11 +184,139 @@ def account_verify_email(request, token):
     return redirect("account_login")
 
 
+def _generate_username_from_email(email: str) -> str:
+    base = (email.split("@", 1)[0] if "@" in email else email).strip().lower()
+    base = "".join(ch if ch.isalnum() else "_" for ch in base).strip("_")
+    if not base:
+        base = "user"
+
+    username = base
+    i = 1
+    while User.objects.filter(username__iexact=username).exists():
+        username = f"{base}{i}"
+        i += 1
+    return username
+
+
+def account_admin_invite_accept(request, token: str):
+    invite = get_object_or_404(AdminInvite, token=token, accepted_at__isnull=True)
+    email_value = (invite.email or "").strip().lower()
+    next_url = _safe_next_redirect(request) or "/admin/"
+
+    if request.method == "POST":
+        password1 = (request.POST.get("password1") or "").strip()
+        password2 = (request.POST.get("password2") or "").strip()
+
+        if not password1 or not password2:
+            messages.error(request, "Введите пароль в оба поля.")
+            return render(
+                request,
+                "core/account_admin_invite_accept.html",
+                {"invite": invite, "next_url": next_url},
+            )
+
+        if password1 != password2:
+            messages.error(request, "Пароли не совпадают.")
+            return render(
+                request,
+                "core/account_admin_invite_accept.html",
+                {"invite": invite, "next_url": next_url},
+            )
+
+        # Валидация пароля по тем же правилам, что и при создании пользователя.
+        temp_username = _generate_username_from_email(email_value)
+        temp_user = User(username=temp_username, email=email_value)
+        try:
+            validate_password(password1, temp_user)
+        except ValidationError as e:
+            messages.error(request, e.messages[0] if getattr(e, "messages", None) else "Некорректный пароль.")
+            return render(
+                request,
+                "core/account_admin_invite_accept.html",
+                {"invite": invite, "next_url": next_url},
+            )
+
+        user = User.objects.filter(email__iexact=email_value).first()
+        if user is None:
+            if invite.role == AdminInvite.ROLE_SUPERUSER:
+                user = User.objects.create_superuser(
+                    username=temp_username,
+                    email=email_value,
+                    password=password1,
+                )
+            else:
+                user = User.objects.create_user(
+                    username=temp_username,
+                    email=email_value,
+                    password=password1,
+                )
+                user.is_staff = True
+                user.save(update_fields=["is_staff"])
+        else:
+            user.set_password(password1)
+
+        # Присваиваем права в зависимости от роли приглашения.
+        if invite.role == AdminInvite.ROLE_SUPERUSER:
+            user.is_staff = True
+            user.is_superuser = True
+        else:
+            user.is_staff = True
+            # Не "даунгрейдим" уже существующих суперпользователей.
+        user.email = email_value
+        user.save()
+
+        # Чтобы staff/superuser гарантированно считались "email verified".
+        EmailVerification.objects.update_or_create(
+            user=user,
+            defaults={
+                "is_verified": True,
+                "verified_at": timezone.now(),
+                "token": uuid4().hex,
+            },
+        )
+
+        invite.accepted_at = timezone.now()
+        invite.save(update_fields=["accepted_at"])
+
+        login(request, user)
+        messages.success(request, "Приглашение принято. Доступ в админку активирован.")
+        return redirect(next_url)
+
+    return render(
+        request,
+        "core/account_admin_invite_accept.html",
+        {"invite": invite, "next_url": next_url},
+    )
+
+
 @login_required
 def account_logout(request):
     logout(request)
     messages.info(request, "Вы вышли из аккаунта.")
     return redirect("catalog")
+
+
+@login_required
+def account_profile(request):
+    profile, _created = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Кабинет обновлён.")
+            return redirect("account_profile")
+    else:
+        form = UserProfileForm(instance=profile, user=request.user)
+
+    return render(
+        request,
+        "core/account_profile.html",
+        {
+            "form": form,
+            "profile": profile,
+        },
+    )
 
 
 def product_list(request):

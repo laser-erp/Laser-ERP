@@ -76,3 +76,115 @@ input[type="file"].laser-file-input-native {
   font-size: 0.875rem;
   color: #64748b;
 }
+
+.profile-avatar-image {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border: 3px solid rgba(99, 102, 241, 0.14);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+}
+
+.profile-avatar-fallback {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(125, 211, 252, 0.26);
+  background:
+    radial-gradient(circle at 28% 28%, rgba(168, 85, 247, 0.4), transparent 30%),
+    radial-gradient(circle at 78% 72%, rgba(56, 189, 248, 0.28), transparent 34%),
+    linear-gradient(135deg, #0a1328 0%, #261550 50%, #0a2945 100%);
+  box-shadow:
+    0 16px 44px rgba(15, 23, 42, 0.18),
+    inset 0 0 32px rgba(255, 255, 255, 0.04);
+}
+
+.profile-avatar-fallback::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.profile-avatar-beam,
+.profile-avatar-stroke {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+}
+
+.profile-avatar-beam--left {
+  left: 10px;
+  top: 66px;
+  width: 52px;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0), rgba(56, 189, 248, 0.98));
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+}
+
+.profile-avatar-beam--top {
+  left: 61px;
+  top: 28px;
+  width: 38px;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(192, 132, 252, 0), rgba(192, 132, 252, 0.98));
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.72);
+}
+
+.profile-avatar-beam--diag {
+  left: 20px;
+  top: 96px;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(192, 132, 252, 0), rgba(56, 189, 248, 0.9));
+  transform: rotate(-25deg);
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.52);
+}
+
+.profile-avatar-stroke {
+  box-shadow: 0 0 10px currentColor;
+}
+
+.profile-avatar-stroke--l1 {
+  left: 54px;
+  top: 39px;
+  width: 4px;
+  height: 50px;
+  color: #56d7ff;
+  background: currentColor;
+}
+
+.profile-avatar-stroke--l2 {
+  left: 54px;
+  top: 85px;
+  width: 28px;
+  height: 4px;
+  color: #56d7ff;
+  background: currentColor;
+}
+
+.profile-avatar-stroke--e1,
+.profile-avatar-stroke--e2,
+.profile-avatar-stroke--e3 {
+  left: 87px;
+  width: 22px;
+  height: 4px;
+  color: #d18cff;
+  background: currentColor;
+}
+
+.profile-avatar-stroke--e1 {
+  top: 40px;
+}
+
+.profile-avatar-stroke--e2 {
+  top: 63px;
+  width: 18px;
+}
+
+.profile-avatar-stroke--e3 {
+  top: 86px;
+}

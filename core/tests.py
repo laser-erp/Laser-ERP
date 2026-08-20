@@ -37,6 +37,7 @@ from core.models import (
     TechOperationProduct,
     TechProcess,
     ProductDisassembly,
+    UserProfile,
     Warehouse,
 )
 
@@ -2355,3 +2356,41 @@ class ProductGoodsCardTests(TestCase):
         self.assertEqual(params["арт."], "ART-TEST")
         self.assertEqual(params["лист"], "900×600×6 мм")
         self.assertIn("цена", params)
+
+
+class AccountProfileTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="profile_user",
+            email="profile@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(self.user)
+
+    def test_profile_page_creates_profile_and_renders(self):
+        response = self.client.get(reverse("account_profile"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Кабинет")
+        self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
+
+    def test_profile_update_saves_email_and_phone(self):
+        response = self.client.post(
+            reverse("account_profile"),
+            {
+                "last_name": "Иванов",
+                "first_name": "Иван",
+                "middle_name": "Иванович",
+                "email": "new-profile@example.com",
+                "phone": "+7 999 123-45-67",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.last_name, "Иванов")
+        self.assertEqual(self.user.first_name, "Иван")
+        self.assertEqual(self.user.email, "new-profile@example.com")
+        self.assertEqual(self.user.profile.middle_name, "Иванович")
+        self.assertEqual(self.user.profile.phone, "+7 999 123-45-67")
+        self.assertContains(response, "Кабинет обновлён.")

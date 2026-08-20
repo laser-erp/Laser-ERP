@@ -2907,6 +2907,10 @@ def _email_verification_token():
     return uuid4().hex
 
 
+def _admin_invite_token():
+    return uuid4().hex
+
+
 class EmailVerification(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -2928,6 +2932,78 @@ class EmailVerification(models.Model):
     def __str__(self) -> str:
         state = "подтверждено" if self.is_verified else "ожидает подтверждения"
         return f"{self.user} — {state}"
+
+
+class AdminInvite(models.Model):
+    ROLE_STAFF = "staff"
+    ROLE_SUPERUSER = "superuser"
+
+    ROLE_CHOICES = (
+        (ROLE_STAFF, "Сотрудник"),
+        (ROLE_SUPERUSER, "Суперпользователь"),
+    )
+
+    email = models.EmailField("E-mail", db_index=True)
+    token = models.CharField(
+        "Токен приглашения",
+        max_length=64,
+        unique=True,
+        default=_admin_invite_token,
+    )
+    role = models.CharField("Роль", max_length=20, choices=ROLE_CHOICES, default=ROLE_STAFF)
+
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Кем приглашён",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="admin_invites_sent",
+    )
+
+    sent_at = models.DateTimeField("Дата отправки", null=True, blank=True)
+    accepted_at = models.DateTimeField("Дата принятия", null=True, blank=True)
+
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+    updated_at = models.DateTimeField("Дата изменения", auto_now=True)
+
+    class Meta:
+        verbose_name = "Приглашение в админку"
+        verbose_name_plural = "Приглашения в админку"
+        indexes = [models.Index(fields=["email"])]
+
+    @property
+    def is_accepted(self) -> bool:
+        return self.accepted_at is not None
+
+    def __str__(self) -> str:
+        return f"{self.email} ({self.role}) — {'принято' if self.is_accepted else 'ожидает'}"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Пользователь",
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    avatar = models.ImageField(
+        "Аватар",
+        upload_to="profiles/avatars/",
+        null=True,
+        blank=True,
+    )
+    middle_name = models.CharField("Отчество", max_length=150, blank=True)
+    phone = models.CharField("Телефон", max_length=64, blank=True)
+    created_at = models.DateTimeField("Дата создания", auto_now_add=True)
+    updated_at = models.DateTimeField("Дата изменения", auto_now=True)
+
+    class Meta:
+        verbose_name = "Профиль пользователя"
+        verbose_name_plural = "Профили пользователей"
+
+    def __str__(self) -> str:
+        return self.user.get_username()
 
 
 class ProductionRequest(models.Model):
