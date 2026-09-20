@@ -10,7 +10,7 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | `waiting` |
+| **Статус** | `done` |
 | **Кто выполняет** | cloud-agent |
 | **Блокер** | — |
 
@@ -111,11 +111,11 @@ curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.s
 
 ## Критерий «готово»
 
-- [ ] `git rev-parse` на сервере = коммит с **main** после этого релиза.
-- [ ] `0133`–`0136` применены в **Postgres** (не только SQLite).
-- [ ] `/admin/login/` — **200** или **302**, не **500**.
-- [ ] `laser-erp` и `nginx` — **active**.
-- [ ] Отчёт заполнен и **на GitHub**.
+- [x] `git rev-parse` на сервере = коммит с **main** после этого релиза.
+- [x] `0133`–`0136` применены в **Postgres** (не только SQLite).
+- [x] `/admin/login/` — **200** или **302**, не **500**.
+- [x] `laser-erp` и `nginx` — **active**.
+- [x] Отчёт заполнен и **на GitHub**.
 
 ---
 
@@ -123,31 +123,63 @@ curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.s
 
 ### Дата и время
 
-(заполнить)
+2026-09-20 / 2026-09-21 (UTC), cloud-agent.
 
 ### Git: коммит на сервере до / после
 
-(заполнить)
+**До:** `4ee01ce`  
+**После:** `362ead1` (`main`, `origin/main`)
+
+Релиз локального агента: `07f7393` (техкарта). Дополнительно на **main** для прода:
+
+- `f22ac99` — в репозиторий добавлена `0133_password_reset_request` (уже была в Postgres с прошлого rsync), цепочка техкарты зависит от неё;
+- `362ead1` — исправлен `RunPython` в `0133_techcard_single_raw_sheet` (без вызова live-модели до миграций схемы).
+
+На VPS удалён **untracked** дубликат `0133_password_reset_request.py`, мешавший `git pull`.
 
 ### update_ubuntu.sh
 
-(последние ~25 строк вывода или ошибка)
+Первый прогон после `07f7393`: **ошибка** `Conflicting migrations` (лист `0133_password_reset_request` + `0136_…`).
+
+После правок на GitHub — успешно:
+
+```
+Running migrations:
+  Applying core.0133_techcard_single_raw_sheet... OK
+  Applying core.0134_tablichka_laser_cut_norm... OK
+  Applying core.0135_laser_cut_items_no_material... OK
+  Applying core.0136_laser_engrave_types_and_rates... OK
+3 static files copied to '/var/www/laser-erp/staticfiles', 196 unmodified.
+OK: Laser ERP обновлён и перезапущен.
+```
+
+`tools/_deploy_server.py` **не запускался**.
 
 ### showmigrations core (0133–0136)
 
-(вставить строки)
+```
+ [X] 0133_password_reset_request
+ [X] 0133_techcard_single_raw_sheet
+ [X] 0134_tablichka_laser_cut_norm
+ [X] 0135_laser_cut_items_no_material
+ [X] 0136_laser_engrave_types_and_rates
+```
+
+(Проверка через `settings_prod` + `POSTGRES_*` + `DJANGO_SECRET_KEY` из `/etc/laser-erp.env`.)
 
 ### admin_login HTTP-код
 
-(заполнить)
+**200** (после restart; `laser-erp` / `nginx` — **active**).
 
 ### Статус финальный
 
-`waiting` → `done` / `blocked`
+`waiting` → **`done`**
 
 ### Что нужно от владельца / локального агента
 
-(если blocked)
+- Принять коммиты **`f22ac99`** и **`362ead1`** на **main** (миграции для прода).
+- Вручную в админке: техкарта «Табличка Баня…» — лазерная резка ~0,46 м, без лишних строк гравировки (облачный агент UI не открывал).
+- Модель/функционал **PasswordResetRequest** в коде **main** по-прежнему только как миграция; полный флоу сброса — из ветки PR, если ещё не смержен.
 
 ---
 
