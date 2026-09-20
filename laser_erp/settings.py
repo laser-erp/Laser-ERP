@@ -218,3 +218,7 @@ INVOICE_OCR = {
 
 # Авторизация storefront: используем кастомный путь входа.
 LOGIN_URL = "/account/login/"
+
+from laser_erp.mail import apply_email_settings  # noqa: E402
+
+apply_email_settings(locals())

@@ -8,6 +8,24 @@ from .forms import AccountPasswordChangeForm
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("account/login/", views.account_login, name="account_login"),
+    path(
+        "account/password-reset/",
+        auth_views.PasswordResetView.as_view(
+            template_name="registration/account_password_reset_form.html",
+            email_template_name="registration/password_reset_email.html",
+            subject_template_name="registration/password_reset_subject.txt",
+            success_url=reverse_lazy("account_password_reset_done"),
+            extra_email_context={"site_name": "Laser ERP"},
+        ),
+        name="account_password_reset",
+    ),
+    path(
+        "account/password-reset/done/",
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="registration/account_password_reset_done.html",
+        ),
+        name="account_password_reset_done",
+    ),
     path("account/register/", views.account_register, name="account_register"),
     path("account/profile/", views.account_profile, name="account_profile"),
     path(
