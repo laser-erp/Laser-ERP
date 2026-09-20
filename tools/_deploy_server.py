@@ -18,7 +18,10 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
-ROOT = Path(__file__).resolve().parent.parent
+_TOOLS = Path(__file__).resolve().parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+from project_root import PROJECT_ROOT as ROOT
 ENV_FILE = ROOT / ".env.server"
 TMP_DIR = ROOT / "tools" / "_deploy_tmp"
 CODE_ZIP = TMP_DIR / "code.zip"

@@ -40,3 +40,10 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 
+# Agent scratch / one-off diagnostics (not part of the app)
+tools/_tmp/
+
+# Local-only helpers that touch secrets on disk
+tools/_show_email_keys.py
+tools/ops/**/_show_email_keys.py
+
