@@ -255,7 +255,7 @@ ssh -i ~/.ssh/vps_key root@${VPS_HOST} 'chown -R lasererp:www-data /var/www/lase
 
 1. [ ] Проверить секреты (`VPS_*`, `YANDEX_SMTP_PASSWORD`).
 2. [ ] `python3 tools/install_vps_ssh_key.py` и SSH на VPS по ключу.
-3. [ ] При наличии `YANDEX_SMTP_PASSWORD` — `python3 tools/apply_yandex_smtp_to_vps.py`.
+3. [ ] Применить пароль: либо `YANDEX_SMTP_PASSWORD` в общем списке Secrets рядом с `VPS_PASSWORD` (не Environment), либо с ПК `.\tools\apply_yandex_smtp_from_pc.ps1 -VpsHost <host>`.
 4. [ ] Проверить тестовое письмо и `/admin/password_reset/` (поле Email).
 5. [ ] Сообщить пользователю результат **без** паролей и ключей.
 6. [ ] Обновить PR при изменениях в коде; на прод код уже частично залит через rsync.
