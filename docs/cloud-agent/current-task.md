@@ -10,7 +10,7 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | `waiting` |
+| **Статус** | `done` |
 | **Кто выполняет** | cloud-agent |
 | **Блокер** | — |
 
@@ -120,11 +120,11 @@ curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.s
 
 ## Критерий «готово»
 
-- [ ] `git rev-parse` в `/var/www/laser-erp` показывает коммит с **main** GitHub.
-- [ ] `deploy/update_ubuntu.sh` завершился **OK**.
-- [ ] `/admin/login/` по-прежнему **200/302**, не **500**.
-- [ ] Файл **`docs/cloud-agent/server-update.md`** создан.
-- [ ] Отчёт ниже заполнен и **выложен на GitHub**.
+- [x] `git rev-parse` в `/var/www/laser-erp` показывает коммит с **main** GitHub.
+- [x] `deploy/update_ubuntu.sh` завершился **OK**.
+- [x] `/admin/login/` по-прежнему **200/302**, не **500**.
+- [x] Файл **`docs/cloud-agent/server-update.md`** создан.
+- [x] Отчёт ниже заполнен и **выложен на GitHub**.
 
 ---
 
@@ -132,19 +132,48 @@ curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.s
 
 ### Дата и время
 
+2026-09-20 (UTC), cloud-agent.
+
 ### Git: коммит на сервере, upstream
+
+До работ: каталог **без** `.git` (`NO_GIT`).
+
+Выполнено от `lasererp`: `git init -b main`, `remote` → `https://github.com/laser-erp/Laser-ERP.git`, `git fetch origin main`, `git reset --hard origin/main`, upstream `origin/main`.
+
+На момент проверки: **`ee87be6`** — `main` отслеживает **`origin/main`**. Репозиторий **публичный**, `GITHUB_TOKEN` не использовался. Deploy key: **нет**.
 
 ### update_ubuntu.sh: вывод (последние ~20 строк)
 
+```
+Already up to date.
+...
+Running migrations:
+  No migrations to apply.
+...
+0 static files copied to '/var/www/laser-erp/staticfiles', 199 unmodified.
+OK: Laser ERP обновлён и перезапущен.
+```
+
+(Предупреждение Django о немигрированных изменениях моделей — как раньше, на запуск не влияет.)
+
 ### admin_login HTTP-код после работ
+
+**200** (`https://laser-erp.armada.sx/admin/login/`). `laser-erp` и `nginx` — **active**.
 
 ### media/ и logs/ на месте (да/нет, размеры)
 
+**Да.** `media/` ~4.9M, `logs/` ~14M. `tools/_deploy_server.py` **не запускался**.
+
 ### Статус финальный
 
-`done` | `blocked` — …
+`done`
 
 ### Что нужно от владельца / локального агента
+
+- После merge этого отчёта на **main** на VPS: `sudo bash /var/www/laser-erp/deploy/update_ubuntu.sh` — подтянет `server-update.md` и обновлённый `current-task.md`.
+- Дальнейшие релизы: push в **main** → та же команда на сервере (см. [server-update.md](./server-update.md)).
+- При переводе репозитория в **private** — настроить deploy key или PAT на VPS (секрет `GITHUB_TOKEN` в Cursor для агента).
+- Опционально: исправить `VPS_SSH_PRIVATE_KEY` в Secrets (ключ с агента даёт `error in libcrypto`; вход по паролю работает).
 
 ---
 
