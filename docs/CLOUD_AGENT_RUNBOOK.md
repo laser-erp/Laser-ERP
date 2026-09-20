@@ -46,9 +46,28 @@ for k in ('VPS_HOST','VPS_USER','VPS_PASSWORD','VPS_SSH_PRIVATE_KEY','YANDEX_SMT
 "
 ```
 
-Если `YANDEX_SMTP_PASSWORD` **не set** — SMTP на сервере не завершить. Попросить добавить секрет (пароль приложения Яндекса, без пробелов). Не печатать значение.
+## Секреты Cursor — почему агенты ходят по кругу
 
-Секрет, добавленный через форму Cloud Agent **в уже запущенный** агент, в этот VM часто **не попадает** (`CLOUD_AGENT_ALL_SECRET_NAMES` остаётся прежним). Нужен **новый** Cloud Agent после сохранения секрета. Этот запуск был без linked Environment — секреты должны быть в том же списке, что `VPS_PASSWORD`, либо агент надо стартовать с Environment, куда секрет записали.
+Этот Cloud Agent **без linked Environment**. В него попадают только секреты из общего списка Cloud Agents (сейчас: `VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`, `VPS_SSH_PRIVATE_KEY`, плюс `EPD_API_KEY` и ошибочное имя `root`).
+
+Форма «Env setup / Add secrets» и **Secrets внутри Environment** пишут пароль **в окружение**, которое этот агент не использует. Новый агент, запущенный с рабочего стола так же «без Environment», снова не увидит `YANDEX_SMTP_PASSWORD`. Поэтому «перезапусти агента» само по себе не помогает.
+
+**Как сделать так, чтобы агент увидел пароль**
+
+1. Откройте [https://cursor.com/dashboard/cloud-agents](https://cursor.com/dashboard/cloud-agents) (не только карточку Environment).
+2. **Secrets** того же уровня, где уже есть **`VPS_PASSWORD`**.
+3. Добавьте **`YANDEX_SMTP_PASSWORD`** (пароль приложения Яндекса, без пробелов). Тип: Runtime Secret.
+4. Только после этого имеет смысл новый агент — и только если в его env появится это имя в `CLOUD_AGENT_ALL_SECRET_NAMES`.
+
+**Как применить пароль без Cursor** (предпочтительный обход): с домашнего ПК, пароль в чат не писать:
+
+```powershell
+.\tools\apply_yandex_smtp_from_pc.ps1 -VpsHost <VPS_HOST>
+```
+
+На сервере уже лежит `/usr/local/sbin/apply-yandex-smtp.py` (читает пароль из stdin, не печатает его, включает сброс по почте только если `send_mail` прошёл).
+
+Если `YANDEX_SMTP_PASSWORD` **не set** в сессии агента — не звать «просто нового агента». Либо общий список Secrets как у `VPS_PASSWORD`, либо скрипт с ПК. Не печатать значение.
 
 `VPS_SSH_PRIVATE_KEY` часто приходит **одной строкой с пробелами** вокруг base64. Не писать его в файл как есть — только через `tools/install_vps_ssh_key.py`.
 
