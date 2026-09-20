@@ -5,8 +5,13 @@
   <div class="card-body p-4">
     <h1 class="mb-3">Запрос на производство отправлен</h1>
     <p class="mb-1">Номер запроса: <strong>№{{ request_obj.id }}</strong></p>
-    <p class="mb-3">Статус: <strong>{{ request_obj.get_status_display }}</strong></p>
-    <p class="text-muted">Менеджер проверит параметры и свяжется с вами для уточнения и подтверждения.</p>
+    <p class="mb-1">Статус: <strong>{{ request_obj.get_status_display }}</strong></p>
+    {% if request_obj.draft_total_cost is not None %}
+    <p class="mb-3">Ориентир стоимости: <strong>{{ request_obj.draft_total_cost }} ₽</strong>
+      <span class="text-muted small">(уточняется менеджером)</span></p>
+    {% else %}
+    <p class="mb-3 text-muted">Менеджер проверит параметры и свяжется с вами.</p>
+    {% endif %}
     <div class="d-flex gap-2 mt-3">
       <a href="{% url 'catalog' %}" class="btn btn-primary">Вернуться в каталог</a>
       {% if user.is_authenticated %}

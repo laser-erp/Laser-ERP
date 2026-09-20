@@ -10,6 +10,17 @@ urlpatterns = [
     path("account/login/", views.account_login, name="account_login"),
     path("account/register/", views.account_register, name="account_register"),
     path("account/profile/", views.account_profile, name="account_profile"),
+    path("workspace/", views.workspace, name="workspace"),
+    path(
+        "workspace/impersonate/",
+        views.workspace_impersonate_start,
+        name="workspace_impersonate_start",
+    ),
+    path(
+        "workspace/impersonate/stop/",
+        views.workspace_impersonate_stop,
+        name="workspace_impersonate_stop",
+    ),
     path(
         "account/password-change/",
         auth_views.PasswordChangeView.as_view(
@@ -48,6 +59,7 @@ urlpatterns = [
     path("account/orders/<int:order_id>/", views.account_order_detail, name="account_order_detail"),
     path("account/orders/<int:order_id>/repeat/", views.account_repeat_order, name="account_repeat_order"),
     path("account/production-requests/", views.account_production_requests, name="account_production_requests"),
+    path("account/invoices/", views.account_invoices, name="account_invoices"),
     path("employee/contracts/", views.employee_contracts, name="employee_contracts"),
     path("employee/contracts/create/", views.employee_contract_create, name="employee_contract_create"),
     path("employee/contracts/<int:contract_id>/", views.employee_contract_detail, name="employee_contract_detail"),

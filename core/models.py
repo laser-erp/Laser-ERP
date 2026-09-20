@@ -3006,6 +3006,51 @@ class UserProfile(models.Model):
         return self.user.get_username()
 
 
+class UserActionLog(models.Model):
+    """Журнал ключевых действий (вход, профиль, замещение сотрудника)."""
+
+    ACTION_LOGIN = "login"
+    ACTION_PROFILE_UPDATE = "profile_update"
+    ACTION_IMPERSONATE_START = "impersonate_start"
+    ACTION_IMPERSONATE_STOP = "impersonate_stop"
+
+    ACTION_CHOICES = [
+        (ACTION_LOGIN, "Вход"),
+        (ACTION_PROFILE_UPDATE, "Изменение профиля"),
+        (ACTION_IMPERSONATE_START, "Включение замещения"),
+        (ACTION_IMPERSONATE_STOP, "Выключение замещения"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Пользователь",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="action_logs",
+    )
+    action = models.CharField("Действие", max_length=64, choices=ACTION_CHOICES)
+    detail = models.TextField("Детали", blank=True)
+    related_employee = models.ForeignKey(
+        "Employee",
+        verbose_name="Связанный сотрудник",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="action_logs",
+    )
+    created_at = models.DateTimeField("Когда", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Запись журнала действий"
+        verbose_name_plural = "Журнал действий пользователей"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        who = self.user.get_username() if self.user_id else "—"
+        return f"{who}: {self.get_action_display()} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
 class ProductionRequest(models.Model):
     STATUS_NEW = "new"
     STATUS_IN_REVIEW = "in_review"
@@ -3021,6 +3066,22 @@ class ProductionRequest(models.Model):
         (STATUS_APPROVED, "Согласована"),
         (STATUS_REJECTED, "Отклонена"),
         (STATUS_CONVERTED, "Конвертирована в заказ"),
+    ]
+    ORDER_MODE_CATALOG = "catalog"
+    ORDER_MODE_CUSTOM = "custom"
+    ORDER_MODE_CHOICES = [
+        (ORDER_MODE_CATALOG, "Из каталога (можно надпись/лого)"),
+        (ORDER_MODE_CUSTOM, "Индивидуальный макет (DXF)"),
+    ]
+    METRICS_NONE = ""
+    METRICS_OK = "ok"
+    METRICS_UNSUPPORTED = "unsupported"
+    METRICS_ERROR = "error"
+    METRICS_STATUS_CHOICES = [
+        (METRICS_NONE, "Нет"),
+        (METRICS_OK, "Посчитано"),
+        (METRICS_UNSUPPORTED, "Формат без авторасчёта"),
+        (METRICS_ERROR, "Ошибка разбора"),
     ]
     SCAN_PENDING = "pending"
     SCAN_CLEAN = "clean"
@@ -3043,6 +3104,12 @@ class ProductionRequest(models.Model):
         blank=True,
         related_name="production_requests",
     )
+    order_mode = models.CharField(
+        "Режим заказа",
+        max_length=20,
+        choices=ORDER_MODE_CHOICES,
+        default=ORDER_MODE_CATALOG,
+    )
     customer_name = models.CharField("Клиент", max_length=255)
     phone = models.CharField("Телефон", max_length=64)
     email = models.EmailField("Email")
@@ -3063,6 +3130,13 @@ class ProductionRequest(models.Model):
         null=True,
         blank=True,
     )
+    engraving_text = models.CharField("Текст гравировки", max_length=500, blank=True)
+    logo_file = models.FileField(
+        "Логотип / изображение для гравировки",
+        upload_to="production_requests/logos/",
+        null=True,
+        blank=True,
+    )
     layout_scan_status = models.CharField(
         "Статус проверки файла",
         max_length=20,
@@ -3073,6 +3147,44 @@ class ProductionRequest(models.Model):
     layout_scanned_at = models.DateTimeField("Проверено в", null=True, blank=True)
     layout_is_quarantined = models.BooleanField("Файл в карантине", default=False)
     layout_quarantine_path = models.CharField("Путь в карантине", max_length=512, blank=True)
+    layout_cut_length_m = models.DecimalField(
+        "Длина реза, м",
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+    layout_engrave_length_m = models.DecimalField(
+        "Длина гравировки, м",
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+    layout_metrics_status = models.CharField(
+        "Статус авторасчёта длин",
+        max_length=20,
+        choices=METRICS_STATUS_CHOICES,
+        default=METRICS_NONE,
+        blank=True,
+    )
+    layout_metrics_note = models.CharField("Заметка по разбору макета", max_length=500, blank=True)
+    draft_unit_cost = models.DecimalField(
+        "Ориентир цены за 1 шт., ₽",
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    draft_total_cost = models.DecimalField(
+        "Ориентир суммы, ₽",
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    draft_quoted_at = models.DateTimeField("Ориентир посчитан", null=True, blank=True)
+    draft_quote_note = models.CharField("Пояснение к ориентиру", max_length=500, blank=True)
     specs = models.TextField("Параметры и требования", blank=True)
     material_preferences = models.CharField("Предпочтения по материалу", max_length=255, blank=True)
     comment = models.TextField("Комментарий клиента", blank=True)

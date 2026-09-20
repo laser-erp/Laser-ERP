@@ -166,6 +166,11 @@ LOGGING = {
     },
 }
 
+# Ориентир котировки заявки на производство (₽ за погонный метр / персонализация)
+QUOTE_DEFAULT_CUT_RATE_PER_M = os.environ.get("QUOTE_DEFAULT_CUT_RATE_PER_M", "15")
+QUOTE_DEFAULT_ENGRAVE_RATE_PER_M = os.environ.get("QUOTE_DEFAULT_ENGRAVE_RATE_PER_M", "8")
+QUOTE_PERSONALIZATION_FEE = os.environ.get("QUOTE_PERSONALIZATION_FEE", "250")
+
 # Безопасность загрузки макетов (клиентский запрос на производство)
 UPLOAD_SECURITY = {
     "max_size_mb": int(os.environ.get("UPLOAD_MAX_SIZE_MB", "20")),
@@ -218,3 +223,41 @@ INVOICE_OCR = {
 
 # Авторизация storefront: используем кастомный путь входа.
 LOGIN_URL = "/account/login/"
+
+# Почта (приглашения в админку, подтверждение email).
+# Сейчас приглашения передаются ссылкой из админки; SMTP опционален.
+PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "").strip()
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "").strip()
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587") or "587")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "").strip()
+_email_use_tls = os.environ.get("EMAIL_USE_TLS", "").strip().lower()
+_email_use_ssl = os.environ.get("EMAIL_USE_SSL", "").strip().lower()
+if _email_use_ssl in ("1", "true", "yes"):
+    EMAIL_USE_SSL = True
+    EMAIL_USE_TLS = False
+elif _email_use_tls in ("1", "true", "yes"):
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+else:
+    # Яндекс/465 → SSL; иначе по умолчанию STARTTLS на 587.
+    EMAIL_USE_SSL = EMAIL_PORT == 465
+    EMAIL_USE_TLS = not EMAIL_USE_SSL and EMAIL_PORT in (25, 587)
+DEFAULT_FROM_EMAIL = (
+    os.environ.get("DEFAULT_FROM_EMAIL", "").strip()
+    or EMAIL_HOST_USER
+    or "noreply@localhost"
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "20") or "20")
+
+_email_backend = os.environ.get("EMAIL_BACKEND", "").strip()
+if _email_backend:
+    EMAIL_BACKEND = _email_backend
+elif DEBUG and not (EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD):
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+elif EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Без SMTP не притворяемся, что письма уходят.
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"

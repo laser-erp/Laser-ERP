@@ -37,8 +37,11 @@ from core.models import (
     TechOperationProduct,
     TechProcess,
     ProductDisassembly,
+    UserActionLog,
     UserProfile,
     Warehouse,
+    CustomerInvoice,
+    ProductionRequest,
 )
 
 
@@ -2371,7 +2374,8 @@ class AccountProfileTests(TestCase):
     def test_profile_page_creates_profile_and_renders(self):
         response = self.client.get(reverse("account_profile"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Кабинет")
+        self.assertContains(response, "Профиль")
+        self.assertContains(response, "Рабочее пространство")
         self.assertTrue(UserProfile.objects.filter(user=self.user).exists())
 
     def test_profile_update_saves_email_and_phone(self):
@@ -2393,4 +2397,157 @@ class AccountProfileTests(TestCase):
         self.assertEqual(self.user.email, "new-profile@example.com")
         self.assertEqual(self.user.profile.middle_name, "Иванович")
         self.assertEqual(self.user.profile.phone, "+7 999 123-45-67")
-        self.assertContains(response, "Кабинет обновлён.")
+        self.assertContains(response, "Профиль обновлён.")
+
+
+class WorkspaceRoleTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.client_user = User.objects.create_user(
+            username="ws_client",
+            email="ws_client@example.com",
+            password="test-pass-123",
+        )
+        self.employee_user = User.objects.create_user(
+            username="ws_employee",
+            email="ws_employee@example.com",
+            password="test-pass-123",
+        )
+        self.admin_user = User.objects.create_user(
+            username="ws_admin",
+            email="ws_admin@example.com",
+            password="test-pass-123",
+            is_staff=True,
+        )
+        Employee.objects.create(
+            user=self.employee_user,
+            full_name="Сотрудник Тест",
+            position="Оператор",
+            hourly_rate=Decimal("400"),
+        )
+        Employee.objects.create(
+            user=self.admin_user,
+            full_name="Админ Тест",
+            position="Администратор",
+            hourly_rate=Decimal("500"),
+        )
+
+    def test_register_duplicate_username_shows_form_error(self):
+        response = self.client.post(
+            reverse("account_register"),
+            {
+                "username": "ws_client",
+                "email": "new_ws@example.com",
+                "password1": "ComplexPass123!",
+                "password2": "ComplexPass123!",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Такой логин уже занят")
+
+    def test_client_workspace_template(self):
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("workspace"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Кабинет клиента")
+        self.assertContains(response, "Мои заказы")
+        self.assertContains(response, "Мои счета")
+        self.assertContains(response, "Рабочее пространство")
+
+    def test_client_invoices_page_lists_sent_invoice(self):
+        req = ProductionRequest.objects.create(
+            user=self.client_user,
+            customer_name="Клиент",
+            phone="+70000000000",
+            email="ws_client@example.com",
+            request_title="Табличка",
+            quantity=1,
+        )
+        invoice = CustomerInvoice.objects.create(
+            production_request=req,
+            customer_name="Клиент",
+            customer_email="ws_client@example.com",
+            amount=Decimal("1500.00"),
+            status=CustomerInvoice.STATUS_SENT,
+        )
+        draft = CustomerInvoice.objects.create(
+            production_request=req,
+            customer_name="Клиент",
+            customer_email="ws_client@example.com",
+            amount=Decimal("100.00"),
+            status=CustomerInvoice.STATUS_DRAFT,
+        )
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("account_invoices"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, invoice.number or str(invoice.pk))
+        self.assertNotContains(response, f">{draft.amount}")
+
+        workspace = self.client.get(reverse("workspace"))
+        self.assertContains(workspace, "1")
+        self.assertContains(workspace, invoice.number or f"СК-")
+
+    def test_employee_workspace_includes_my_work(self):
+        self.client.force_login(self.employee_user)
+        response = self.client.get(reverse("workspace"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Сотрудник:")
+        self.assertContains(response, "Моя работа")
+
+    def test_employee_admin_workspace_has_admin_link(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse("workspace"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Админка")
+        self.assertContains(response, "Моя работа")
+
+    def test_my_work_redirects_to_workspace(self):
+        self.client.force_login(self.client_user)
+        response = self.client.get(reverse("my_work"))
+        self.assertRedirects(response, reverse("workspace"))
+
+    def test_login_redirects_to_workspace(self):
+        response = self.client.post(
+            reverse("account_login"),
+            {"username": "ws_client", "password": "test-pass-123"},
+        )
+        self.assertRedirects(response, reverse("workspace"))
+
+    def test_admin_can_impersonate_employee(self):
+        target = Employee.objects.get(user=self.employee_user)
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse("workspace_impersonate_start"),
+            {"employee_id": target.pk},
+        )
+        self.assertRedirects(response, reverse("workspace"))
+        workspace = self.client.get(reverse("workspace"))
+        self.assertContains(workspace, "Режим замещения")
+        self.assertContains(workspace, target.full_name)
+        self.assertTrue(
+            UserActionLog.objects.filter(
+                user=self.admin_user,
+                action=UserActionLog.ACTION_IMPERSONATE_START,
+                related_employee=target,
+            ).exists()
+        )
+
+        stop = self.client.get(reverse("workspace_impersonate_stop"))
+        self.assertRedirects(stop, reverse("workspace"))
+        after = self.client.get(reverse("workspace"))
+        self.assertContains(after, "Смотреть как сотрудник")
+        self.assertTrue(
+            UserActionLog.objects.filter(
+                user=self.admin_user,
+                action=UserActionLog.ACTION_IMPERSONATE_STOP,
+            ).exists()
+        )
+
+    def test_employee_cannot_impersonate(self):
+        target = Employee.objects.get(user=self.admin_user)
+        self.client.force_login(self.employee_user)
+        response = self.client.post(
+            reverse("workspace_impersonate_start"),
+            {"employee_id": target.pk},
+        )
+        self.assertEqual(response.status_code, 403)

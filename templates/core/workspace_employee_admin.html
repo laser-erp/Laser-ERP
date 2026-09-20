@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% block title %}Рабочее пространство{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1">Рабочее пространство</h1>
+    <p class="text-muted mb-0">Администратор: работа сотрудника плюс управление и админка.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/" class="btn btn-primary">Админка</a>
+    <a href="{% url 'account_profile' %}" class="btn btn-outline-secondary">Профиль</a>
+  </div>
+</div>
+
+{% if storefront_can_impersonate and impersonation_employees %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Смотреть как сотрудник</h2>
+    <form method="post" action="{% url 'workspace_impersonate_start' %}" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-8">
+        <label class="form-label" for="impersonate-employee">Сотрудник</label>
+        <select class="form-select" id="impersonate-employee" name="employee_id" required>
+          <option value="">— выберите —</option>
+          {% for emp in impersonation_employees %}
+          <option value="{{ emp.id }}">{{ emp.full_name }}{% if emp.position %} — {{ emp.position }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-warning w-100">Включить замещение</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'order_list' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Заказы</h6>
+        <p class="card-text text-muted small mb-0">Список заказов</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'employee_production_requests' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Запросы на производство</h6>
+        <p class="card-text text-muted small mb-0">Заявки клиентов</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'production:stage_register' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Реестр этапов</h6>
+        <p class="card-text text-muted small mb-0">Производственный контроль</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'employee_quarantine_files' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Карантин файлов</h6>
+        <p class="card-text text-muted small mb-0">Проверка загрузок</p>
+      </div>
+    </a>
+  </div>
+</div>
+
+{% include "core/_workspace_my_work_block.html" %}
+{% endblock %}

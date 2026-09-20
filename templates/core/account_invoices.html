@@ -1,0 +1,47 @@
+{% extends "core/base.html" %}
+{% block title %}Мои счета{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="mb-0">Мои счета</h1>
+  <a href="{% url 'workspace' %}" class="btn btn-outline-secondary">В кабинет</a>
+</div>
+
+{% if invoices %}
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Номер</th>
+        <th>Дата</th>
+        <th>Заявка</th>
+        <th>Сумма</th>
+        <th>Статус</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td>{{ inv.number }}</td>
+        <td>{{ inv.issue_date|date:"d.m.Y" }}</td>
+        <td>
+          {% if inv.production_request_id %}
+          <a href="{% url 'production_request_detail' inv.production_request_id %}">#{{ inv.production_request_id }}</a>
+          {% else %}
+          —
+          {% endif %}
+        </td>
+        <td>{{ inv.amount }} ₽</td>
+        <td>{{ inv.get_status_display }}</td>
+        <td class="text-end">
+          <a href="{% url 'customer_invoice_detail' inv.id %}" class="btn btn-sm btn-outline-primary">Открыть</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-light border">У вас пока нет выставленных счетов.</div>
+{% endif %}
+{% endblock %}

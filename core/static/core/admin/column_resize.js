@@ -5,6 +5,11 @@
 (function () {
   "use strict";
 
+  /* Ресайз колонок на узком экране не нужен */
+  if (window.matchMedia && !window.matchMedia("(min-width: 641px)").matches) {
+    return;
+  }
+
   var STORAGE_PREFIX = "laser-admin-col-widths:";
   var MIN_WIDTH = 72;
   var HANDLE_WIDTH = 8;

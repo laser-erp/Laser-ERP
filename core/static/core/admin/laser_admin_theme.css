@@ -579,6 +579,49 @@ body.change-list.model-material #result_list .laser-material-card-params .v {
 
 /* Телефон: иконки разделов листаются вбок, липкое «Сохранить», фильтры по кнопке */
 @media (max-width: 640px) {
+  /* Меньше работы для GPU/скролла на слабых телефонах */
+  html {
+    scroll-behavior: auto;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  label,
+  .laser-topnav-item,
+  .submit-row input,
+  .submit-row a {
+    touch-action: manipulation;
+  }
+
+  #header,
+  body:not(.popup) .submit-row,
+  #changelist-filter {
+    box-shadow: none !important;
+  }
+
+  /* Без десктопного autosize.js — поля на всю ширину колонки */
+  body.change-form #content-main input.vTextField,
+  body.add-form #content-main input.vTextField,
+  body.change-form #content-main input[type="text"],
+  body.add-form #content-main input[type="text"],
+  body.change-form #content-main input[type="number"],
+  body.add-form #content-main input[type="number"],
+  body.change-form #content-main input[type="email"],
+  body.add-form #content-main input[type="email"],
+  body.change-form #content-main input[type="url"],
+  body.add-form #content-main input[type="url"],
+  body.change-form #content-main select:not([multiple]),
+  body.add-form #content-main select:not([multiple]),
+  body.change-form #content-main .select2-container,
+  body.add-form #content-main .select2-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    field-sizing: fixed;
+  }
+
   #header {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto;

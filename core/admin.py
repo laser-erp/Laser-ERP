@@ -120,6 +120,7 @@ from .models import (
     TechOperation,
     TechProcess,
     TechProcessStage,
+    UserActionLog,
     UserProfile,
     Warehouse,
 )
@@ -3158,16 +3159,18 @@ def convert_request_to_order(modeladmin, request, queryset):
 class ProductionRequestAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     list_display = (
         "id",
+        "order_mode",
         "request_title",
         "customer_name",
         "quantity",
+        "draft_total_cost",
         "layout_file_link",
         "layout_scan_status",
         "status",
         "created_at",
     )
-    list_filter = ("status", "layout_scan_status", "created_at")
-    search_fields = ("customer_name", "request_title", "phone", "email", "specs", "comment")
+    list_filter = ("order_mode", "status", "layout_scan_status", "layout_metrics_status", "created_at")
+    search_fields = ("customer_name", "request_title", "phone", "email", "specs", "comment", "engraving_text")
     autocomplete_fields = ("product", "user")
     readonly_fields = (
         "layout_scan_status",
@@ -3175,6 +3178,14 @@ class ProductionRequestAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
         "layout_scanned_at",
         "layout_is_quarantined",
         "layout_quarantine_path",
+        "layout_cut_length_m",
+        "layout_engrave_length_m",
+        "layout_metrics_status",
+        "layout_metrics_note",
+        "draft_unit_cost",
+        "draft_total_cost",
+        "draft_quoted_at",
+        "draft_quote_note",
         "created_at",
         "updated_at",
     )
@@ -3267,20 +3278,78 @@ class EmailVerificationAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
+@admin.action(description="Показать ссылки приглашений")
+def show_admin_invite_links(modeladmin, request, queryset):
+    from .admin_invite import invite_accept_url
+
+    for invite in queryset.filter(accepted_at__isnull=True):
+        messages.info(
+            request,
+            f"{invite.email}: {invite_accept_url(request, invite)}",
+        )
+    skipped = queryset.exclude(accepted_at__isnull=True).count()
+    if skipped:
+        messages.warning(request, f"Пропущено уже принятых: {skipped}.")
+
+
 @admin.register(AdminInvite)
 class AdminInviteAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
-    list_display = ("id", "email", "role", "sent_at", "accepted_at", "created_at", "updated_at")
-    list_filter = ("role", "sent_at", "accepted_at")
+    list_display = ("id", "email", "role", "invite_link_short", "accepted_at", "created_at")
+    list_filter = ("role", "accepted_at")
     search_fields = ("email",)
-    readonly_fields = ("token", "sent_at", "accepted_at", "created_at", "updated_at")
+    readonly_fields = (
+        "invite_link",
+        "token",
+        "sent_at",
+        "accepted_at",
+        "created_at",
+        "updated_at",
+        "inviter",
+    )
+    fields = (
+        "email",
+        "role",
+        "invite_link",
+        "token",
+        "inviter",
+        "sent_at",
+        "accepted_at",
+        "created_at",
+        "updated_at",
+    )
+    actions = (show_admin_invite_links,)
+
+    @admin.display(description="Ссылка приглашения")
+    def invite_link(self, obj):
+        from .admin_invite import invite_link_html
+
+        if obj is None or not obj.pk:
+            return "Появится после сохранения"
+        return invite_link_html(obj)
+
+    @admin.display(description="Ссылка")
+    def invite_link_short(self, obj):
+        from .admin_invite import invite_accept_url
+
+        if not obj or not obj.pk or obj.accepted_at:
+            return "—"
+        url = invite_accept_url(None, obj)
+        return format_html('<a href="{}" target="_blank" rel="noopener">открыть</a>', url)
 
     def save_model(self, request, obj, form, change):
-        is_new = not change
-        super().save_model(request, obj, form, change)
-        if is_new and obj.sent_at is None:
-            from .admin_invite import send_admin_invite_email
+        from .admin_invite import invite_accept_url
 
-            send_admin_invite_email(request, obj)
+        is_new = obj.pk is None
+        if is_new and not obj.inviter_id:
+            obj.inviter = request.user
+        super().save_model(request, obj, form, change)
+        if obj.accepted_at is not None:
+            return
+        accept_url = invite_accept_url(request, obj)
+        messages.success(
+            request,
+            f"Приглашение для {obj.email} готово. Скопируйте ссылку и передайте человеку: {accept_url}",
+        )
 
 
 @admin.register(UserProfile)
@@ -3289,6 +3358,27 @@ class UserProfileAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     search_fields = ("user__username", "user__email", "phone")
     autocomplete_fields = ("user",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(UserActionLog)
+class UserActionLogAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
+    list_display = ("id", "created_at", "user", "action", "related_employee", "detail_short")
+    list_filter = ("action", "created_at")
+    search_fields = ("user__username", "detail", "related_employee__full_name")
+    autocomplete_fields = ("user", "related_employee")
+    readonly_fields = ("user", "action", "detail", "related_employee", "created_at")
+    ordering = ("-created_at",)
+
+    @admin.display(description="Детали")
+    def detail_short(self, obj):
+        text = obj.detail or ""
+        return text if len(text) <= 80 else text[:77] + "…"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 # --- Заказ на производство (базовый способ) ---

@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import F, Sum
 from django.db.models import Q
+from django.db import IntegrityError
 from django.http import HttpResponseForbidden
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -41,21 +42,63 @@ from .models import (
     Product,
     ProductionRequest,
     ProductionRequestMessage,
+    UserActionLog,
     UserProfile,
 )
 from .storefront_roles import (
     ALLOWED_PREVIEW_ROLES,
+    IMPERSONATE_EMPLOYEE_SESSION_KEY,
     ROLE_PREVIEW_SESSION_KEY,
+    can_impersonate_employees,
     can_preview_roles,
+    clear_impersonation,
     get_effective_role,
+    get_impersonated_employee,
 )
+from .user_action_log import log_user_action
 
 
 def _post_login_redirect(request):
-    role = get_effective_role(request)
-    if role in {"employee", "employee_admin"}:
-        return redirect("order_list")
-    return redirect("catalog")
+    return redirect("workspace")
+
+
+def _employee_work_context(request, employee=None):
+    """Контекст блока «Моя работа» для employee / employee_admin workspace."""
+    if employee is None:
+        try:
+            employee = request.user.employee
+        except (Employee.DoesNotExist, AttributeError):
+            employee = None
+    if employee is None:
+        return {
+            "employee": None,
+            "logs": [],
+            "total_minutes": Decimal("0"),
+            "total_earnings": Decimal("0"),
+        }
+    all_logs = LaborTimeLog.objects.filter(employee=employee)
+    total_minutes = all_logs.aggregate(s=Sum("minutes_spent"))["s"] or Decimal("0")
+    total_earnings = Decimal("0")
+    for log in all_logs.select_related("operation_type"):
+        rate = employee.hourly_rate or (log.operation_type.hourly_rate or 0)
+        total_earnings += (log.minutes_spent / Decimal("60")) * rate
+    total_earnings = total_earnings.quantize(Decimal("0.01"))
+    logs = (
+        LaborTimeLog.objects.filter(employee=employee)
+        .select_related(
+            "operation_type",
+            "production_assignment",
+            "production_assignment_item",
+            "batch",
+        )
+        .order_by("-date")
+    )[:100]
+    return {
+        "employee": employee,
+        "logs": logs,
+        "total_minutes": total_minutes,
+        "total_earnings": total_earnings,
+    }
 
 
 def _safe_next_redirect(request):
@@ -105,6 +148,7 @@ def account_login(request):
     if request.method == "POST" and form.is_valid():
         user = form.get_user()
         login(request, user)
+        log_user_action(user, UserActionLog.ACTION_LOGIN, detail="Вход через форму")
         if get_effective_role(request) == "client" and not is_email_verified(user):
             messages.info(
                 request,
@@ -127,28 +171,51 @@ def account_register(request):
     form.fields["password2"].widget.attrs.update({"class": "form-control"})
     if request.method == "POST":
         has_errors = False
+        username_value = (request.POST.get("username") or "").strip()
         if not email_value:
             messages.error(request, "Укажите e-mail.")
             has_errors = True
         elif User.objects.filter(email__iexact=email_value).exists():
             messages.error(request, "Пользователь с таким e-mail уже существует.")
             has_errors = True
+        if username_value and User.objects.filter(username__iexact=username_value).exists():
+            form.add_error("username", "Такой логин уже занят. Выберите другой.")
+            has_errors = True
 
         if not has_errors and form.is_valid():
-            user = form.save(commit=False)
-            user.email = email_value
-            user.save()
-            verification_url = issue_email_verification(request, user)
-            login(request, user)
-            messages.success(
-                request,
-                (
-                    "Аккаунт создан. Подтвердите e-mail из письма, "
-                    "после этого станет доступна вкладка 'Заказ на производство'. "
-                    f"Ссылка подтверждения: {verification_url}"
-                ),
-            )
-            return redirect("catalog")
+            try:
+                user = form.save(commit=False)
+                user.email = email_value
+                user.save()
+            except IntegrityError:
+                form.add_error("username", "Такой логин уже занят. Выберите другой.")
+            else:
+                try:
+                    verification_url = issue_email_verification(request, user)
+                    mail_note = f"Письмо отправлено. Ссылка подтверждения: {verification_url}"
+                except Exception as exc:
+                    from django.urls import reverse
+
+                    from .models import EmailVerification
+
+                    state = EmailVerification.objects.filter(user=user).first()
+                    if state is None:
+                        state = EmailVerification.objects.create(user=user, is_verified=False)
+                    verification_url = request.build_absolute_uri(
+                        reverse("account_verify_email", args=[state.token])
+                    )
+                    mail_note = f"Письмо не ушло ({exc}). Подтвердите по ссылке: {verification_url}"
+                login(request, user)
+                log_user_action(user, UserActionLog.ACTION_LOGIN, detail="Регистрация и вход")
+                messages.success(
+                    request,
+                    (
+                        "Аккаунт создан. Подтвердите e-mail, "
+                        "после этого станет доступна вкладка 'Заказ на производство'. "
+                        + mail_note
+                    ),
+                )
+                return redirect("workspace")
     return render(
         request,
         "core/account_register.html",
@@ -162,8 +229,28 @@ def account_resend_verification(request):
         messages.info(request, "Ваш e-mail уже подтвержден.")
         return redirect("catalog")
 
-    verification_url = issue_email_verification(request, request.user)
-    messages.success(request, f"Письмо для подтверждения e-mail отправлено повторно. Ссылка: {verification_url}")
+    try:
+        verification_url = issue_email_verification(request, request.user)
+        messages.success(
+            request,
+            f"Письмо для подтверждения e-mail отправлено повторно. Ссылка: {verification_url}",
+        )
+    except Exception as exc:
+        from django.urls import reverse
+
+        from .models import EmailVerification
+
+        state = EmailVerification.objects.filter(user=request.user).first()
+        if state is None:
+            messages.error(request, f"Письмо не ушло: {exc}")
+        else:
+            verification_url = request.build_absolute_uri(
+                reverse("account_verify_email", args=[state.token])
+            )
+            messages.error(
+                request,
+                f"Письмо не ушло ({exc}). Подтвердите по ссылке: {verification_url}",
+            )
     return redirect("catalog")
 
 
@@ -304,7 +391,12 @@ def account_profile(request):
         form = UserProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
         if form.is_valid():
             form.save()
-            messages.success(request, "Кабинет обновлён.")
+            log_user_action(
+                request.user,
+                UserActionLog.ACTION_PROFILE_UPDATE,
+                detail="Обновлены контакты профиля",
+            )
+            messages.success(request, "Профиль обновлён.")
             return redirect("account_profile")
     else:
         form = UserProfileForm(instance=profile, user=request.user)
@@ -317,6 +409,103 @@ def account_profile(request):
             "profile": profile,
         },
     )
+
+
+def _client_workspace_context(request):
+    """Сводка кабинета клиента: счётчики и последние записи."""
+    user = request.user
+    marker = f"user_id={user.pk}"
+    orders_qs = Order.objects.filter(comment__icontains=marker).order_by("-created_at")
+    requests_qs = ProductionRequest.objects.filter(user_id=user.pk).order_by("-created_at")
+    invoices_qs = (
+        CustomerInvoice.objects.filter(production_request__user_id=user.pk)
+        .exclude(status=CustomerInvoice.STATUS_DRAFT)
+        .exclude(status=CustomerInvoice.STATUS_CANCELLED)
+        .select_related("production_request")
+        .order_by("-created_at")
+    )
+    return {
+        "client_orders_count": orders_qs.count(),
+        "client_requests_count": requests_qs.count(),
+        "client_invoices_count": invoices_qs.count(),
+        "client_recent_orders": list(orders_qs[:5]),
+        "client_recent_requests": list(requests_qs[:5]),
+        "client_recent_invoices": list(invoices_qs[:5]),
+        "client_email_verified": is_email_verified(user),
+    }
+
+
+@login_required
+def workspace(request):
+    """Единая точка входа в рабочее пространство по роли."""
+    role = get_effective_role(request)
+    impersonated = get_impersonated_employee(request)
+    context = {
+        "workspace_role": role,
+        "impersonated_employee": impersonated,
+        "impersonation_employees": [],
+    }
+    if can_impersonate_employees(request.user):
+        context["impersonation_employees"] = list(
+            Employee.objects.order_by("full_name").only("id", "full_name", "position")
+        )
+
+    if impersonated:
+        context.update(_employee_work_context(request, employee=impersonated))
+        return render(request, "core/workspace_employee.html", context)
+
+    if role == "client":
+        context.update(_client_workspace_context(request))
+        return render(request, "core/workspace_client.html", context)
+
+    context.update(_employee_work_context(request))
+    if role == "employee_admin":
+        return render(request, "core/workspace_employee_admin.html", context)
+    return render(request, "core/workspace_employee.html", context)
+
+
+@login_required
+def workspace_impersonate_start(request):
+    if not can_impersonate_employees(request.user):
+        return HttpResponseForbidden("Недостаточно прав для замещения сотрудника.")
+    if request.method != "POST":
+        return redirect("workspace")
+
+    emp_id = (request.POST.get("employee_id") or "").strip()
+    employee = Employee.objects.filter(pk=emp_id).first() if emp_id else None
+    if not employee:
+        messages.error(request, "Выберите сотрудника для режима замещения.")
+        return redirect("workspace")
+
+    request.session[IMPERSONATE_EMPLOYEE_SESSION_KEY] = employee.pk
+    log_user_action(
+        request.user,
+        UserActionLog.ACTION_IMPERSONATE_START,
+        detail=f"Замещение: {employee.full_name} (id={employee.pk})",
+        related_employee=employee,
+    )
+    messages.info(
+        request,
+        f"Режим замещения включён: вы смотрите рабочее пространство как «{employee.full_name}».",
+    )
+    return redirect("workspace")
+
+
+@login_required
+def workspace_impersonate_stop(request):
+    if not can_impersonate_employees(request.user):
+        return redirect("workspace")
+    current = get_impersonated_employee(request)
+    clear_impersonation(request)
+    if current:
+        log_user_action(
+            request.user,
+            UserActionLog.ACTION_IMPERSONATE_STOP,
+            detail=f"Выход из замещения: {current.full_name} (id={current.pk})",
+            related_employee=current,
+        )
+        messages.info(request, "Режим замещения выключен.")
+    return redirect("workspace")
 
 
 def product_list(request):
@@ -484,6 +673,13 @@ def production_request_create(request):
 
     products = _catalog_queryset()[:300]
     if request.method == "POST":
+        order_mode = (request.POST.get("order_mode") or ProductionRequest.ORDER_MODE_CATALOG).strip()
+        if order_mode not in {
+            ProductionRequest.ORDER_MODE_CATALOG,
+            ProductionRequest.ORDER_MODE_CUSTOM,
+        }:
+            order_mode = ProductionRequest.ORDER_MODE_CATALOG
+
         customer_name = (request.POST.get("customer_name") or "").strip()
         phone = (request.POST.get("phone") or "").strip()
         email = (request.POST.get("email") or "").strip().lower()
@@ -492,6 +688,8 @@ def production_request_create(request):
         deadline_raw = (request.POST.get("deadline") or "").strip()
         product_id_raw = (request.POST.get("product_id") or "").strip()
         layout_file = request.FILES.get("layout_file")
+        logo_file = request.FILES.get("logo_file")
+        engraving_text = (request.POST.get("engraving_text") or "").strip()
         specs = (request.POST.get("specs") or "").strip()
         material_preferences = (request.POST.get("material_preferences") or "").strip()
         comment = (request.POST.get("comment") or "").strip()
@@ -511,15 +709,27 @@ def production_request_create(request):
             errors.append("Укажите email.")
         if not request_title:
             errors.append("Укажите наименование заказа на производство.")
-        if layout_file:
-            errors.extend(validate_layout_file(layout_file))
 
         product = None
-        if product_id_raw:
-            try:
-                product = Product.objects.get(pk=int(product_id_raw))
-            except (ValueError, Product.DoesNotExist):
-                errors.append("Выбранный товар не найден.")
+        if order_mode == ProductionRequest.ORDER_MODE_CATALOG:
+            if not product_id_raw:
+                errors.append("Выберите изделие из каталога.")
+            else:
+                try:
+                    product = Product.objects.get(pk=int(product_id_raw))
+                except (ValueError, Product.DoesNotExist):
+                    errors.append("Выбранный товар не найден.")
+            if logo_file:
+                errors.extend(validate_layout_file(logo_file))
+        else:
+            if not layout_file:
+                errors.append("Для индивидуального заказа загрузите макет DXF или SVG.")
+            else:
+                errors.extend(validate_layout_file(layout_file))
+                ext = (layout_file.name or "").rsplit(".", 1)
+                suffix = f".{ext[-1].lower()}" if len(ext) == 2 else ""
+                if suffix not in {".dxf", ".svg"}:
+                    errors.append("Для авторасчёта метров загрузите DXF или SVG.")
 
         deadline = None
         if deadline_raw:
@@ -544,6 +754,7 @@ def production_request_create(request):
 
         req = ProductionRequest.objects.create(
             user=request.user,
+            order_mode=order_mode,
             customer_name=customer_name,
             phone=phone,
             email=email,
@@ -551,7 +762,9 @@ def production_request_create(request):
             product=product,
             quantity=quantity,
             deadline=deadline,
-            layout_file=layout_file,
+            layout_file=layout_file if order_mode == ProductionRequest.ORDER_MODE_CUSTOM else None,
+            logo_file=logo_file if order_mode == ProductionRequest.ORDER_MODE_CATALOG else None,
+            engraving_text=engraving_text if order_mode == ProductionRequest.ORDER_MODE_CATALOG else "",
             specs=specs,
             material_preferences=material_preferences,
             comment=comment,
@@ -573,15 +786,21 @@ def production_request_create(request):
                     request,
                     "Файл сохранен без антивирусной проверки (проверка отключена в настройках).",
                 )
+        from .services.production_request_quote import apply_draft_quote
+
+        apply_draft_quote(req)
+        req.save()
         messages.success(request, "Запрос на производство отправлен.")
         return redirect("production_request_success", request_id=req.pk)
 
-    initial = {}
+    initial = {"order_mode": ProductionRequest.ORDER_MODE_CATALOG, "quantity": "1"}
     if request.user.is_authenticated:
-        initial = {
-            "customer_name": request.user.get_full_name() or request.user.get_username(),
-            "email": request.user.email or "",
-        }
+        initial.update(
+            {
+                "customer_name": request.user.get_full_name() or request.user.get_username(),
+                "email": request.user.email or "",
+            }
+        )
     return render(
         request,
         "core/production_request_form.html",
@@ -922,6 +1141,24 @@ def account_production_requests(request):
         request,
         "core/account_production_requests.html",
         {"requests_list": requests_qs},
+    )
+
+
+@login_required
+def account_invoices(request):
+    if get_effective_role(request) != "client":
+        return redirect("order_list")
+    invoices = (
+        CustomerInvoice.objects.filter(production_request__user_id=request.user.pk)
+        .exclude(status=CustomerInvoice.STATUS_DRAFT)
+        .exclude(status=CustomerInvoice.STATUS_CANCELLED)
+        .select_related("production_request")
+        .order_by("-created_at")
+    )
+    return render(
+        request,
+        "core/account_invoices.html",
+        {"invoices": invoices},
     )
 
 
@@ -1613,33 +1850,5 @@ def set_storefront_preview_role(request, role):
 
 @login_required
 def my_work(request):
-    """
-    Страница сотрудника: трудозатраты и заработок.
-    Доступна если у пользователя привязан сотрудник (Employee).
-    """
-    try:
-        employee = request.user.employee
-    except (Employee.DoesNotExist, AttributeError):
-        return render(request, "core/my_work.html", {"employee": None})
-    all_logs = LaborTimeLog.objects.filter(employee=employee)
-    total_minutes = all_logs.aggregate(s=Sum("minutes_spent"))["s"] or Decimal("0")
-    total_earnings = Decimal("0")
-    for log in all_logs.select_related("operation_type"):
-        rate = employee.hourly_rate or (log.operation_type.hourly_rate or 0)
-        total_earnings += (log.minutes_spent / Decimal("60")) * rate
-    total_earnings = total_earnings.quantize(Decimal("0.01"))
-    logs = (
-        LaborTimeLog.objects.filter(employee=employee)
-        .select_related("operation_type", "production_assignment", "production_assignment_item", "batch")
-        .order_by("-date")
-    )[:100]
-    return render(
-        request,
-        "core/my_work.html",
-        {
-            "employee": employee,
-            "logs": logs,
-            "total_minutes": total_minutes,
-            "total_earnings": total_earnings,
-        },
-    )
+    """Совместимость: старый URL ведёт в рабочее пространство."""
+    return redirect("workspace")

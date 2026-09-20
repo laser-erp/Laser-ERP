@@ -20,6 +20,9 @@
       <div class="card-body">
         <h2 class="h5 mb-3">Данные заявки</h2>
         <dl class="row mb-0">
+          <dt class="col-sm-4">Режим</dt>
+          <dd class="col-sm-8">{{ request_obj.get_order_mode_display }}</dd>
+
           <dt class="col-sm-4">Клиент</dt>
           <dd class="col-sm-8">{{ request_obj.customer_name }}</dd>
 
@@ -34,6 +37,16 @@
 
           <dt class="col-sm-4">Товар/основа</dt>
           <dd class="col-sm-8">{{ request_obj.product|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Гравировка (текст)</dt>
+          <dd class="col-sm-8">{{ request_obj.engraving_text|default:"—" }}</dd>
+
+          <dt class="col-sm-4">Логотип</dt>
+          <dd class="col-sm-8">
+            {% if request_obj.logo_file %}
+            <a href="{{ request_obj.logo_file.url }}" download>Открыть</a>
+            {% else %}—{% endif %}
+          </dd>
 
           <dt class="col-sm-4">Желаемый срок</dt>
           <dd class="col-sm-8">{{ request_obj.deadline|date:"d.m.Y"|default:"—" }}</dd>
@@ -57,7 +70,7 @@
         <h2 class="h6 mb-3">Статус и файл</h2>
         <p class="mb-2">Текущий статус: <strong>{{ request_obj.get_status_display }}</strong></p>
         <p class="mb-2">Проверка файла: <strong>{{ request_obj.get_layout_scan_status_display }}</strong></p>
-        <p class="mb-3">
+        <p class="mb-2">
           Файл макета:
           {% if request_obj.layout_file and not request_obj.layout_is_quarantined and request_obj.layout_scan_status != 'infected' %}
           <a href="{{ request_obj.layout_file.url }}" download>Открыть</a>
@@ -65,12 +78,31 @@
           <span class="text-danger">Файл заблокирован и помещен в карантин.</span>
           {% elif request_obj.layout_scan_status == 'failed' %}
           <span class="text-warning">Файл недоступен из-за ошибки антивирусной проверки.</span>
-          {% elif request_obj.layout_scan_status == 'pending' %}
+          {% elif request_obj.layout_scan_status == 'pending' and request_obj.layout_file %}
           <span class="text-muted">Файл проверяется.</span>
           {% else %}
           —
           {% endif %}
         </p>
+        {% if request_obj.layout_metrics_status %}
+        <p class="mb-2">Авторасчёт длин: <strong>{{ request_obj.get_layout_metrics_status_display }}</strong></p>
+        <p class="mb-2 small">
+          Рез: {% if request_obj.layout_cut_length_m != None %}{{ request_obj.layout_cut_length_m }}{% else %}—{% endif %} м ·
+          Гравировка: {% if request_obj.layout_engrave_length_m != None %}{{ request_obj.layout_engrave_length_m }}{% else %}—{% endif %} м
+        </p>
+        {% if request_obj.layout_metrics_note %}
+        <p class="small text-muted mb-2">{{ request_obj.layout_metrics_note }}</p>
+        {% endif %}
+        {% endif %}
+        {% if request_obj.draft_total_cost is not None %}
+        <div class="alert alert-info py-2 small mb-3">
+          <strong>Ориентир:</strong> {{ request_obj.draft_total_cost }} ₽
+          {% if request_obj.draft_unit_cost is not None %}
+          <span class="text-muted">({{ request_obj.draft_unit_cost }} ₽/шт.)</span>
+          {% endif %}
+          <div class="mt-1">{{ request_obj.draft_quote_note }}</div>
+        </div>
+        {% endif %}
         {% if request_obj.layout_scan_result %}
         <p class="small text-muted mb-3">{{ request_obj.layout_scan_result }}</p>
         {% endif %}

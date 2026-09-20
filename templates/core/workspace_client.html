@@ -1,0 +1,122 @@
+{% extends "core/base.html" %}
+{% block title %}Кабинет клиента{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1">Кабинет клиента</h1>
+    <p class="text-muted mb-0">Заказы, заявки, счета и быстрые действия.</p>
+  </div>
+  <a href="{% url 'account_profile' %}" class="btn btn-outline-secondary">Профиль</a>
+</div>
+
+{% if not client_email_verified %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>Подтвердите e-mail, чтобы оформлять заказы на производство.</div>
+  <a class="btn btn-sm btn-outline-dark" href="{% url 'account_resend_verification' %}">Отправить письмо снова</a>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'account_orders' %}">
+      <div class="card-body">
+        <div class="text-muted small">Мои заказы</div>
+        <div class="display-6">{{ client_orders_count }}</div>
+        <p class="card-text text-muted mb-0 small">История и повтор заказа</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'account_production_requests' %}">
+      <div class="card-body">
+        <div class="text-muted small">Заявки на производство</div>
+        <div class="display-6">{{ client_requests_count }}</div>
+        <p class="card-text text-muted mb-0 small">Статусы и переписка</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'account_invoices' %}">
+      <div class="card-body">
+        <div class="text-muted small">Мои счета</div>
+        <div class="display-6">{{ client_invoices_count }}</div>
+        <p class="card-text text-muted mb-0 small">Выставленные к оплате</p>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  {% if client_email_verified %}
+  <a class="btn btn-primary" href="{% url 'production_request_create' %}">Новый заказ на производство</a>
+  {% else %}
+  <a class="btn btn-primary" href="{% url 'account_resend_verification' %}">Подтвердить e-mail для заявки</a>
+  {% endif %}
+  <a class="btn btn-outline-primary" href="{% url 'catalog' %}">Каталог</a>
+  <a class="btn btn-outline-primary" href="{% url 'cart' %}">Корзина</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h5 mb-0">Последние заказы</h2>
+      <a href="{% url 'account_orders' %}" class="small">Все</a>
+    </div>
+    {% if client_recent_orders %}
+    <ul class="list-group list-group-flush border rounded">
+      {% for order in client_recent_orders %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <a href="{% url 'account_order_detail' order.id %}">#{{ order.id }}</a>
+          <div class="small text-muted">{{ order.created_at|date:"d.m.Y" }} · {{ order.get_status_display }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="alert alert-light border mb-0">Заказов пока нет.</div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h5 mb-0">Последние заявки</h2>
+      <a href="{% url 'account_production_requests' %}" class="small">Все</a>
+    </div>
+    {% if client_recent_requests %}
+    <ul class="list-group list-group-flush border rounded">
+      {% for req in client_recent_requests %}
+      <li class="list-group-item">
+        <a href="{% url 'production_request_detail' req.id %}">#{{ req.id }} — {{ req.request_title }}</a>
+        <div class="small text-muted">{{ req.created_at|date:"d.m.Y" }} · {{ req.get_status_display }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="alert alert-light border mb-0">Заявок пока нет.</div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h5 mb-0">Последние счета</h2>
+      <a href="{% url 'account_invoices' %}" class="small">Все</a>
+    </div>
+    {% if client_recent_invoices %}
+    <ul class="list-group list-group-flush border rounded">
+      {% for inv in client_recent_invoices %}
+      <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+        <div>
+          <a href="{% url 'customer_invoice_detail' inv.id %}">{{ inv.number }}</a>
+          <div class="small text-muted">{{ inv.issue_date|date:"d.m.Y" }} · {{ inv.get_status_display }}</div>
+        </div>
+        <div class="text-nowrap">{{ inv.amount }} ₽</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="alert alert-light border mb-0">Счетов пока нет.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -26,9 +26,8 @@ def issue_email_verification(request, user) -> str:
     )
     verification.is_verified = False
     verification.verified_at = None
-    verification.sent_at = timezone.now()
     verification.token = verification.token or uuid4().hex
-    verification.save(update_fields=["is_verified", "verified_at", "sent_at", "token", "updated_at"])
+    verification.save(update_fields=["is_verified", "verified_at", "token", "updated_at"])
 
     verification_url = request.build_absolute_uri(
         reverse("account_verify_email", args=[verification.token]),
@@ -44,6 +43,8 @@ def issue_email_verification(request, user) -> str:
         ),
         from_email,
         [user.email],
-        fail_silently=True,
+        fail_silently=False,
     )
+    verification.sent_at = timezone.now()
+    verification.save(update_fields=["sent_at", "updated_at"])
     return verification_url

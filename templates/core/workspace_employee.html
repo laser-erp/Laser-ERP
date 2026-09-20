@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% block title %}Рабочее пространство{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1">Рабочее пространство</h1>
+    {% if impersonated_employee %}
+    <p class="text-muted mb-0">Замещение: данные сотрудника «{{ impersonated_employee.full_name }}».</p>
+    {% else %}
+    <p class="text-muted mb-0">Сотрудник: задачи, документы и трудозатраты.</p>
+    {% endif %}
+  </div>
+  <a href="{% url 'account_profile' %}" class="btn btn-outline-secondary">Профиль</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'order_list' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Заказы</h6>
+        <p class="card-text text-muted small mb-0">Список заказов покупателей</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'employee_production_requests' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Запросы на производство</h6>
+        <p class="card-text text-muted small mb-0">Обработка заявок клиентов</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'employee_contracts' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Договоры</h6>
+        <p class="card-text text-muted small mb-0">Документы и версии</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a class="card h-100 text-decoration-none text-dark workspace-card" href="{% url 'procurement:goods_receipt_create' %}">
+      <div class="card-body">
+        <h6 class="card-title mb-1">Приёмка</h6>
+        <p class="card-text text-muted small mb-0">Поступление материалов</p>
+      </div>
+    </a>
+  </div>
+</div>
+
+{% include "core/_workspace_my_work_block.html" %}
+{% endblock %}

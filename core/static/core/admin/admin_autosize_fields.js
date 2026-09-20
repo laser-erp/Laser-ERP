@@ -5,6 +5,11 @@
 (function () {
   "use strict";
 
+  /* На телефоне не гоняем MutationObserver — поля тянутся CSS на 100% */
+  if (window.matchMedia && !window.matchMedia("(min-width: 641px)").matches) {
+    return;
+  }
+
   /** Минимальная ширина пустого поля в ch (ширина растёт по значению/placeholder) */
   var MIN_CH = 4;
   /** Верхний предел в ch для браузеров без field-sizing (не режем длинный текст; max-width: 100% в CSS) */

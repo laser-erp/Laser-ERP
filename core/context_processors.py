@@ -9,8 +9,10 @@ from .storefront_roles import (
     ROLE_EMPLOYEE,
     ROLE_EMPLOYEE_ADMIN,
     ROLE_PREVIEW_SESSION_KEY,
+    can_impersonate_employees,
     can_preview_roles,
     get_effective_role,
+    get_impersonated_employee,
 )
 
 
@@ -79,6 +81,7 @@ def storefront_user_role(request):
     email_verified = is_email_verified(getattr(request, "user", None))
     can_preview = can_preview_roles(getattr(request, "user", None))
     preview_role = request.session.get(ROLE_PREVIEW_SESSION_KEY) if can_preview else ""
+    impersonated = get_impersonated_employee(request)
 
     return {
         "storefront_role": role,
@@ -88,4 +91,6 @@ def storefront_user_role(request):
         "storefront_email_verified": email_verified,
         "storefront_can_preview_roles": can_preview,
         "storefront_preview_role": preview_role if preview_role in ALLOWED_PREVIEW_ROLES else "",
+        "storefront_can_impersonate": can_impersonate_employees(getattr(request, "user", None)),
+        "impersonated_employee": impersonated,
     }

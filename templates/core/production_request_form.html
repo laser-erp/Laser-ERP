@@ -2,17 +2,32 @@
 {% block title %}Заказ на производство{% endblock %}
 {% block content %}
 <h1 class="mb-3">Заказ на производство</h1>
-<p class="text-muted">Опишите требования к изготовлению. Менеджер проверит запрос и свяжется с вами.</p>
-
-{% if messages %}
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
-  {% endfor %}
-{% endif %}
+<p class="text-muted mb-4">Выберите готовое изделие или загрузите свой DXF. Ориентир цены появится после отправки.</p>
 
 <div class="card card-body border-0 shadow-sm">
-  <form method="post" enctype="multipart/form-data" class="row g-3">
+  <form method="post" enctype="multipart/form-data" class="row g-3" id="production-request-form">
     {% csrf_token %}
+
+    <div class="col-12">
+      <label class="form-label fw-semibold">Что заказываете?</label>
+      <div class="d-flex flex-wrap gap-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="order_mode" id="mode_catalog" value="catalog"
+            {% if form_data.order_mode != 'custom' %}checked{% endif %} onchange="toggleOrderMode()">
+          <label class="form-check-label" for="mode_catalog">
+            Из каталога <span class="text-muted">(можно надпись или лого)</span>
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="order_mode" id="mode_custom" value="custom"
+            {% if form_data.order_mode == 'custom' %}checked{% endif %} onchange="toggleOrderMode()">
+          <label class="form-check-label" for="mode_custom">
+            Индивидуальный макет <span class="text-muted">(DXF / SVG)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <div class="col-md-6">
       <label class="form-label">Имя или компания *</label>
       <input type="text" name="customer_name" class="form-control" value="{{ form_data.customer_name|default:'' }}" required>
@@ -27,7 +42,7 @@
     </div>
     <div class="col-md-6">
       <label class="form-label">Наименование заказа *</label>
-      <input type="text" name="request_title" class="form-control" value="{{ form_data.request_title|default:'' }}" placeholder="Например: Короб с лазерной резкой" required>
+      <input type="text" name="request_title" class="form-control" value="{{ form_data.request_title|default:'' }}" placeholder="Например: Коробка с логотипом" required>
     </div>
     <div class="col-md-2">
       <label class="form-label">Количество *</label>
@@ -37,52 +52,71 @@
       <label class="form-label">Желаемый срок</label>
       <input type="date" name="deadline" class="form-control" value="{{ form_data.deadline|default:'' }}">
     </div>
-    <div class="col-md-6">
-      <label class="form-label">Товар/основа (если есть)</label>
-      <select name="product_id" class="form-select">
-        <option value="">— не выбрано —</option>
+
+    <div class="col-12 mode-catalog">
+      <hr class="my-1">
+      <h2 class="h6">Изделие и персонализация</h2>
+    </div>
+    <div class="col-md-6 mode-catalog">
+      <label class="form-label">Изделие из каталога *</label>
+      <select name="product_id" id="product_id" class="form-select">
+        <option value="">— выберите —</option>
         {% for p in products %}
         <option value="{{ p.id }}" {% if form_data.product_id == p.id|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-6 mode-catalog">
+      <label class="form-label">Текст гравировки</label>
+      <input type="text" name="engraving_text" class="form-control" value="{{ form_data.engraving_text|default:'' }}" placeholder="Необязательно">
+    </div>
+    <div class="col-md-6 mode-catalog">
+      <label class="form-label">Логотип (PNG/JPG/SVG…)</label>
+      <input type="file" name="logo_file" class="form-control" accept=".png,.jpg,.jpeg,.webp,.svg,.pdf">
+      <div class="form-text">Без DXF — макет изделия уже в каталоге.</div>
+    </div>
+
+    <div class="col-12 mode-custom d-none">
+      <hr class="my-1">
+      <h2 class="h6">Индивидуальный макет</h2>
+      <p class="small text-muted mb-2">Для авторасчёта длины реза загрузите <strong>DXF</strong> или <strong>SVG</strong>. CDR для станка подготовит менеджер.</p>
+    </div>
+    <div class="col-md-6 mode-custom d-none">
+      <label class="form-label">Файл макета (DXF/SVG) *</label>
+      <input type="file" name="layout_file" id="layout_file" class="form-control" accept=".dxf,.svg,.DXF,.SVG">
+    </div>
+    <div class="col-md-6 mode-custom d-none">
       <label class="form-label">Предпочтения по материалу</label>
-      <input type="text" name="material_preferences" class="form-control" value="{{ form_data.material_preferences|default:'' }}" placeholder="МДФ 10мм, фанера, пластик...">
+      <input type="text" name="material_preferences" class="form-control" value="{{ form_data.material_preferences|default:'' }}" placeholder="Фанера 4 мм, МДФ…">
     </div>
-    <div class="col-md-6">
-      <label class="form-label">Файл макета</label>
-      <input
-        type="file"
-        id="layout_file"
-        name="layout_file"
-        class="d-none"
-        accept=".pdf,.cdr,.ai,.eps,.svg,.dxf,.dwg,.zip,.rar,.7z,.png,.jpg,.jpeg,.webp"
-        onchange="document.getElementById('layout_file_name').value = this.files.length ? this.files[0].name : 'Файл не выбран';"
-      >
-      <div class="input-group">
-        <label class="btn btn-outline-secondary mb-0" for="layout_file">Прикрепить файл</label>
-        <input
-          type="text"
-          id="layout_file_name"
-          class="form-control"
-          value="Файл не выбран"
-          readonly
-        >
-      </div>
-      <div class="form-text">Можно прикрепить макет или архив с макетами.</div>
-    </div>
+
     <div class="col-12">
       <label class="form-label">Параметры и требования</label>
-      <textarea name="specs" class="form-control" rows="4" placeholder="Размеры, толщина, обработка кромки, цвет, требования к упаковке...">{{ form_data.specs|default:'' }}</textarea>
+      <textarea name="specs" class="form-control" rows="3" placeholder="Размеры, нюансы…">{{ form_data.specs|default:'' }}</textarea>
     </div>
     <div class="col-12">
       <label class="form-label">Комментарий</label>
-      <textarea name="comment" class="form-control" rows="3">{{ form_data.comment|default:'' }}</textarea>
+      <textarea name="comment" class="form-control" rows="2">{{ form_data.comment|default:'' }}</textarea>
     </div>
     <div class="col-12">
       <button type="submit" class="btn btn-success">Отправить запрос</button>
     </div>
   </form>
 </div>
+<script>
+function toggleOrderMode() {
+  var custom = document.getElementById('mode_custom').checked;
+  document.querySelectorAll('.mode-catalog').forEach(function (el) {
+    el.classList.toggle('d-none', custom);
+  });
+  document.querySelectorAll('.mode-custom').forEach(function (el) {
+    el.classList.toggle('d-none', !custom);
+  });
+  var product = document.getElementById('product_id');
+  if (product) product.required = !custom;
+  var layout = document.getElementById('layout_file');
+  if (layout) layout.required = custom;
+}
+toggleOrderMode();
+</script>
 {% endblock %}
