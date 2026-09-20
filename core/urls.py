@@ -2,12 +2,27 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 from django.urls import reverse_lazy
 
+from core.views_password_reset import (
+    AccountPasswordResetDoneView,
+    AccountPasswordResetView,
+)
+
 from . import views
 from .forms import AccountPasswordChangeForm
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("account/login/", views.account_login, name="account_login"),
+    path(
+        "account/password-reset/",
+        AccountPasswordResetView.as_view(),
+        name="account_password_reset",
+    ),
+    path(
+        "account/password-reset/done/",
+        AccountPasswordResetDoneView.as_view(),
+        name="account_password_reset_done",
+    ),
     path("account/register/", views.account_register, name="account_register"),
     path("account/profile/", views.account_profile, name="account_profile"),
     path(

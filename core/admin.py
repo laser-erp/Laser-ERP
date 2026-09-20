@@ -3272,15 +3272,44 @@ class AdminInviteAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
     list_display = ("id", "email", "role", "sent_at", "accepted_at", "created_at", "updated_at")
     list_filter = ("role", "sent_at", "accepted_at")
     search_fields = ("email",)
-    readonly_fields = ("token", "sent_at", "accepted_at", "created_at", "updated_at")
+    readonly_fields = (
+        "token",
+        "sent_at",
+        "accepted_at",
+        "created_at",
+        "updated_at",
+        "accept_url_display",
+    )
+
+    @admin.display(description="Ссылка приглашения")
+    def accept_url_display(self, obj: AdminInvite) -> str:
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        from core.services.password_reset import build_public_site_url
+
+        if not obj.token:
+            return "—"
+        url = build_public_site_url(
+            reverse("account_admin_invite_accept", args=[obj.token])
+        )
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
 
     def save_model(self, request, obj, form, change):
         is_new = not change
         super().save_model(request, obj, form, change)
         if is_new and obj.sent_at is None:
+            from django.contrib import messages
+
+            from core.services.password_reset import is_password_reset_email_enabled
             from .admin_invite import send_admin_invite_email
 
-            send_admin_invite_email(request, obj)
+            accept_url = send_admin_invite_email(request, obj)
+            if not is_password_reset_email_enabled() and accept_url:
+                messages.warning(
+                    request,
+                    f"Почта отключена. Передайте приглашённому ссылку вручную: {accept_url}",
+                )
 
 
 @admin.register(UserProfile)

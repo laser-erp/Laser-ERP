@@ -93,3 +93,7 @@ LOGGING = {  # noqa: F405
         },
     },
 }
+
+from laser_erp.mail import apply_email_settings  # noqa: E402
+
+apply_email_settings(locals())
