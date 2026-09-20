@@ -697,6 +697,8 @@
 .techcard-items-inline-group .tc-item-card:focus-within input,
 .techcard-items-inline-group .tc-item-card:hover select.tc-item-card-unit,
 .techcard-items-inline-group .tc-item-card:focus-within select.tc-item-card-unit,
+.techcard-items-inline-group .tc-item-card:hover select.tc-item-card-engrave-kind,
+.techcard-items-inline-group .tc-item-card:focus-within select.tc-item-card-engrave-kind,
 .techcard-items-inline-group .tc-item-card:hover select.tc-item-card-tech-select,
 .techcard-items-inline-group .tc-item-card:focus-within select.tc-item-card-tech-select {
   background-color: #fff;
@@ -746,6 +748,23 @@
   border: 1px solid var(--border-color, #ccc);
   border-radius: 3px;
   box-sizing: border-box;
+}
+
+.techcard-items-inline-group .tc-item-card-engrave-kind {
+  flex: 0 0 auto;
+  max-width: 76px;
+}
+
+.techcard-items-inline-group .tc-item-search-row--laser-engrave .tc-engrave-footer-kind {
+  flex-shrink: 0;
+  min-width: 76px;
+  max-width: 88px;
+}
+
+.techcard-items-inline-group .tc-item-search-row--laser-engrave .tc-item-search-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .techcard-items-inline-group .tc-item-card-col-menu {
@@ -1200,3 +1219,4 @@
   max-width: 280px;
   text-align: right;
 }
+

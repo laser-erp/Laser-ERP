@@ -550,6 +550,28 @@
     }
   }
 
+  function engraveFillRateByStageId() {
+    var el = document.getElementById("tech-process-stages-data");
+    if (!el || !el.textContent) return {};
+    try {
+      var tpId = currentTechProcessId();
+      var map = JSON.parse(el.textContent);
+      var stages = map[String(tpId)] || [];
+      var out = {};
+      stages.forEach(function (s) {
+        if (s.id == null) return;
+        var raw = s.engrave_fill_rate_per_sq_m;
+        if (raw != null && String(raw).trim() !== "") {
+          var n = parseFloat(String(raw).replace(",", "."));
+          if (isFinite(n)) out[String(s.id)] = n;
+        }
+      });
+      return out;
+    } catch (e) {
+      return {};
+    }
+  }
+
   function eachItemBackendRow(fn) {
     document
       .querySelectorAll(".techcard-items-backend tbody tr.form-row")
@@ -643,15 +665,29 @@
 
   function sumCutCost() {
     var cutRates = cutRateByStageId();
+    var fillRates = engraveFillRateByStageId();
     var total = 0;
     var lines = 0;
     eachItemBackendRow(function (tr) {
+      var stageEl = tr.querySelector('select[name$="-production_stage"]');
+      var sid = stageEl && stageEl.value ? String(stageEl.value) : "";
+      var ekEl = tr.querySelector('select[name$="-engrave_kind"], input[name$="-engrave_kind"]');
+      var ek = ekEl ? String(ekEl.value || "").trim() : "";
+      if (ek === "fill") {
+        var areaEl = tr.querySelector('input[name$="-engrave_area_m2"]');
+        if (!areaEl) return;
+        var area = parseFloat(String(areaEl.value).replace(",", "."));
+        if (!isFinite(area) || area <= 0) return;
+        var fr = sid ? fillRates[sid] : null;
+        if (fr == null || !isFinite(fr)) return;
+        total += area * fr;
+        lines++;
+        return;
+      }
       var lenEl = tr.querySelector('input[name$="-cut_length_meters_per_unit"]');
       if (!lenEl) return;
       var len = parseFloat(String(lenEl.value).replace(",", "."));
       if (!isFinite(len) || len <= 0) return;
-      var stageEl = tr.querySelector('select[name$="-production_stage"]');
-      var sid = stageEl && stageEl.value ? String(stageEl.value) : "";
       var rate = sid ? cutRates[sid] : null;
       if (rate == null || !isFinite(rate)) return;
       total += len * rate;
@@ -708,6 +744,8 @@
         n.indexOf("-quantity") === -1 &&
         n.indexOf("-material") === -1 &&
         n.indexOf("-cut_length") === -1 &&
+        n.indexOf("-engrave_kind") === -1 &&
+        n.indexOf("-engrave_area_m2") === -1 &&
         n.indexOf("-production_stage") === -1 &&
         n.indexOf("-item_kind") === -1 &&
         !(cls && cls.contains("tc-item-card-qty"))

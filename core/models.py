@@ -1661,14 +1661,23 @@ class TechCard(models.Model):
         return self.name
 
     def planned_cut_cost_per_unit(self) -> Decimal:
-        """Плановые затраты на рез по метрам на 1 изделие по этой техкарте (сумма по строкам с нормой м и ставкой этапа)."""
+        """Рез и лазерная гравировка: метры × ₽/м этапа; заливка — м² × ₽/м² этапа."""
         total = Decimal("0")
         for item in self.items.select_related("production_stage"):
-            L = item.cut_length_meters_per_unit
-            if L is None or L <= 0:
-                continue
             st = item.production_stage
             if not st:
+                continue
+            if (
+                production_stage_is_laser_engrave_only(st)
+                and item.engrave_kind == TechCardItem.ENGRAVE_KIND_FILL
+            ):
+                area = item.engrave_area_m2
+                r = st.engrave_fill_rate_per_sq_m
+                if area is not None and area > 0 and r is not None and r > 0:
+                    total += Decimal(str(area)) * Decimal(str(r))
+                continue
+            L = item.cut_length_meters_per_unit
+            if L is None or L <= 0:
                 continue
             r = st.cut_rate_per_meter
             if r is None or r <= 0:
@@ -1716,16 +1725,20 @@ class TechCard(models.Model):
         return (self.planned_machine_cost_per_unit() + extra).quantize(Decimal("0.01"))
 
     def planned_material_cost_per_unit(self) -> Decimal:
-        """Материалы на 1 изд. по строкам техкарты × цена закупки (приёмка или карточка)."""
+        """Материалы на 1 изд. по агрегированным нормам × цена закупки (приёмка или карточка)."""
         total = Decimal("0")
-        for item in self.items.filter(
-            material__isnull=False,
-            item_kind__in=(TechCardItem.KIND_RAW, TechCardItem.KIND_MATERIAL),
-        ).select_related("material"):
-            price = item.material.cost_unit_price
+        agg = self.material_quantities_per_unit_by_material_id()
+        if not agg:
+            return Decimal("0.00")
+        mats = Material.objects.in_bulk(agg.keys())
+        for mid, qty in agg.items():
+            material = mats.get(mid)
+            if not material:
+                continue
+            price = material.cost_unit_price
             if price is None:
                 continue
-            total += Decimal(str(price)) * Decimal(str(item.quantity))
+            total += Decimal(str(price)) * qty
         return total.quantize(Decimal("0.01"))
 
     def planned_component_cost_per_unit(self, _seen: set[int] | None = None) -> Decimal:
@@ -1762,13 +1775,33 @@ class TechCard(models.Model):
         ).quantize(Decimal("0.01"))
 
     def material_quantities_per_unit_by_material_id(self) -> dict[int, Decimal]:
-        """Суммарный расход материала на 1 готовое изделие по всем строкам техкарты (с материалом)."""
+        """
+        Расход материалов на 1 изделие.
+
+        «Сырьё» (KIND_RAW) — один физический лист/заготовка на все этапы: по material_id берётся
+        максимум нормы, не сумма. «Материал» (расходник) — сумма по этапам (диски, плёнка и т.д.).
+        """
         from collections import defaultdict
 
-        out: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+        consumable_sum: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+        raw_max: dict[int, Decimal] = {}
         for item in self.items.filter(material__isnull=False):
-            out[item.material_id] += item.quantity
-        return dict(out)
+            qty = Decimal(str(item.quantity or 0))
+            if qty <= 0:
+                continue
+            mid = item.material_id
+            if item.item_kind == TechCardItem.KIND_RAW:
+                prev = raw_max.get(mid, Decimal("0"))
+                if qty > prev:
+                    raw_max[mid] = qty
+            elif item.item_kind == TechCardItem.KIND_MATERIAL:
+                consumable_sum[mid] += qty
+            else:
+                consumable_sum[mid] += qty
+        out = dict(consumable_sum)
+        for mid, qty in raw_max.items():
+            out[mid] = out.get(mid, Decimal("0")) + qty
+        return out
 
     def sync_material_norms_to_product(self) -> None:
         """
@@ -1795,6 +1828,22 @@ class TechCard(models.Model):
                     for mid, qty in sorted(agg.items(), key=lambda x: x[0])
                 ]
             )
+
+
+def production_stage_is_laser_cut_only(stage) -> bool:
+    """Этап «Лазерная резка» (не гравировка): в техкарте только норма метров, без материала."""
+    if stage is None:
+        return False
+    name = (getattr(stage, "name", None) or "").lower().replace("ё", "е")
+    return "лазер" in name and "рез" in name and "гравир" not in name
+
+
+def production_stage_is_laser_engrave_only(stage) -> bool:
+    """Этап «Лазерная гравировка»: тип + метры (контур) или м² (заливка), без материала."""
+    if stage is None:
+        return False
+    name = (getattr(stage, "name", None) or "").lower().replace("ё", "е")
+    return "гравир" in name
 
 
 class TechCardItem(models.Model):
@@ -1839,9 +1888,9 @@ class TechCardItem(models.Model):
         "Количество на единицу",
         max_digits=12,
         decimal_places=4,
-        help_text="Норма расхода на одно изделие. Один и тот же материал в нескольких строках (разные этапы) "
-        "суммируется при резерве и списании. Один физический лист на два этапа: одна строка с количеством 1, "
-        "на втором этапе лист не дублируйте (или 0); расходники (диск) — отдельными строками по этапам.",
+        help_text="Норма расхода на одно изделие. Тип «Материал» (расходник): количества по этапам "
+        "суммируются. Тип «Сырьё» (один лист/заготовка на все этапы): на карту — одна строка; если "
+        "сырьё ошибочно продублировано на этапах, при расчёте берётся максимум, не сумма.",
     )
     item_kind = models.CharField(
         "Тип позиции",
@@ -1864,6 +1913,28 @@ class TechCardItem(models.Model):
         null=True,
         blank=True,
         help_text="Погонные метры реза на одно изделие (лазер и т.п.). Учитывается, если у выбранного этапа задана «Стоимость метра реза».",
+    )
+    ENGRAVE_KIND_CONTOUR = "contour"
+    ENGRAVE_KIND_FILL = "fill"
+    ENGRAVE_KIND_CHOICES = [
+        (ENGRAVE_KIND_CONTOUR, "Контурная (вектор)"),
+        (ENGRAVE_KIND_FILL, "Заливка (растр)"),
+    ]
+    engrave_kind = models.CharField(
+        "Тип гравировки",
+        max_length=20,
+        choices=ENGRAVE_KIND_CHOICES,
+        blank=True,
+        default="",
+        help_text="Только для этапа «Лазерная гравировка».",
+    )
+    engrave_area_m2 = models.DecimalField(
+        "Площадь гравировки на 1 изд., м²",
+        max_digits=12,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Тип «Заливка»: площадь закрашиваемой зоны на одно изделие.",
     )
     note = models.CharField("Примечание", max_length=255, blank=True)
     composition_order = models.PositiveIntegerField(
@@ -1897,7 +1968,45 @@ class TechCardItem(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if bool(self.material_id) == bool(self.product_id):
+        st = self.production_stage
+        if production_stage_is_laser_cut_only(st):
+            if self.material_id or self.product_id:
+                raise ValidationError(
+                    "На этапе «Лазерная резка» указывают только норму реза в метрах. "
+                    "Лист и расходники — на других этапах техкарты."
+                )
+            cl = self.cut_length_meters_per_unit
+            if cl is None or cl <= 0:
+                raise ValidationError(
+                    {"cut_length_meters_per_unit": "Укажите норму длины реза в метрах на 1 изделие."}
+                )
+        elif production_stage_is_laser_engrave_only(st):
+            if self.material_id or self.product_id:
+                raise ValidationError(
+                    "На этапе «Лазерная гравировка» указывают тип и норму (метры или м²). "
+                    "Материал — на других этапах."
+                )
+            kind = (self.engrave_kind or "").strip() or self.ENGRAVE_KIND_CONTOUR
+            if kind == self.ENGRAVE_KIND_FILL:
+                area = self.engrave_area_m2
+                if area is None or area <= 0:
+                    raise ValidationError(
+                        {"engrave_area_m2": "Для заливки укажите площадь гравировки в м² на 1 изделие."}
+                    )
+                fr = st.engrave_fill_rate_per_sq_m if st else None
+                if fr is None or fr <= 0:
+                    raise ValidationError(
+                        "У этапа «Лазерная гравировка» задайте «Стоимость сплошной гравировки, ₽/м²»."
+                    )
+            else:
+                cl = self.cut_length_meters_per_unit
+                if cl is None or cl <= 0:
+                    raise ValidationError(
+                        {
+                            "cut_length_meters_per_unit": "Для контурной гравировки укажите норму в метрах на 1 изделие.",
+                        }
+                    )
+        elif bool(self.material_id) == bool(self.product_id):
             raise ValidationError("Укажите либо материал, либо полуфабрикат (изделие).")
 
         if self.component_tech_card_id:
@@ -1937,18 +2046,34 @@ class TechCardItem(models.Model):
                     }
                 )
             st = self.production_stage
-            rate = st.cut_rate_per_meter if st else None
-            if rate is None or rate <= 0:
-                raise ValidationError(
-                    {
-                        "cut_length_meters_per_unit": f"У этапа «{st}» не задана стоимость метра реза в справочнике этапов.",
-                    }
-                )
+            if production_stage_is_laser_engrave_only(st) and (
+                (self.engrave_kind or "").strip() == self.ENGRAVE_KIND_FILL
+            ):
+                pass
+            else:
+                rate = st.cut_rate_per_meter if st else None
+                if rate is None or rate <= 0:
+                    raise ValidationError(
+                        {
+                            "cut_length_meters_per_unit": f"У этапа «{st}» не задана стоимость метра реза в справочнике этапов.",
+                        }
+                    )
 
     def __str__(self) -> str:
         if self.product_id:
             return f"{self.tech_card} — {self.get_item_kind_display()}: {self.product}"
-        return f"{self.tech_card} — {self.get_item_kind_display()}: {self.material}"
+        if self.material_id:
+            return f"{self.tech_card} — {self.get_item_kind_display()}: {self.material}"
+        if production_stage_is_laser_engrave_only(self.production_stage):
+            if (self.engrave_kind or "") == self.ENGRAVE_KIND_FILL:
+                return f"{self.tech_card} — гравировка заливка {self.engrave_area_m2} м²"
+            cl = self.cut_length_meters_per_unit
+            if cl is not None and cl > 0:
+                return f"{self.tech_card} — гравировка контур {cl} м"
+        cl = self.cut_length_meters_per_unit
+        if cl is not None and cl > 0:
+            return f"{self.tech_card} — рез {cl} м"
+        return f"{self.tech_card} — позиция #{self.pk or '?'}"
 
 
 class TechCardLaborLine(models.Model):
@@ -3456,9 +3581,18 @@ class ProductionStage(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Для этапов вроде лазерной резки: затраты на 1 погонный метр реза. "
-        "В техкарте на строке с этим этапом укажите норму длины реза на 1 изделие (м). "
-        "Себестоимость строки: метры × эта ставка. Пусто — считать только по нормо-часу (если используете).",
+        help_text="Лазерная резка: метры контура × эта ставка. "
+        "Лазерная гравировка (контурная): метры траектории × эта же ставка. "
+        "В техкарте — норма м на 1 изделие. Сплошная гравировка — поле «₽/м²» ниже.",
+    )
+    engrave_fill_rate_per_sq_m = models.DecimalField(
+        "Стоимость сплошной гравировки, ₽/м²",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Только этап «Лазерная гравировка»: заливка/растр. "
+        "В техкарте — тип «Заливка» и площадь м² на 1 изделие.",
     )
     track_real_time = models.BooleanField(
         "Факт. время",

@@ -262,6 +262,95 @@
       return false;
     }
 
+    /** Только «Лазерная резка»: без каталога материалов, одна норма — метры траектории. */
+    function stageIsLaserCutOnly(stageId) {
+      if (!stageId) {
+        return false;
+      }
+      var stages = currentStages();
+      var st = null;
+      for (var i = 0; i < stages.length; i++) {
+        if (String(stages[i].id) === String(stageId)) {
+          st = stages[i];
+          break;
+        }
+      }
+      if (!st) {
+        return false;
+      }
+      var name = String(st.name || '')
+        .toLowerCase()
+        .replace(/ё/g, 'е');
+      return name.indexOf('лазер') >= 0 && name.indexOf('рез') >= 0 && name.indexOf('гравир') < 0;
+    }
+
+    function stageIsLaserEngraveOnly(stageId) {
+      if (!stageId) {
+        return false;
+      }
+      var stages = currentStages();
+      var st = null;
+      for (var i = 0; i < stages.length; i++) {
+        if (String(stages[i].id) === String(stageId)) {
+          st = stages[i];
+          break;
+        }
+      }
+      if (!st) {
+        return false;
+      }
+      var name = String(st.name || '')
+        .toLowerCase()
+        .replace(/ё/g, 'е');
+      return name.indexOf('гравир') >= 0;
+    }
+
+    function stageIsLaserMeterOnly(stageId) {
+      return stageIsLaserCutOnly(stageId) || stageIsLaserEngraveOnly(stageId);
+    }
+
+    function clearFkSilent($select) {
+      if (!$select || !$select.length) {
+        return;
+      }
+      var el = $select[0];
+      if (el.tagName === 'SELECT') {
+        $select.empty();
+        $select.append(new Option('---------', '', true, true));
+        $select.val('');
+      } else {
+        $select.val('');
+      }
+    }
+
+    /** Без trigger('change') — иначе rebuildMirrors зацикливается и строка «моргает». */
+    function syncLaserCutRowBackend($row, stageId) {
+      if (!stageIsLaserCutOnly(stageId)) {
+        return;
+      }
+      var $mat = $row.find('[name$="-material"]');
+      var $prod = $row.find('[name$="-product"]');
+      if (($mat.val() || '').trim()) {
+        clearFkSilent($mat);
+        $row.attr('data-material-id', '');
+      }
+      if (($prod.val() || '').trim()) {
+        clearFkSilent($prod);
+      }
+      var $qty = $row.find('[name$="-quantity"]');
+      if ($qty.length && String($qty.val() || '').trim() !== '0') {
+        $qty.val('0');
+      }
+      $row.find('[name$="-item_kind"]').val(K.material);
+    }
+
+    function syncLaserEngraveRowBackend($row, stageId) {
+      if (!stageIsLaserEngraveOnly(stageId)) {
+        return;
+      }
+      syncLaserCutRowBackend($row, stageId);
+    }
+
     function onTechProcessUiChange() {
       window.setTimeout(rebuildMirrors, 0);
     }
@@ -367,6 +456,46 @@
       var $kind = $row.find('[name$="-item_kind"]');
       var $mat = $row.find('[name$="-material"]');
       var $prod = $row.find('[name$="-product"]');
+        if (p.kind === 'laser_cut' || p.kind === 'laser_engrave') {
+        $kind.val(K.material);
+        clearFkSilent($mat);
+        clearFkSilent($prod);
+        $row.attr('data-material-id', '');
+        $row.attr('data-product-name', '');
+        $row.attr('data-product-id', '');
+        var $stLc = $row.find('[name$="-production_stage"]');
+        if ($stLc.length && p.stageId != null) {
+          $stLc.val(String(p.stageId));
+        }
+        var $qnLc = $row.find('[name$="-quantity"]');
+        if ($qnLc.length) {
+          $qnLc.val('0');
+        }
+        if (p.kind === 'laser_cut') {
+          $row.find('[name$="-engrave_kind"]').val('');
+          $row.find('[name$="-engrave_area_m2"]').val('');
+          if (p.cutMeters != null && String(p.cutMeters).trim() !== '') {
+            $row.find('[name$="-cut_length_meters_per_unit"]').val(String(p.cutMeters).trim());
+          }
+        } else {
+          var ek = (p.engraveKind || 'contour').trim() || 'contour';
+          $row.find('[name$="-engrave_kind"]').val(ek);
+          if (ek === 'fill') {
+            $row.find('[name$="-cut_length_meters_per_unit"]').val('');
+            $row.find('[name$="-engrave_area_m2"]').val(
+              p.normValue != null ? String(p.normValue).trim() : ''
+            );
+          } else {
+            $row.find('[name$="-engrave_area_m2"]').val('');
+            if (p.normValue != null && String(p.normValue).trim() !== '') {
+              $row.find('[name$="-cut_length_meters_per_unit"]').val(String(p.normValue).trim());
+            } else if (p.cutMeters != null && String(p.cutMeters).trim() !== '') {
+              $row.find('[name$="-cut_length_meters_per_unit"]').val(String(p.cutMeters).trim());
+            }
+          }
+        }
+        return;
+      }
       $kind.val(p.kind);
       if (p.kind === K.component) {
         wipeAndSetFk($mat, null, '');
@@ -836,8 +965,30 @@
           return;
         }
         var $row = $rowFromCardId(String(data.rowId));
-        if ($row.length) {
-          $row.find('[name$="-production_stage"]').val(String(targetSid)).trigger('change');
+        if (!$row.length) {
+          return;
+        }
+        if (stageIsLaserMeterOnly(targetSid)) {
+          if (rowItemKind($row) === K.component) {
+            window.alert(
+              'На этап лазерной резки/гравировки нельзя перенести комплектующее. Здесь только нормы работы.'
+            );
+            return;
+          }
+          var mid = ($row.find('[name$="-material"]').val() || '').trim();
+          var qn = parseMaterialQty($row.find('[name$="-quantity"]').val());
+          if (mid && qn != null && qn > 0) {
+            window.alert(
+              'Материал с расходом оставьте на своём этапе. На лазере — только метры или м² гравировки.'
+            );
+            return;
+          }
+        }
+        $row.find('[name$="-production_stage"]').val(String(targetSid)).trigger('change');
+        if (stageIsLaserCutOnly(targetSid)) {
+          syncLaserCutRowBackend($row, targetSid);
+        } else if (stageIsLaserEngraveOnly(targetSid)) {
+          syncLaserEngraveRowBackend($row, targetSid);
         }
         rebuildMirrors();
       });
@@ -866,24 +1017,59 @@
 
         var $footer = $('<div class="tc-stage-search-footer"></div>');
         var $footInner = $('<div class="tc-stage-search-footer-inner"></div>');
+        var laserCutFooter = stageIsLaserCutOnly(sid);
+        var laserEngraveFooter = stageIsLaserEngraveOnly(sid);
+        var laserFooter = laserCutFooter || laserEngraveFooter;
+        if (laserFooter) {
+          $panel.addClass('tc-stage-panel--laser-cut-only');
+        }
+        if (laserEngraveFooter) {
+          $panel.addClass('tc-stage-panel--laser-engrave-only');
+        }
+        var footerPh = 'Поиск по наименованию, коду, штрихкоду или артикулу';
+        if (laserCutFooter) {
+          footerPh = 'Метры реза на 1 изделие — Enter для новой строки';
+        } else if (laserEngraveFooter) {
+          footerPh = 'Метры контура на 1 изделие — Enter для новой строки';
+        }
         var $sr = $('<div class="tc-item-search-row tc-item-search-row--stage"></div>');
+        if (laserEngraveFooter) {
+          $sr.addClass('tc-item-search-row--laser-engrave');
+        }
         var $wrap = $('<div class="tc-item-search-wrap"></div>');
-        $wrap.append(
-          $('<input type="text" class="tc-item-search-input" autocomplete="off" />').attr(
-            'placeholder',
-            'Поиск по наименованию, коду, штрихкоду или артикулу'
-          )
-        );
-        $wrap.append($('<ul class="tc-item-dropdown"></ul>'));
+        var $footInput = $(
+          '<input type="text" class="tc-item-search-input" autocomplete="off" inputmode="decimal" />'
+        ).attr('placeholder', footerPh);
+        if (laserEngraveFooter) {
+          var $footKind = $(
+            '<select class="tc-item-kind-select--stage tc-engrave-footer-kind" aria-label="Тип гравировки для новой строки"></select>'
+          );
+          $footKind.append(new Option('Контур', 'contour', true, true));
+          $footKind.append(new Option('Заливка', 'fill', false, false));
+          $footKind.on('change', function () {
+            var ph =
+              ($footKind.val() || 'contour') === 'fill'
+                ? 'Площадь заливки, м² — Enter для новой строки'
+                : 'Метры контура на 1 изделие — Enter для новой строки';
+            $footInput.attr('placeholder', ph);
+          });
+          $sr.append($footKind);
+        }
+        $wrap.append($footInput);
+        if (!laserFooter) {
+          $wrap.append($('<ul class="tc-item-dropdown"></ul>'));
+        }
         $sr.append($wrap);
-        $sr.append(
-          $('<button type="button" class="tc-item-add-from-directory"></button>').text('Добавить из справочника')
-        );
-        $sr.append(
-          $('<button type="button" class="tc-item-import tc-item-import--stage" disabled title="Импорт из файла — в разработке"></button>')
-            .append($('<span class="tc-item-import-icon" aria-hidden="true"></span>').text('↓'))
-            .append($('<span class="tc-item-import-label"></span>').text('Импортировать'))
-        );
+        if (!laserFooter) {
+          $sr.append(
+            $('<button type="button" class="tc-item-add-from-directory"></button>').text('Добавить из справочника')
+          );
+          $sr.append(
+            $('<button type="button" class="tc-item-import tc-item-import--stage" disabled title="Импорт из файла — в разработке"></button>')
+              .append($('<span class="tc-item-import-icon" aria-hidden="true"></span>').text('↓'))
+              .append($('<span class="tc-item-import-label"></span>').text('Импортировать'))
+          );
+        }
         $footInner.append($sr);
         $footer.append($footInner);
 
@@ -894,7 +1080,9 @@
       });
     }
 
-    function rebuildMirrors() {
+    var rebuildMirrorsTimer = null;
+
+    function rebuildMirrorsImpl() {
       /* tbody заново: после загрузки/переноса панелей ссылка должна быть актуальной */
       $tbody = backendItemTbody();
       renderStageShells();
@@ -1027,6 +1215,23 @@
           return;
         }
 
+        var laserCutOnly = stageIsLaserCutOnly(sk);
+        var laserEngraveOnly = stageIsLaserEngraveOnly(sk);
+        var laserMeterOnly = laserCutOnly || laserEngraveOnly;
+        if (laserCutOnly) {
+          syncLaserCutRowBackend($row, sk);
+          label = 'Метры реза';
+          code = '—';
+          unit = 'м';
+          qty = '';
+        } else if (laserEngraveOnly) {
+          syncLaserEngraveRowBackend($row, sk);
+          label = 'Метры контура';
+          code = '—';
+          unit = 'м';
+          qty = '';
+        }
+
         var $card = $('<div class="tc-item-card"></div>');
         $card.attr('data-row-id', $row.attr('id') || '');
         $card.attr('data-stage-id', sk);
@@ -1046,26 +1251,101 @@
         var $matCell = $('<div class="tc-item-card-material-cell"></div>');
         $matCell.append($drag);
         $matCell.append($cb);
-        $matCell.append(
-          $('<div class="tc-item-card-name"></div>').text(label).attr('title', label)
-        );
+        var $nameEl = $('<div class="tc-item-card-name"></div>').text(label).attr('title', label);
+        $matCell.append($nameEl);
         $card.append($matCell);
 
         var $normCell = $('<div class="tc-item-card-norm-cell"></div>');
-        var $qty = $('<input type="text" class="tc-item-card-qty vTextField">');
-        $qty.attr('placeholder', 'Норма');
-        $qty.attr('title', 'Расход материала на 1 изделие (в единицах материала: лист, шт и т.п.)');
-        $qty.val(qty);
-        $qty.on('input change', function () {
-          $row.find('[name$="-quantity"]').val($qty.val()).trigger('change');
-        });
-        var $unitSel = $('<select class="tc-item-card-unit" aria-label="Единица измерения"></select>');
-        $unitSel.append(new Option(unit, unit, true, true));
-        $normCell.append($qty);
-        $normCell.append($unitSel);
-
         var $cutField = $row.find('[name$="-cut_length_meters_per_unit"]');
-        if (stageSupportsCutMeters(sk)) {
+        if (laserCutOnly) {
+          var cutValLc = $cutField.val() || '';
+          var $cutWrapLc = $('<div class="tc-item-card-cut-wrap"></div>');
+          var $cutOnly = $('<input type="text" class="tc-item-card-cut vTextField" inputmode="decimal">');
+          $cutOnly.attr('placeholder', 'рез');
+          $cutOnly.attr(
+            'title',
+            'Длина реза на 1 изделие, м. Стоимость = м × ₽/м этапа.'
+          );
+          $cutOnly.attr('aria-label', 'Норма длины реза, м');
+          $cutOnly.val(cutValLc);
+          $cutOnly.on('input change', function () {
+            $cutField.val($cutOnly.val());
+          });
+          $cutWrapLc.append($cutOnly);
+          $cutWrapLc.append($('<span class="tc-item-card-cut-unit"></span>').text('м'));
+          $normCell.append($cutWrapLc);
+        } else if (laserEngraveOnly) {
+          var $kindField = $row.find('[name$="-engrave_kind"]');
+          var $areaField = $row.find('[name$="-engrave_area_m2"]');
+          var kindVal0 = ($kindField.val() || '').trim() || 'contour';
+          if (!$kindField.val()) {
+            $kindField.val('contour');
+          }
+          var $kindSel = $(
+            '<select class="tc-item-card-unit tc-item-card-engrave-kind" aria-label="Тип гравировки"></select>'
+          );
+          $kindSel.append(new Option('Контур', 'contour', kindVal0 === 'contour', kindVal0 === 'contour'));
+          $kindSel.append(new Option('Заливка', 'fill', kindVal0 === 'fill', kindVal0 === 'fill'));
+          $normCell.append($kindSel);
+          function paintEngraveNormFields() {
+            $normCell.find('.tc-engrave-contour-wrap, .tc-engrave-fill-wrap').remove();
+            var k = ($kindSel.val() || 'contour').trim();
+            $kindField.val(k);
+            var rowLabel = k === 'fill' ? 'Площадь заливки' : 'Метры контура';
+            $nameEl.text(rowLabel).attr('title', rowLabel);
+            if (k === 'fill') {
+              $cutField.val('');
+              var $fillWrap = $('<div class="tc-engrave-fill-wrap tc-item-card-cut-wrap"></div>');
+              var $areaIn = $('<input type="text" class="tc-item-card-engrave-area vTextField" inputmode="decimal">');
+              $areaIn.attr('placeholder', 'площадь');
+              $areaIn.attr(
+                'title',
+                'Площадь заливки на 1 изделие, м². Стоимость = м² × ₽/м² этапа «Лазерная гравировка».'
+              );
+              $areaIn.attr('aria-label', 'Норма площади гравировки, м²');
+              $areaIn.val($areaField.val() || '');
+              $areaIn.on('input change', function () {
+                $areaField.val($areaIn.val());
+              });
+              $fillWrap.append($areaIn);
+              $fillWrap.append($('<span class="tc-item-card-cut-unit"></span>').text('м²'));
+              $normCell.append($fillWrap);
+            } else {
+              $areaField.val('');
+              var $cWrap = $('<div class="tc-engrave-contour-wrap tc-item-card-cut-wrap"></div>');
+              var $cIn = $('<input type="text" class="tc-item-card-cut vTextField" inputmode="decimal">');
+              $cIn.attr('placeholder', 'контур');
+              $cIn.attr(
+                'title',
+                'Метры контура на 1 изделие. Стоимость = м × ₽/м этапа «Лазерная гравировка».'
+              );
+              $cIn.attr('aria-label', 'Норма контура гравировки, м');
+              $cIn.val($cutField.val() || '');
+              $cIn.on('input change', function () {
+                $cutField.val($cIn.val());
+              });
+              $cWrap.append($cIn);
+              $cWrap.append($('<span class="tc-item-card-cut-unit"></span>').text('м'));
+              $normCell.append($cWrap);
+            }
+          }
+          $kindSel.on('change', paintEngraveNormFields);
+          paintEngraveNormFields();
+        } else {
+          var $qty = $('<input type="text" class="tc-item-card-qty vTextField">');
+          $qty.attr('placeholder', 'Норма');
+          $qty.attr('title', 'Расход материала на 1 изделие (в единицах материала: лист, шт и т.п.)');
+          $qty.val(qty);
+          $qty.on('input change', function () {
+            $row.find('[name$="-quantity"]').val($qty.val()).trigger('change');
+          });
+          var $unitSel = $('<select class="tc-item-card-unit" aria-label="Единица измерения"></select>');
+          $unitSel.append(new Option(unit, unit, true, true));
+          $normCell.append($qty);
+          $normCell.append($unitSel);
+        }
+
+        if (!laserMeterOnly && stageSupportsCutMeters(sk)) {
           var cutVal = $cutField.val() || '';
           var $cutWrap = $('<div class="tc-item-card-cut-wrap"></div>');
           var $cut = $('<input type="text" class="tc-item-card-cut vTextField" inputmode="decimal">');
@@ -1082,7 +1362,7 @@
           $cutWrap.append($cut);
           $cutWrap.append($('<span class="tc-item-card-cut-unit"></span>').text('м'));
           $normCell.append($cutWrap);
-        } else if ($cutField.length) {
+        } else if (!laserMeterOnly && $cutField.length) {
           /* На шлифовке/сборке и т.п. метры реза не нужны */
           $cutField.val('');
         }
@@ -1200,13 +1480,15 @@
         $kebab.append($('<span class="tc-item-card-kebab-dot"></span>'));
         $kebab.append($('<span class="tc-item-card-kebab-dot"></span>'));
         var $pop = $('<div class="tc-item-card-menu" role="menu" hidden></div>');
-        var items = [
-          { act: 'open-card', label: 'Открыть карточку товара' },
-          { act: 'replace', label: 'Заменить товар' },
-          { act: 'edit-techcard', label: 'Редактировать техкарту' },
-          { act: 'create-techcard', label: 'Создать техкарту товара' },
-          { act: 'delete', label: 'Удалить' },
-        ];
+        var items = laserMeterOnly
+          ? [{ act: 'delete', label: 'Удалить' }]
+          : [
+              { act: 'open-card', label: 'Открыть карточку товара' },
+              { act: 'replace', label: 'Заменить товар' },
+              { act: 'edit-techcard', label: 'Редактировать техкарту' },
+              { act: 'create-techcard', label: 'Создать техкарту товара' },
+              { act: 'delete', label: 'Удалить' },
+            ];
         items.forEach(function (it) {
           $pop.append(
             $('<button type="button" role="menuitem"></button>')
@@ -1224,6 +1506,17 @@
       setupStageSearches();
       syncMaterialHeaderSelectionUi();
       layoutStagePanelGrid();
+    }
+
+    /** Схлопывает частые вызовы — меньше нагрузка на слабый ПК при открытой техкарте. */
+    function rebuildMirrors() {
+      if (rebuildMirrorsTimer) {
+        window.clearTimeout(rebuildMirrorsTimer);
+      }
+      rebuildMirrorsTimer = window.setTimeout(function () {
+        rebuildMirrorsTimer = null;
+        rebuildMirrorsImpl();
+      }, 60);
     }
 
     function layoutStagePanelGrid() {
@@ -1515,6 +1808,59 @@
       $addLink[0].click();
     }
 
+    function queueAddLaserCutNorm(stageId, cutMeters) {
+      materialBatchTail = [];
+      materialBatchStageId = '';
+      if (adding || pendingAdd) {
+        return;
+      }
+      var $addLink = getAddLink();
+      if (!$addLink.length) {
+        return;
+      }
+      pendingAdd = {
+        kind: 'laser_cut',
+        stageId: stageId,
+        cutMeters: cutMeters != null ? String(cutMeters).trim() : '',
+      };
+      adding = true;
+      $addLink[0].click();
+      window.setTimeout(function () {
+        if (adding && pendingAdd) {
+          adding = false;
+          pendingAdd = null;
+        }
+      }, 3000);
+    }
+
+    function queueAddLaserEngraveNorm(stageId, normValue, engraveKind) {
+      materialBatchTail = [];
+      materialBatchStageId = '';
+      if (adding || pendingAdd) {
+        return;
+      }
+      var $addLink = getAddLink();
+      if (!$addLink.length) {
+        return;
+      }
+      var ek = (engraveKind || 'contour').trim() || 'contour';
+      pendingAdd = {
+        kind: 'laser_engrave',
+        stageId: stageId,
+        engraveKind: ek,
+        normValue: normValue != null ? String(normValue).trim() : '',
+        cutMeters: normValue != null ? String(normValue).trim() : '',
+      };
+      adding = true;
+      $addLink[0].click();
+      window.setTimeout(function () {
+        if (adding && pendingAdd) {
+          adding = false;
+          pendingAdd = null;
+        }
+      }, 3000);
+    }
+
     function queueAdd(kind, id, text, fkName, stageId) {
       materialBatchTail = [];
       materialBatchStageId = '';
@@ -1570,6 +1916,10 @@
           }
           pendingAdd = null;
           adding = false;
+          if (p.kind === 'laser_cut' || p.kind === 'laser_engrave') {
+            rebuildMirrors();
+            return;
+          }
           prefetchRowUnits($row, continueMaterialBatchAfterRow, {
             autofillNorm: true,
             forceAutofill: !(p.quantity != null && String(p.quantity).trim() !== ''),
@@ -1811,6 +2161,27 @@
 
         $input.off('.tcStg');
         $btn.off('.tcStg');
+        if (stageIsLaserCutOnly(stageId) || stageIsLaserEngraveOnly(stageId)) {
+          $input.on('keydown.tcStg', function (e) {
+            if (e.key !== 'Enter') {
+              return;
+            }
+            e.preventDefault();
+            var v = ($input.val() || '').trim();
+            if (stageIsLaserEngraveOnly(stageId)) {
+              var ek = 'contour';
+              var $fk = $panel.find('.tc-engrave-footer-kind');
+              if ($fk.length) {
+                ek = ($fk.val() || 'contour').trim() || 'contour';
+              }
+              queueAddLaserEngraveNorm(stageId, v, ek);
+            } else {
+              queueAddLaserCutNorm(stageId, v);
+            }
+            $input.val('');
+          });
+          return;
+        }
 
         function buildMaterialAcUrl(term, page) {
           var u =
@@ -2406,10 +2777,8 @@
     setupProductTabSearch();
     bindTechColCollapseOnce();
     bindMaterialsColumnResizesOnce();
-    rebuildMirrors();
-    /* Поздний проход: Select2/прочая инициализация админки может обновить DOM после первого rebuild */
-    window.setTimeout(rebuildMirrors, 500);
-    window.setTimeout(rebuildMirrors, 1200);
+    rebuildMirrorsImpl();
+    window.setTimeout(rebuildMirrors, 450);
     applyTechColCollapsedFromStorage();
   }
 

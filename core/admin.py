@@ -3636,9 +3636,11 @@ class ProductionStageAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                 "material_warehouse",
                 "hourly_rate",
                 "cut_rate_per_meter",
+                "engrave_fill_rate_per_sq_m",
                 "track_real_time",
             ),
-            "description": "Нормо-час — ₽ за час работы этапа (станок/участок). Стоимость метра реза — для лазера: в техкарте укажите норму м на изделие на строке с этим этапом.",
+            "description": "Нормо-час — ₽/ч. «Стоимость метра реза» — лазерная резка и контурная гравировка (м × ₽). "
+            "«Стоимость сплошной гравировки, ₽/м²» — только для этапа «Лазерная гравировка», тип «Заливка» в техкарте.",
             "classes": ("wide", "compact-two-cols"),
         }),
         ("Исполнители", {

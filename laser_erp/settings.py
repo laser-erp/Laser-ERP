@@ -54,9 +54,14 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.local_dev_auto_login.LocalDevAutoLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Локальный runserver: вход в /admin/ без логина/пароля (127.0.0.1). На VPS — выключено в settings_prod.
+LOCAL_DEV_AUTO_LOGIN = True
+# LOCAL_DEV_AUTO_LOGIN_USERNAME = "Admin"  # если нужен конкретный пользователь
 
 ROOT_URLCONF = 'laser_erp.urls'
 

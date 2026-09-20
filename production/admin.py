@@ -324,6 +324,8 @@ class TechCardItemInline(admin.TabularInline):
         "product",
         "quantity",
         "cut_length_meters_per_unit",
+        "engrave_kind",
+        "engrave_area_m2",
         "component_tech_card",
         "composition_order",
     )
@@ -712,6 +714,11 @@ class TechCardAdmin(ReturnToReferrerMixin, admin.ModelAdmin):
                             ""
                             if st.cut_rate_per_meter is None
                             else format(st.cut_rate_per_meter, "f")
+                        ),
+                        "engrave_fill_rate_per_sq_m": (
+                            ""
+                            if st.engrave_fill_rate_per_sq_m is None
+                            else format(st.engrave_fill_rate_per_sq_m, "f")
                         ),
                     }
                 )

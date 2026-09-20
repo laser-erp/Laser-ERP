@@ -12,6 +12,8 @@ import os
 
 from .settings import *  # noqa: F403
 
+LOCAL_DEV_AUTO_LOGIN = False  # noqa: F405 — на боевом сайте всегда обычный вход
+
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") in ("1", "true", "True", "yes", "YES")
 
 _allowed = os.environ.get("DJANGO_ALLOWED_HOSTS", "").strip()

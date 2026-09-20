@@ -618,6 +618,140 @@ class TechCardAdminFormTests(TestCase):
         self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.fields)
         self.assertNotIn("employee_hourly_rate_display", TechCardLaborLineInline.readonly_fields)
 
+    def test_raw_material_same_sheet_max_not_sum_across_stages(self):
+        product = Product.objects.create(name="Изделие одно сырьё", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP raw once")
+        stage1 = ProductionStage.objects.create(name="Этап 1", sequence=1)
+        stage2 = ProductionStage.objects.create(name="Этап 2", sequence=2)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage1, order=1)
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=stage2, order=2)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        sheet = Material.objects.create(name="Лист фанеры тест", unit="лист")
+        disc = Material.objects.create(name="Круг тест P100", unit="шт")
+        MaterialBatch.objects.create(
+            material=sheet,
+            movement_type=MaterialBatch.INCOMING,
+            quantity=Decimal("10"),
+            unit_price=Decimal("100"),
+        )
+        MaterialBatch.objects.create(
+            material=disc,
+            movement_type=MaterialBatch.INCOMING,
+            quantity=Decimal("10"),
+            unit_price=Decimal("10"),
+        )
+        for stage in (stage1, stage2, stage1):
+            TechCardItem.objects.create(
+                tech_card=tech_card,
+                production_stage=stage,
+                item_kind=TechCardItem.KIND_RAW,
+                material=sheet,
+                quantity=Decimal("1"),
+            )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=stage1,
+            item_kind=TechCardItem.KIND_MATERIAL,
+            material=disc,
+            quantity=Decimal("0.2"),
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=stage2,
+            item_kind=TechCardItem.KIND_MATERIAL,
+            material=disc,
+            quantity=Decimal("0.3"),
+        )
+        agg = tech_card.material_quantities_per_unit_by_material_id()
+        self.assertEqual(agg[sheet.pk], Decimal("1"))
+        self.assertEqual(agg[disc.pk], Decimal("0.5"))
+        self.assertEqual(tech_card.planned_material_cost_per_unit(), Decimal("105.00"))
+
+    def test_laser_engrave_fill_and_contour_planned_cut_cost(self):
+        from django.core.exceptions import ValidationError
+
+        product = Product.objects.create(name="Изделие с гравировкой", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP engrave")
+        laser = ProductionStage.objects.create(
+            name="Лазерная гравировка",
+            sequence=1,
+            cut_rate_per_meter=Decimal("20"),
+            engrave_fill_rate_per_sq_m=Decimal("2500"),
+        )
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=laser, order=1)
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=laser,
+            quantity=Decimal("0"),
+            engrave_kind=TechCardItem.ENGRAVE_KIND_CONTOUR,
+            cut_length_meters_per_unit=Decimal("1"),
+        )
+        TechCardItem.objects.create(
+            tech_card=tech_card,
+            production_stage=laser,
+            quantity=Decimal("0"),
+            engrave_kind=TechCardItem.ENGRAVE_KIND_FILL,
+            engrave_area_m2=Decimal("0.01"),
+        )
+        self.assertEqual(tech_card.planned_cut_cost_per_unit(), Decimal("45.00"))
+        bad = TechCardItem(
+            tech_card=tech_card,
+            production_stage=laser,
+            engrave_kind=TechCardItem.ENGRAVE_KIND_FILL,
+            engrave_area_m2=Decimal("0.01"),
+            material=Material.objects.create(name="лишний", unit="шт"),
+        )
+        with self.assertRaises(ValidationError):
+            bad.full_clean()
+
+    def test_laser_cut_stage_allows_cut_norm_without_material(self):
+        from django.core.exceptions import ValidationError
+
+        from core.models import production_stage_is_laser_cut_only
+
+        product = Product.objects.create(name="Табличка лазер", min_stock=Decimal("0"))
+        tech_process = TechProcess.objects.create(name="TP laser cut only")
+        laser = ProductionStage.objects.create(
+            name="Лазерная резка",
+            sequence=1,
+            cut_rate_per_meter=Decimal("50"),
+        )
+        TechProcessStage.objects.create(tech_process=tech_process, production_stage=laser, order=1)
+        self.assertTrue(production_stage_is_laser_cut_only(laser))
+        tech_card = TechCard.objects.create(
+            name=product.name,
+            product=product,
+            tech_process=tech_process,
+        )
+        sheet = Material.objects.create(name="Лист 317", unit="лист")
+        item = TechCardItem(
+            tech_card=tech_card,
+            production_stage=laser,
+            quantity=Decimal("0"),
+            cut_length_meters_per_unit=Decimal("0.46"),
+        )
+        item.full_clean()
+        item.save()
+        self.assertEqual(tech_card.planned_cut_cost_per_unit(), Decimal("23.00"))
+        bad = TechCardItem(
+            tech_card=tech_card,
+            production_stage=laser,
+            material=sheet,
+            quantity=Decimal("0"),
+            cut_length_meters_per_unit=Decimal("0.46"),
+        )
+        with self.assertRaises(ValidationError):
+            bad.full_clean()
+
     def test_material_kind_lines_included_in_planned_material_cost(self):
         product = Product.objects.create(name="Табличка материал kind", min_stock=Decimal("0"))
         tech_process = TechProcess.objects.create(name="TP material kind")

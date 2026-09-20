@@ -1,8 +1,8 @@
 # Задание для облачного агента (сервер)
 
-**Обновлено локальным агентом:** 2026-09-20  
-**Фаза плана:** 0.1 (доработка) — git на VPS для `deploy/update_ubuntu.sh`  
-**Прошлое задание:** [archive/2026-09-20-phase0-vps-update.md](./archive/2026-09-20-phase0-vps-update.md)
+**Обновлено локальным агентом:** 2026-09-21  
+**Релиз:** техкарта — лазерная резка/гравировка, миграции `0133`–`0136`  
+**Прошлое задание:** [archive/2026-09-20-phase0-vps-update.md](./archive/2026-09-20-phase0-vps-update.md) (git на VPS — `done`)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | `done` |
+| **Статус** | `waiting` |
 | **Кто выполняет** | cloud-agent |
 | **Блокер** | — |
 
@@ -18,19 +18,22 @@
 
 ## Цель
 
-1. Сделать `/var/www/laser-erp` **git-репозиторием**, привязанным к **https://github.com/laser-erp/Laser-ERP** (ветка **main**).
-2. Добиться успешного **`sudo bash deploy/update_ubuntu.sh`** (или `git pull --ff-only` от пользователя `lasererp`).
-3. **Не удалять** `media/`, `logs/`, `.venv/`, `/etc/laser-erp.env` — они в `.gitignore` или вне каталога.
-4. Кратко описать в отчёте, как дальше обновлять сервер (git pull vs rsync).
+После **выложить на GitHub** в **main** подтянуть код на боевой сервер и применить **миграции Postgres**, чтобы на **https://laser-erp.armada.sx** работали:
+
+- один лист на техкарте таблички (без тройного учёта);
+- этап **«Лазерная резка»** — только метры, без материала;
+- этап **«Лазерная гравировка»** — тип контур/заливка, ₽/м и ₽/м² на карточке этапа;
+- обновлённый интерфейс вкладки «Материалы» техкарты.
+
+**Не запускать** `tools/_deploy_server.py` (затирает каталог и loaddata).
 
 ---
 
 ## Предусловия
 
-- SSH: `VPS_HOST` / `VPS_USER` / `VPS_PASSWORD` (как в прошлом задании) или исправленный ключ.
-- **Не запускать** `tools/_deploy_server.py`.
-- Каталог приложения: `/var/www/laser-erp`, пользователь: `lasererp`.
-- Если репозиторий **приватный** — в Secrets нужен **`GITHUB_TOKEN`** (PAT только `repo`) для `git fetch`/`pull` под пользователем `lasererp`. Токен **не писать в отчёт**.
+- SSH: `VPS_HOST` / `VPS_USER` / `VPS_PASSWORD` (или ключ).
+- Каталог: `/var/www/laser-erp`, пользователь `lasererp`, env: `/etc/laser-erp.env`.
+- Репозиторий: https://github.com/laser-erp/Laser-ERP , ветка **main**.
 
 ---
 
@@ -40,91 +43,79 @@
 
 ```bash
 systemctl is-active laser-erp nginx
-ls -la /var/www/laser-erp/.git 2>/dev/null || echo "NO_GIT"
-du -sh /var/www/laser-erp/media /var/www/laser-erp/logs 2>/dev/null || true
 curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.sx/admin/login/
+sudo -u lasererp bash -lc 'cd /var/www/laser-erp && git rev-parse --short HEAD'
 ```
 
-### 2. Инициализация git (если NO_GIT)
+Записать коммит «до» в отчёт.
 
-Выполнять **от root**, команды git — **от lasererp**:
-
-```bash
-APP=/var/www/laser-erp
-sudo -u lasererp bash -lc "cd $APP && git init -b main"
-sudo -u lasererp bash -lc "cd $APP && git remote add origin https://github.com/laser-erp/Laser-ERP.git"
-```
-
-Если `remote origin already exists` — проверить URL и перейти к fetch.
-
-**Приватный GitHub** (если `git fetch` просит логин):
-
-```bash
-# GITHUB_TOKEN — из Secrets, не логировать
-sudo -u lasererp bash -lc "cd $APP && git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/laser-erp/Laser-ERP.git"
-```
-
-### 3. Подтянуть main без потери media/logs
-
-```bash
-APP=/var/www/laser-erp
-sudo -u lasererp bash -lc "cd $APP && git fetch origin main"
-sudo -u lasererp bash -lc "cd $APP && git reset --hard origin/main"
-sudo -u lasererp bash -lc "cd $APP && git branch --set-upstream-to=origin/main main"
-sudo -u lasererp bash -lc "cd $APP && git rev-parse --short HEAD"
-```
-
-После `reset --hard` проверить, что **media** и **logs** на месте (они должны остаться как неотслеживаемые/игнорируемые).
-
-Если `reset --hard` неприемлем из-за локальных правок на сервере — в отчёте описать diff и статус **`blocked`**, предложить вариант **только rsync** (см. шаг 6).
-
-### 4. Права
-
-```bash
-chown -R lasererp:www-data /var/www/laser-erp
-find /var/www/laser-erp -type d -exec chmod 775 {} \;
-find /var/www/laser-erp -type f -exec chmod 664 {} \;
-# .venv и manage.py — как было на сервере; при сомнениях не менять исполняемость .venv/bin/*
-```
-
-### 5. Проверка update_ubuntu.sh
+### 2. Обновление кода и деплой
 
 ```bash
 cd /var/www/laser-erp
 sudo bash deploy/update_ubuntu.sh
 ```
 
-Ожидаемо: `git pull --ff-only` успешен (или «Already up to date»), migrate/collectstatic/restart без ошибок.
+Скрипт сам делает `git pull`, `pip install`, **migrate** с Postgres (через `POSTGRES_*` из `/etc/laser-erp.env`), `collectstatic`, `restart laser-erp`.
 
-Повторно:
+**Ожидаемые миграции** (если ещё не применены): `0133` … `0136` (`core`).
+
+Если `update_ubuntu.sh` упал на migrate — **не** гонять `migrate` без env. Вручную только так:
+
+```bash
+source /etc/laser-erp.env
+sudo -u lasererp env \
+  DJANGO_SETTINGS_MODULE=laser_erp.settings_prod \
+  POSTGRES_DB="$POSTGRES_DB" \
+  POSTGRES_USER="$POSTGRES_USER" \
+  POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}" \
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}" \
+  /var/www/laser-erp/.venv/bin/python /var/www/laser-erp/manage.py migrate --noinput
+sudo bash /var/www/laser-erp/deploy/update_ubuntu.sh
+```
+
+(или `collectstatic` + `systemctl restart laser-erp`, если pull уже был.)
+
+### 3. Проверка миграций в Postgres
+
+```bash
+source /etc/laser-erp.env
+sudo -u lasererp env \
+  DJANGO_SETTINGS_MODULE=laser_erp.settings_prod \
+  POSTGRES_DB="$POSTGRES_DB" \
+  POSTGRES_USER="$POSTGRES_USER" \
+  POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+  POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}" \
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}" \
+  /var/www/laser-erp/.venv/bin/python /var/www/laser-erp/manage.py showmigrations core | tail -n 8
+```
+
+В отчёте: `[X]` у `0133`–`0136`.
+
+### 4. Проверка сайта
 
 ```bash
 curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.sx/admin/login/
 ```
 
-### 6. Документация (в репозитории)
+Опционально: открыть техкарту «Табличка Баня» (если есть на проде) — лазерная резка ~0,46 м, **без** строк гравировки.
 
-Добавить файл **`docs/cloud-agent/server-update.md`** (кратко, по-русски):
+### 5. Отчёт и GitHub
 
-- штатная команда на VPS: `sudo bash /var/www/laser-erp/deploy/update_ubuntu.sh` после **выложить на GitHub** с **main**;
-- запасной путь: rsync / `tools/_sync_vps_code.py` с машины, где есть `.env.server`;
-- что **не** делать: `_deploy_server.py`.
-
-Сохранить файл в истории проекта и **выложить на GitHub** вместе с отчётом.
-
-### 7. (Опционально) Deploy key
-
-Если PAT неудобен — настроить read-only deploy key для `lasererp`, **не коммитить** приватный ключ; в отчёте только «deploy key установлен: да/нет».
+- Заполнить раздел **«Отчёт облачного агента»** ниже.
+- Статус: `done` или `blocked`.
+- **Сохранить в истории проекта и выложить на GitHub** (`current-task.md` с отчётом).
 
 ---
 
 ## Критерий «готово»
 
-- [x] `git rev-parse` в `/var/www/laser-erp` показывает коммит с **main** GitHub.
-- [x] `deploy/update_ubuntu.sh` завершился **OK**.
-- [x] `/admin/login/` по-прежнему **200/302**, не **500**.
-- [x] Файл **`docs/cloud-agent/server-update.md`** создан.
-- [x] Отчёт ниже заполнен и **выложен на GitHub**.
+- [ ] `git rev-parse` на сервере = коммит с **main** после этого релиза.
+- [ ] `0133`–`0136` применены в **Postgres** (не только SQLite).
+- [ ] `/admin/login/` — **200** или **302**, не **500**.
+- [ ] `laser-erp` и `nginx` — **active**.
+- [ ] Отчёт заполнен и **на GitHub**.
 
 ---
 
@@ -132,48 +123,31 @@ curl -sS -o /dev/null -w "admin_login=%{http_code}\n" https://laser-erp.armada.s
 
 ### Дата и время
 
-2026-09-20 (UTC), cloud-agent.
+(заполнить)
 
-### Git: коммит на сервере, upstream
+### Git: коммит на сервере до / после
 
-До работ: каталог **без** `.git` (`NO_GIT`).
+(заполнить)
 
-Выполнено от `lasererp`: `git init -b main`, `remote` → `https://github.com/laser-erp/Laser-ERP.git`, `git fetch origin main`, `git reset --hard origin/main`, upstream `origin/main`.
+### update_ubuntu.sh
 
-На момент проверки: **`ee87be6`** — `main` отслеживает **`origin/main`**. Репозиторий **публичный**, `GITHUB_TOKEN` не использовался. Deploy key: **нет**.
+(последние ~25 строк вывода или ошибка)
 
-### update_ubuntu.sh: вывод (последние ~20 строк)
+### showmigrations core (0133–0136)
 
-```
-Already up to date.
-...
-Running migrations:
-  No migrations to apply.
-...
-0 static files copied to '/var/www/laser-erp/staticfiles', 199 unmodified.
-OK: Laser ERP обновлён и перезапущен.
-```
+(вставить строки)
 
-(Предупреждение Django о немигрированных изменениях моделей — как раньше, на запуск не влияет.)
+### admin_login HTTP-код
 
-### admin_login HTTP-код после работ
-
-**200** (`https://laser-erp.armada.sx/admin/login/`). `laser-erp` и `nginx` — **active**.
-
-### media/ и logs/ на месте (да/нет, размеры)
-
-**Да.** `media/` ~4.9M, `logs/` ~14M. `tools/_deploy_server.py` **не запускался**.
+(заполнить)
 
 ### Статус финальный
 
-`done`
+`waiting` → `done` / `blocked`
 
 ### Что нужно от владельца / локального агента
 
-- После merge этого отчёта на **main** на VPS: `sudo bash /var/www/laser-erp/deploy/update_ubuntu.sh` — подтянет `server-update.md` и обновлённый `current-task.md`.
-- Дальнейшие релизы: push в **main** → та же команда на сервере (см. [server-update.md](./server-update.md)).
-- При переводе репозитория в **private** — настроить deploy key или PAT на VPS (секрет `GITHUB_TOKEN` в Cursor для агента).
-- Опционально: исправить `VPS_SSH_PRIVATE_KEY` в Secrets (ключ с агента даёт `error in libcrypto`; вход по паролю работает).
+(если blocked)
 
 ---
 
