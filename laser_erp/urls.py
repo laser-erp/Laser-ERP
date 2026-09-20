@@ -9,6 +9,13 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path, reverse
 from django.urls import reverse_lazy
 
+from core.views_password_reset import (
+    AccountPasswordResetDoneView,
+    AccountPasswordResetView,
+    LaserPasswordResetDoneView,
+    LaserPasswordResetView,
+)
+
 # Блок на главной /admin/: материалы + движения + группы + «Товары и услуги» (одна точка входа).
 _NOMENCLATURE_MODEL_ORDER = (
     "materialgroup",
@@ -142,27 +149,15 @@ def _get_app_list_with_production_grouped(request, app_label=None):
 
 admin.site.get_app_list = _get_app_list_with_production_grouped
 
-_PASSWORD_RESET_EMAIL = {
-    "email_template_name": "registration/password_reset_email.html",
-    "subject_template_name": "registration/password_reset_subject.txt",
-    "extra_email_context": {"site_name": "Laser ERP"},
-}
-
 urlpatterns = [
     path(
         "admin/password_reset/",
-        auth_views.PasswordResetView.as_view(
-            template_name="registration/admin_password_reset_form.html",
-            success_url=reverse_lazy("admin_password_reset_done"),
-            **_PASSWORD_RESET_EMAIL,
-        ),
+        LaserPasswordResetView.as_view(),
         name="admin_password_reset",
     ),
     path(
         "admin/password_reset/done/",
-        auth_views.PasswordResetDoneView.as_view(
-            template_name="registration/admin_password_reset_done.html",
-        ),
+        LaserPasswordResetDoneView.as_view(),
         name="admin_password_reset_done",
     ),
     path(

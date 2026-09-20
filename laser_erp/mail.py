@@ -30,6 +30,7 @@ def apply_email_settings(settings: dict) -> None:
             default_from = settings["EMAIL_HOST_USER"] or "noreply@localhost"
         settings["DEFAULT_FROM_EMAIL"] = default_from
         settings["SERVER_EMAIL"] = os.environ.get("SERVER_EMAIL", default_from).strip() or default_from
+        configure_password_reset_email(settings)
         return
 
     if debug:
@@ -39,3 +40,16 @@ def apply_email_settings(settings: dict) -> None:
 
     settings.setdefault("DEFAULT_FROM_EMAIL", "noreply@laser-erp.local")
     settings.setdefault("SERVER_EMAIL", settings["DEFAULT_FROM_EMAIL"])
+
+    configure_password_reset_email(settings)
+
+
+def configure_password_reset_email(settings: dict) -> None:
+    flag = os.environ.get("PASSWORD_RESET_EMAIL_ENABLED", "").strip().lower()
+    host = os.environ.get("EMAIL_HOST", "").strip()
+    if flag in ("0", "false", "no", "off"):
+        settings["PASSWORD_RESET_EMAIL_ENABLED"] = False
+    elif flag in ("1", "true", "yes", "on"):
+        settings["PASSWORD_RESET_EMAIL_ENABLED"] = bool(host)
+    else:
+        settings["PASSWORD_RESET_EMAIL_ENABLED"] = bool(host)

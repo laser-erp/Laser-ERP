@@ -2980,6 +2980,50 @@ class AdminInvite(models.Model):
         return f"{self.email} ({self.role}) — {'принято' if self.is_accepted else 'ожидает'}"
 
 
+class PasswordResetRequest(models.Model):
+    """Запрос сброса пароля без SMTP: пользователь получает код, админ выдаёт ссылку."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Пользователь",
+        on_delete=models.CASCADE,
+        related_name="password_reset_requests",
+    )
+    short_code = models.CharField("Код для администратора", max_length=16, db_index=True)
+    expires_at = models.DateTimeField("Действует до")
+    ip_address = models.GenericIPAddressField("IP запроса", null=True, blank=True)
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Запрос сброса пароля"
+        verbose_name_plural = "Запросы сброса пароля"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["short_code", "expires_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} — {self.short_code}"
+
+    @property
+    def is_active(self) -> bool:
+        return timezone.now() < self.expires_at
+
+    @classmethod
+    def create_for_user(cls, user, *, ip_address: str | None = None):
+        from core.services.password_reset import (
+            generate_reset_short_code,
+            password_reset_request_ttl,
+        )
+
+        return cls.objects.create(
+            user=user,
+            short_code=generate_reset_short_code(),
+            expires_at=timezone.now() + password_reset_request_ttl(),
+            ip_address=ip_address or None,
+        )
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
