@@ -40,7 +40,7 @@ def noop(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0132_production_request_order_mode_quote"),
+        ("core", "0133_password_reset_request"),
     ]
 
     operations = [
