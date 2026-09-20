@@ -9,9 +9,9 @@
 
 | Поле | Значение |
 |------|----------|
-| **Статус** | `waiting` |
+| **Статус** | `done` |
 | **Кто выполняет** | cloud-agent |
-| **Блокер** | — |
+| **Блокер** | — (см. отчёт: `update_ubuntu.sh` / git) |
 
 *(Облачный агент: при старте поставьте `in_progress`, по завершении — `done` или `blocked`.)*
 
@@ -113,10 +113,10 @@ grep -E '^EMAIL_|^DEFAULT_FROM' /etc/laser-erp.env | sed 's/PASSWORD=.*/PASSWORD
 
 ## Критерий «готово»
 
-- [ ] `update_ubuntu.sh` успешен (или описана блокировка).
-- [ ] Миграции 0131–0132 применены.
-- [ ] `/admin/login/` не отдаёт 500.
-- [ ] Отчёт ниже заполнен и **выложен на GitHub**.
+- [x] `update_ubuntu.sh` успешен (или описана блокировка).
+- [x] Миграции 0131–0132 применены.
+- [x] `/admin/login/` не отдаёт 500.
+- [x] Отчёт ниже заполнен и **выложен на GitHub**.
 
 ---
 
@@ -126,21 +126,44 @@ grep -E '^EMAIL_|^DEFAULT_FROM' /etc/laser-erp.env | sed 's/PASSWORD=.*/PASSWORD
 
 ### Дата и время (UTC или MSK)
 
+2026-09-20, ~19:10 UTC (22:10 MSK)
+
 ### Коммит на сервере после обновления
 
+На VPS **нет git-репозитория** (`git_repo=no`, коммит «до» не определялся).
+
+Код синхронизирован с ветки **main** агента коммитом **`225a7d1`** (rsync в `/var/www/laser-erp`, затем `migrate`, `collectstatic`, `systemctl restart laser-erp`).
+
 ### Результаты шагов 1–6
+
+| Шаг | Результат |
+|-----|-----------|
+| **1. До** | `laser-erp=active`, `nginx=active`, git на сервере отсутствует |
+| **2. update_ubuntu.sh** | **Ошибка:** `fatal: not a git repository` (exit 128). Скрипт не завершён; обновление выполнено **вручную через rsync** (см. выше) |
+| **3. Миграции** | `[X]` **0131_user_action_log**, `[X]` **0132_production_request_order_mode_quote`. Также `[X]` 0133_password_reset_request (была применена ранее на БД) |
+| **4. /admin/login/** | С сервера: HTTPS local **200**, gunicorn **301**. Снаружи: **https://laser-erp.armada.sx/admin/login/ → 200** (не 500) |
+| **5. Суперпользователи** | `['tc_labor_save2', 'tc_labor_save3', 'admin', 'faktoryal', 'Admin']` — сброс пароля **не выполнялся** |
+| **6. Почта** | `EMAIL_HOST=smtp.yandex.ru` задан; `EMAIL_HOST_PASSWORD` **не пустой**; `PASSWORD_RESET_EMAIL_ENABLED=1` |
+
+**SSH:** подключение по ключу из `VPS_SSH_PRIVATE_KEY` — `error in libcrypto`; успешно через `VPS_USER` / `VPS_PASSWORD`. Рекомендуется проверить формат ключа в Secrets.
 
 ### Ошибки / хвост логов (если были)
 
 ```text
-(вставить последние строки django_errors.log или gunicorn_error.log при 500)
+deploy/update_ubuntu.sh: fatal: not a git repository (or any of the parent directories): .git
 ```
+
+При проверке `/admin/login/` ошибок 500 в логах не потребовалось (страница отвечает 200).
 
 ### Статус финальный
 
-`done` | `blocked` — …
+`done` — цели фазы 0 (код main, миграции, живой login) выполнены. **Ограничение:** штатный `git pull` на VPS недоступен до `git clone` / инициализации репозитория.
 
 ### Что нужно от локального агента / владельца
+
+1. Настроить на VPS **git** в `/var/www/laser-erp` (clone + `lasererp` + deploy key) или задокументировать постоянный путь **rsync** / `tools/_sync_vps_code.py`.
+2. При необходимости исправить **`VPS_SSH_PRIVATE_KEY`** в Secrets (сейчас ключ не читается OpenSSH на агенте).
+3. Секреты `SSH_*` в README не инжектятся — агент использовал `VPS_HOST` / `VPS_PASSWORD` (имена из текущих Secrets).
 
 ---
 
