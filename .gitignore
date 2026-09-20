@@ -29,7 +29,10 @@ media/
 # IDE / OS
 .idea/
 .vscode/
-.cursor/
+# Cursor: локальный кэш не в git; правила для агентов — в репозитории
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 .cursor_chat_digest.txt
 *.code-workspace
 .DS_Store

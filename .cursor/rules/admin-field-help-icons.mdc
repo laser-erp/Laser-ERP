@@ -1,0 +1,38 @@
+---
+description: Единое размещение иконки подсказки «?» в админке Laser ERP
+alwaysApply: true
+---
+
+# Подсказки полей (иконка «?») в админке
+
+## Разметка
+
+- Использовать шаблон `templates/admin/includes/fieldset.html` (обёртка `laser-field-with-help`, колонка `laser-field-help-col`, основной блок `laser-field-main-col`).
+- Для чекбоксов — только вариант `laser-field-with-help--checkbox` с `laser-field-help-inline` («?» в одной строке перед переключателем).
+
+## Где стоит иконка и подпись
+
+- В `fieldset` с классом **`aligned`** порядок в одной **горизонтальной** линии: **«?»** → **подпись (наименование)** → **поле ввода**; по вертикали всё **по центру** (`align-items: center`).
+- Чекбокс: тот же порядок — «?», затем **подпись**, затем переключатель (`templates/admin/includes/fieldset.html`, класс `laser-checkbox-help-row`).
+- На узких экранах (≈600px) блок «подпись + поле» может складываться в колонку (`admin_field_help.css`).
+
+## Стили
+
+- Правила в `core/static/core/admin/admin_field_help.css` (версия в `templates/admin/base_site.html` через `?v=…`).
+- При новых кастомных формах/fieldset не обходить эту вёрстку и не дублировать «?» отдельными виджетами без тех же классов.
+
+## Табличные инлайны
+
+- Отдельная разметка в `templates/admin/edit_inline/tabular.html` и классы `laser-th-*`, `laser-tabular-cell*` — там свои правила, но внешний вид кнопки «?» тот же.
+
+## Ширина полей по тексту
+
+- Глобально: `core/static/core/admin/admin_autosize_fields.css` + `admin_autosize_fields.js` (подключены в `templates/admin/base_site.html`) — `field-sizing: content`, запасной пересчёт в `ch` в старых браузерах.
+- Новые экраны админки: не задавать полям фиксированную ширину (`20em`, `width: 100%` на инпутах), если нет причины; при необходимости узкого поля — `max-width` и те же приёмы.
+- Кастомные блоки (карточки техкарты, шапка задания и т.д.) — по возможности `field-sizing: content` и `width: auto`, согласованно с глобальными стилями.
+
+## Десятичный разделитель (ru)
+
+- Локаль `ru`: в `django/conf/locale/ru/formats.py` задано `DECIMAL_SEPARATOR = ","`.
+- Патч `core/admin_numeric_locale.py` (вызывается из `CoreConfig.ready`) включает `localize=True` для целых и дробных полей в админке, чтобы ввод совпадал с отображением (запятая), а не с «голым» `type="number"` (точка).
+- В JS при разборе чисел из строк допускать и запятую, и точку (например `replace(",", ".")` перед `parseFloat`).

@@ -1,0 +1,15 @@
+---
+description: Единая высота однострочных полей в админке Laser ERP (компактная строка)
+alwaysApply: true
+---
+
+# Высота и ширина полей в админке ERP
+
+Однострочные элементы форм в Django admin (инпуты, `select`, Select2, блоки `.readonly` в `fieldset.module.aligned`) должны иметь **одинаковую компактную высоту** и **ширину по содержимому** в пределах колонки.
+
+- **Высота и отступы:** в `core/static/core/admin/admin_autosize_fields.css` задаются **`--laser-admin-control-height: 20px`**, **`--laser-admin-control-padding-y`**, **`--laser-admin-control-padding-x`**, **`--laser-admin-control-line-height`** вместе с `box-sizing: border-box`, `min-height`/`height` на контроле.
+- **Ширина:** `field-sizing: content` (где поддерживается), `max-width: var(--laser-admin-input-max-width)`; запасной расчёт ширины в ch — `admin_autosize_fields.js` (`MIN_CH`, большой `MAX_CH`), плюс `max-width: 100%` на элементе.
+- **Выпадающий Select2:** пункты списка и поле поиска в том же файле — `min-height`/`padding`/`font-size` согласованы с переменными.
+- Не дублировать произвольные `min-height`/`height` для таких контролов в отдельных темах; при необходимости переопределять точечно и согласовывать с переменными.
+- **Не** фиксировать высоту у `textarea`, `input[type="checkbox|radio|file"]`, `select[multiple]` (кроме `min-height` у multiple по необходимости).
+- После правок стилей поднимать `?v=` у `admin_autosize_fields.css` и при изменении логики ширины — у `admin_autosize_fields.js` в `templates/admin/base_site.html`.
