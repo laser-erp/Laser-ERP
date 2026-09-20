@@ -19,6 +19,7 @@
 - С логином `e9650730002@yandex.ru`: `SENT 1`, `PASSWORD_RESET_EMAIL_ENABLED=1`.
 - https://laser-erp.armada.sx/admin/password_reset/ — HTTP 200, поле **Email** (`name=email`).
 - Тестовое письмо ушло на `e9650730002@yandex.ru` (тема `Laser ERP SMTP`).
+- Email в Django: `Admin` → `LC@armada.sx`, `faktoryal` → `faktoryal@yandex.ru`.
 
 ---
 
@@ -186,10 +187,10 @@ print('ok')
 | username | email |
 |----------|--------|
 | `Admin` | `LC@armada.sx` |
-| `faktoryal` | `LC@armada.sx` |
+| `faktoryal` | `faktoryal@yandex.ru` |
 | `admin` | `admin@example.com` (на этот адрес письмо не придёт) |
 
-Сброс по адресу `LC@armada.sx` отправит ссылки **обоим** (`Admin` и `faktoryal`) — Django так делает при одинаковом email. Письма уходят с `e9650730002@yandex.ru`.
+Сброс: `LC@armada.sx` — аккаунт `Admin`; `faktoryal@yandex.ru` — `faktoryal`. Письма уходят с `e9650730002@yandex.ru`.
 
 У `admin` при необходимости сменить email в админке на рабочий.
 
