@@ -15,7 +15,7 @@ import paramiko
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from install_vps_ssh_key import write_vps_ssh_key
 
-SMTP_USER = os.environ.get("YANDEX_SMTP_USER", "Armada.sx@yandex.ru").strip() or "Armada.sx@yandex.ru"
+SMTP_USER = os.environ.get("YANDEX_SMTP_USER", "e9650730002@yandex.ru").strip() or "e9650730002@yandex.ru"
 SMTP_PASS = "".join(os.environ.get("YANDEX_SMTP_PASSWORD", "").split())
 SSH_HOST = os.environ.get("VPS_HOST", "").strip()
 SSH_USER = os.environ.get("VPS_USER", "root").strip() or "root"

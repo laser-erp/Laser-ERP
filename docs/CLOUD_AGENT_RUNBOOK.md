@@ -8,18 +8,17 @@
 |--------|--------|
 | Доступ в Django-админку на проде | Сделано (суперпользователь `admin`, пароль менялся вручную — **не хранить в git**) |
 | SSH-ключ агента на VPS | Сделано: публичный ключ `laser-erp-agent` в `/root/.ssh/authorized_keys` (блок `# CURSOR-AGENT-SSH-*`) |
-| Сброс пароля **без почты** (логин → код → админ) | На проде: `PASSWORD_RESET_EMAIL_ENABLED=0` (форма — поле **Логин**) |
-| Сброс пароля **по email** (Яндекс) | **Не завершено**: пароль приложения записан в `/etc/laser-erp.env`, Яндекс отвечает **535 Invalid user or password** |
+| Сброс пароля **без почты** (логин → код → админ) | Код на проде остаётся; форма сейчас в режиме почты |
+| Сброс пароля **по email** (Яндекс) | **Сделано:** `send_mail` = `SENT`, `PASSWORD_RESET_EMAIL_ENABLED=1`, логин SMTP `e9650730002@yandex.ru` |
 | Код сброса пароля | На проде через `rsync`; git: PR #1 (сброс), #2/#3 (SMTP tools + runbook) |
 
 Проверка 2026-09-20 (агент `Laser ERP VPS smtp`, ветка `cursor/yandex-smtp-apply-095b`):
 
-- Секреты **есть:** `VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`, `VPS_SSH_PRIVATE_KEY`, `YANDEX_SMTP_PASSWORD` (len=16, только a–z — формат пароля приложения).
-- Секреты **нет:** `YANDEX_SMTP_USER` (используется значение по умолчанию `Armada.sx@yandex.ru`).
-- SSH по `~/.ssh/vps_key` работает после `python3 tools/install_vps_ssh_key.py`.
-- `EMAIL_HOST_PASSWORD` на VPS обновлён (len=16). `PASSWORD_RESET_EMAIL_ENABLED` оставлен **0**, чтобы форма сброса не уходила в SMTP.
-- `send_mail` / прямой `smtplib` (465 SSL и 587 STARTTLS, `smtp.yandex.ru` и `smtp.yandex.com`) — **535** и с VPS, и с Cloud Agent. Это не блокировка IP сервера.
-- https://laser-erp.armada.sx/admin/password_reset/ — HTTP 200, поле **Логин** (`name=username`), почта не используется.
+- Секреты **есть:** `VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`, `VPS_SSH_PRIVATE_KEY`, `YANDEX_SMTP_PASSWORD`.
+- Первый прогон с логином `Armada.sx@yandex.ru` дал **535** (пароль приложения был от другого ящика, не блокировка IP: TCP 465/587/993 открыт).
+- С логином `e9650730002@yandex.ru`: `SENT 1`, `PASSWORD_RESET_EMAIL_ENABLED=1`.
+- https://laser-erp.armada.sx/admin/password_reset/ — HTTP 200, поле **Email** (`name=email`).
+- Тестовое письмо ушло на `e9650730002@yandex.ru` (тема `Laser ERP SMTP`).
 
 ---
 
@@ -33,8 +32,8 @@
 | `VPS_USER` | `root` |
 | `VPS_PASSWORD` | Пароль root (запасной вход, если ключ не сработал) |
 | `VPS_SSH_PRIVATE_KEY` | **Полный** OpenSSH PEM (`BEGIN OPENSSH PRIVATE KEY`), не пароль root |
-| `YANDEX_SMTP_PASSWORD` | Пароль приложения Яндекса для `Armada.sx@yandex.ru` |
-| `YANDEX_SMTP_USER` | Опционально; по умолчанию `Armada.sx@yandex.ru` |
+| `YANDEX_SMTP_PASSWORD` | Пароль приложения Яндекса для `e9650730002@yandex.ru` |
+| `YANDEX_SMTP_USER` | Опционально; по умолчанию `e9650730002@yandex.ru` |
 
 **Проверка без утечки:**
 
@@ -51,15 +50,9 @@ for k in ('VPS_HOST','VPS_USER','VPS_PASSWORD','VPS_SSH_PRIVATE_KEY','YANDEX_SMT
 
 Этот Cloud Agent **без linked Environment**. В него попадают только секреты из **общего списка Cloud Agents** (не Secrets внутри Environment). Сейчас в `CLOUD_AGENT_ALL_SECRET_NAMES` есть: `VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`, `VPS_SSH_PRIVATE_KEY`, `YANDEX_SMTP_PASSWORD`, плюс `EPD_API_KEY` и ошибочное имя `root`.
 
-Форма «Env setup / Add secrets» и **Secrets внутри Environment** этот агент не видит. `YANDEX_SMTP_PASSWORD` уже добавлен в общий список — **новый агент ради секрета больше не нужен**, пока Яндекс отвечает 535.
+Форма «Env setup / Add secrets» и **Secrets внутри Environment** этот агент не видит. `YANDEX_SMTP_PASSWORD` уже в общем списке. SMTP на проде работает с логином `e9650730002@yandex.ru`.
 
-**Что проверить в Яндексе** (без этого SMTP не заработает, даже с секретом нужной длины):
-
-1. Почта → Настройки → Почтовые программы: включить **IMAP** (`From the imap.yandex.com server via IMAP`) и **Пароли приложений и OAuth-токены**.
-2. [Пароли приложений](https://id.yandex.ru/security/app-passwords): тип **Почта** (не Disk/WebDAV/CalDAV). Скопировать заново в секрет `YANDEX_SMTP_PASSWORD` (пробелы можно оставить — скрипт их снимет).
-3. Пароль приложения может стать активным через **2–3 часа**.
-4. Логин SMTP — полный адрес `Armada.sx@yandex.ru`. Если ящик другой — задать `YANDEX_SMTP_USER`.
-5. После смены секрета: `python3 tools/apply_yandex_smtp_to_vps.py` (скрипт **не** включает `PASSWORD_RESET_EMAIL_ENABLED=1`, пока `send_mail` не вернул `SENT`).
+Если снова 535 — сначала проверить **логин ящика**, не IP: TCP на 465/587/993 с VPS открыт, IMAP при неверном пользователе отвечает `invalid credentials or IMAP is disabled`.
 
 **Как применить пароль без Cursor** (с домашнего ПК, пароль в чат не писать):
 
@@ -115,23 +108,23 @@ sudo -E -u lasererp .venv/bin/python manage.py shell -c '...'
 
 Управляется `PASSWORD_RESET_EMAIL_ENABLED` в `/etc/laser-erp.env` (и логикой `laser_erp/mail.py` + `core/services/password_reset.py`).
 
-### A. Без почты (`PASSWORD_RESET_EMAIL_ENABLED=0`) — **сейчас на проде**
+### A. Без почты (`PASSWORD_RESET_EMAIL_ENABLED=0`)
 
 1. Пользователь: https://laser-erp.armada.sx/admin/password_reset/ → **логин** → получает **код**.
 2. Админ: админка → **«Запросы сброса пароля»** → ссылка по коду **или** «Пользователи» → действие **«Сгенерировать ссылку сброса пароля»**.
 3. Подтверждение: `/reset/<uid>/<token>/` → новый пароль.
 
-### B. По email (`PASSWORD_RESET_EMAIL_ENABLED=1`)
+### B. По email (`PASSWORD_RESET_EMAIL_ENABLED=1`) — **сейчас на проде**
 
 1. Рабочий SMTP (см. ниже).
 2. У пользователя в Django указан **реальный email** (не `admin@example.com`).
 3. Форма сброса просит **email**, письмо со ссылкой `/reset/...`.
 
-**Почему не Mail.ru / biz для `LC@armada.sx`:** SMTP даёт 535 — нужен платный пароль приложения. Используется **Яндекс** `Armada.sx@yandex.ru`.
+**Почему не Mail.ru / biz для `LC@armada.sx`:** SMTP даёт 535 — нужен платный пароль приложения. Исходящая почта идёт через Яндекс `e9650730002@yandex.ru`.
 
 ---
 
-## Донастройка Яндекс SMTP (главная незавершённая задача)
+## Яндекс SMTP (на проде работает)
 
 ### Текущее содержимое `/etc/laser-erp.env` (ожидаемое)
 
@@ -140,14 +133,14 @@ EMAIL_HOST=smtp.yandex.ru
 EMAIL_PORT=465
 EMAIL_USE_SSL=1
 EMAIL_USE_TLS=0
-EMAIL_HOST_USER=Armada.sx@yandex.ru
-DEFAULT_FROM_EMAIL=Armada.sx@yandex.ru
+EMAIL_HOST_USER=e9650730002@yandex.ru
+DEFAULT_FROM_EMAIL=e9650730002@yandex.ru
 SERVER_DOMAIN=laser-erp.armada.sx
-PASSWORD_RESET_EMAIL_ENABLED=0
-EMAIL_HOST_PASSWORD=<пароль приложения, len=16 — Яндекс пока отвечает 535>
+PASSWORD_RESET_EMAIL_ENABLED=1
+EMAIL_HOST_PASSWORD=<пароль приложения, не коммитить>
 ```
 
-Не включать `PASSWORD_RESET_EMAIL_ENABLED=1`, пока `send_mail` не вернул `SENT`. Иначе форма сброса уйдёт в SMTP и даст 500. Скрипт `apply_yandex_smtp_to_vps.py` сам держит флаг в `0` до успешного теста.
+Скрипт `apply_yandex_smtp_to_vps.py` держит флаг в `0` до успешного `SENT`, затем ставит `1`.
 
 ### Шаги агента
 
@@ -162,7 +155,7 @@ python3 tools/apply_yandex_smtp_to_vps.py
 
 Скрипт пишет пароль в `/etc/laser-erp.env` с `PASSWORD_RESET_EMAIL_ENABLED=0`, перезапускает `laser-erp`, шлёт тестовое письмо на `DEFAULT_FROM_EMAIL`. Флаг `=1` ставит **только** после `SENT`. Пробелы в пароле приложения снимаются. При 535 оставляет офлайн-сброс.
 
-4. Коды: `exit=2` — секрета нет в сессии; `exit=3` — Яндекс отклонил пароль (как сейчас). Не включать почтовый сброс вручную.
+4. Коды: `exit=0` — SMTP ок, email-сброс включён; `exit=2` — нет секрета; `exit=3` — Яндекс отклонил логин/пароль. При 535 не включать почтовый сброс вручную.
 
 **Ручная альтернатива на VPS** (не печатать пароль в лог):
 
@@ -253,9 +246,9 @@ ssh -i ~/.ssh/vps_key root@${VPS_HOST} 'chown -R lasererp:www-data /var/www/lase
 
 ## Краткий чеклист для нового агента
 
-1. [x] Проверить секреты (`VPS_*`, `YANDEX_SMTP_PASSWORD`) — все set, кроме опционального `YANDEX_SMTP_USER`.
-2. [x] `python3 tools/install_vps_ssh_key.py` и SSH на VPS по ключу.
-3. [x] Пароль применён на VPS (`EMAIL_HOST_PASSWORD` len=16). `send_mail` = **535**. Нужны IMAP + пароль приложения типа «Почта» в Яндексе (см. выше), затем снова `python3 tools/apply_yandex_smtp_to_vps.py`.
-4. [ ] Проверить тестовое письмо (`SENT`) и `/admin/password_reset/` (поле **Email**). Сейчас поле **Логин**, офлайн-сброс жив.
-5. [ ] Сообщить пользователю результат **без** паролей и ключей.
-6. [ ] Обновить PR при изменениях в коде; на прод код уже частично залит через rsync.
+1. [x] Секреты `VPS_*` и `YANDEX_SMTP_PASSWORD` на месте.
+2. [x] SSH по ключу работает.
+3. [x] SMTP: логин `e9650730002@yandex.ru`, `send_mail` = `SENT`, `PASSWORD_RESET_EMAIL_ENABLED=1`.
+4. [x] `/admin/password_reset/` показывает поле **Email**.
+5. [x] Сообщить пользователю результат **без** паролей и ключей.
+6. [x] Обновить PR. На прод код сброса уже через rsync; SMTP — только `/etc/laser-erp.env`.

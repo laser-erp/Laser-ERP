@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ENV_PATH = Path("/etc/laser-erp.env")
-SMTP_USER = os.environ.get("YANDEX_SMTP_USER", "Armada.sx@yandex.ru").strip() or "Armada.sx@yandex.ru"
+SMTP_USER = os.environ.get("YANDEX_SMTP_USER", "e9650730002@yandex.ru").strip() or "e9650730002@yandex.ru"
 
 UPDATES = {
     "EMAIL_HOST": "smtp.yandex.ru",
