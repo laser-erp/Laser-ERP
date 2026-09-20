@@ -6,7 +6,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0129_user_profile"),
+        ("core", "0132_production_request_order_mode_quote"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

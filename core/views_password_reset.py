@@ -10,18 +10,14 @@ from core.forms_password_reset import (
 from core.models import PasswordResetRequest
 from core.services.password_reset import is_password_reset_email_enabled
 
-_PASSWORD_RESET_EMAIL = {
-    "email_template_name": "registration/password_reset_email.html",
-    "subject_template_name": "registration/password_reset_subject.txt",
-    "extra_email_context": {"site_name": "Laser ERP"},
-}
-
 
 class LaserPasswordResetView(auth_views.PasswordResetView):
     template_name = "registration/admin_password_reset_form.html"
     success_url = reverse_lazy("admin_password_reset_done")
     form_class = LaserPasswordResetForm
-    **_PASSWORD_RESET_EMAIL
+    email_template_name = "registration/password_reset_email.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+    extra_email_context = {"site_name": "Laser ERP"}
 
     def get_form_class(self):
         if is_password_reset_email_enabled():
