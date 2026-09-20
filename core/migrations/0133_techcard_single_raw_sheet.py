@@ -25,13 +25,6 @@ def fix_tablichka_duplicate_sheet_rows(apps, schema_editor):
     for row in items[1:]:
         row.delete()
 
-    if tc.product_id:
-        from core.models import TechCard as LiveTechCard
-
-        live = LiveTechCard.objects.filter(pk=tc.pk).first()
-        if live:
-            live.sync_material_norms_to_product()
-
 
 def noop(apps, schema_editor):
     pass
