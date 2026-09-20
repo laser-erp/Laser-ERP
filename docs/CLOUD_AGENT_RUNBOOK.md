@@ -185,9 +185,11 @@ print('ok')
 
 | username | email |
 |----------|--------|
-| `admin` | `admin@example.com` (на этот адрес письмо не придёт) |
 | `Admin` | `LC@armada.sx` |
-| `faktoryal` | `faktoryal@yandex.ru` |
+| `faktoryal` | `LC@armada.sx` |
+| `admin` | `admin@example.com` (на этот адрес письмо не придёт) |
+
+Сброс по адресу `LC@armada.sx` отправит ссылки **обоим** (`Admin` и `faktoryal`) — Django так делает при одинаковом email. Письма уходят с `e9650730002@yandex.ru`.
 
 У `admin` при необходимости сменить email в админке на рабочий.
 
