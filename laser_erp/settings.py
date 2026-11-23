@@ -266,3 +266,8 @@ elif EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
 else:
     # Без SMTP не притворяемся, что письма уходят.
     EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+
+# Сброс пароля по email — только если SMTP реально настроен; иначе — через администратора (короткий код).
+from laser_erp.mail import configure_password_reset_email  # noqa: E402
+
+configure_password_reset_email(locals())
