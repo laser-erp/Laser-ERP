@@ -7,7 +7,16 @@ from django.contrib import admin
 
 from core.health import healthz
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth import views as auth_views
 from django.urls import include, path, reverse
+from django.urls import reverse_lazy
+
+from core.views_password_reset import (
+    AccountPasswordResetDoneView,
+    AccountPasswordResetView,
+    LaserPasswordResetDoneView,
+    LaserPasswordResetView,
+)
 
 # Блок на главной /admin/: материалы + движения + группы + «Товары и услуги» (одна точка входа).
 _NOMENCLATURE_MODEL_ORDER = (
@@ -144,6 +153,31 @@ admin.site.get_app_list = _get_app_list_with_production_grouped
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
+    path(
+        "admin/password_reset/",
+        LaserPasswordResetView.as_view(),
+        name="admin_password_reset",
+    ),
+    path(
+        "admin/password_reset/done/",
+        LaserPasswordResetDoneView.as_view(),
+        name="admin_password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="registration/password_reset_confirm.html",
+            success_url=reverse_lazy("password_reset_complete"),
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="registration/password_reset_complete.html",
+        ),
+        name="password_reset_complete",
+    ),
     path("admin/", admin.site.urls),
     path("", include("core.urls")),
     path("production/", include(("production.urls", "production"))),

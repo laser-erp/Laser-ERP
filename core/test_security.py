@@ -90,3 +90,19 @@ class HealthzTests(TestCase):
         self.assertTrue(data["ok"])
         self.assertIn("commit", data)
         self.assertNotIn("SECRET", response.content.decode().upper())
+
+
+class MigrationsInSyncTests(TestCase):
+    """Модели и миграции не должны расходиться: иначе makemigrations на ровном месте
+    сгенерирует лишнее (однажды — удаление таблицы PasswordResetRequest с прода)."""
+
+    def test_no_missing_migrations(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        try:
+            call_command("makemigrations", "--check", "--dry-run", stdout=out, stderr=out)
+        except SystemExit:
+            self.fail("Есть изменения моделей без миграций:\n" + out.getvalue())
