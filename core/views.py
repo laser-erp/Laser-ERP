@@ -13,7 +13,7 @@ from django.core.files.base import ContentFile
 from django.db.models import F, Sum
 from django.db.models import Q
 from django.db import IntegrityError
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -414,8 +414,7 @@ def account_profile(request):
 def _client_workspace_context(request):
     """Сводка кабинета клиента: счётчики и последние записи."""
     user = request.user
-    marker = f"user_id={user.pk}"
-    orders_qs = Order.objects.filter(comment__icontains=marker).order_by("-created_at")
+    orders_qs = Order.objects.filter(_order_owner_q(user)).order_by("-created_at")
     requests_qs = ProductionRequest.objects.filter(user_id=user.pk).order_by("-created_at")
     invoices_qs = (
         CustomerInvoice.objects.filter(production_request__user_id=user.pk)
@@ -602,10 +601,15 @@ def _parse_order_comment_meta(comment: str):
     return meta
 
 
+def _order_owner_q(user) -> Q:
+    """Заказы пользователя по метке user_id=N в комментарии (с границами: user_id=1 ≠ user_id=12)."""
+    return Q(comment__regex=rf"(^|;)\s*user_id={int(user.pk)}\s*(;|$)")
+
+
 def _append_user_marker_to_order(order: Order, user: User):
     marker = f"user_id={user.pk}"
     comment = order.comment or ""
-    if marker in comment:
+    if Order.objects.filter(_order_owner_q(user), pk=order.pk).exists():
         return
     suffix = f"; {marker}; username={user.get_username()}"
     order.comment = f"{comment}{suffix}" if comment else marker
@@ -1028,6 +1032,15 @@ def order_success(request, order_id):
     if not isinstance(summary, dict) or summary.get("order_id") != order.id:
         summary = {}
 
+    # Страница доступна только тому, кто только что оформил заказ (сессия),
+    # владельцу заказа или сотруднику. Иначе — 404, чтобы не перебирали номера.
+    is_owner = request.user.is_authenticated and Order.objects.filter(
+        _order_owner_q(request.user), pk=order.pk
+    ).exists()
+    is_staff = request.user.is_authenticated and request.user.is_staff
+    if not (summary or is_owner or is_staff):
+        raise Http404("Заказ не найден")
+
     can_claim_account = not request.user.is_authenticated and bool(summary)
     if request.method == "POST" and can_claim_account:
         username = (request.POST.get("username") or "").strip()
@@ -1076,10 +1089,9 @@ def order_success(request, order_id):
 def account_orders(request):
     if get_effective_role(request) != "client":
         return redirect("order_list")
-    marker = f"user_id={request.user.pk}"
     selected_status = (request.GET.get("status") or "").strip().upper()
     orders_qs = (
-        Order.objects.filter(comment__icontains=marker)
+        Order.objects.filter(_order_owner_q(request.user))
         .prefetch_related("items", "items__product")
         .order_by("-created_at")
     )
@@ -1774,11 +1786,10 @@ def production_request_edit_message(request, request_id, message_id):
 
 @login_required
 def account_order_detail(request, order_id):
-    marker = f"user_id={request.user.pk}"
     order = get_object_or_404(
         Order.objects.prefetch_related("items", "items__product"),
+        _order_owner_q(request.user),
         pk=order_id,
-        comment__icontains=marker,
     )
     meta = _parse_order_comment_meta(order.comment)
     payment_label = {
@@ -1817,11 +1828,10 @@ def account_repeat_order(request, order_id):
         return redirect("account_order_detail", order_id=order_id)
     if get_effective_role(request) != "client":
         return redirect("order_list")
-    marker = f"user_id={request.user.pk}"
     order = get_object_or_404(
         Order.objects.prefetch_related("items"),
+        _order_owner_q(request.user),
         pk=order_id,
-        comment__icontains=marker,
     )
     cart = _session_cart(request)
     for item in order.items.all():
