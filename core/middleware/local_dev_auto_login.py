@@ -9,7 +9,9 @@ class LocalDevAutoLoginMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if getattr(settings, "LOCAL_DEV_AUTO_LOGIN", False):
+        # Двойная защита: даже если LOCAL_DEV_AUTO_LOGIN случайно включён на сервере,
+        # без DEBUG (а он выключен в settings_prod и в тестах) автовход не сработает.
+        if settings.DEBUG and getattr(settings, "LOCAL_DEV_AUTO_LOGIN", False):
             if self._is_local_request(request) and not getattr(request.user, "is_authenticated", False):
                 user = self._pick_dev_user()
                 if user is not None:
@@ -18,11 +20,13 @@ class LocalDevAutoLoginMiddleware:
 
     @staticmethod
     def _is_local_request(request) -> bool:
+        # Только прямое обращение к runserver с этой же машины.
+        # Запросы через nginx тоже приходят с 127.0.0.1, но несут X-Forwarded-For / X-Real-IP —
+        # такие не пускаем. Заголовку Host не доверяем: его задаёт клиент.
+        if request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("HTTP_X_REAL_IP"):
+            return False
         addr = (request.META.get("REMOTE_ADDR") or "").strip()
-        if addr in ("127.0.0.1", "::1"):
-            return True
-        host = (request.get_host() or "").split(":")[0].lower()
-        return host in ("127.0.0.1", "localhost")
+        return addr in ("127.0.0.1", "::1")
 
     @staticmethod
     def _pick_dev_user():

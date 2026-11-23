@@ -1,0 +1,8 @@
+[Unit]
+Description=Laser ERP autodeploy (pull main and deploy if changed)
+After=network-online.target laser-erp.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /var/www/laser-erp/deploy/autodeploy.sh
+TimeoutStartSec=900

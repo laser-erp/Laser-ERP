@@ -4,6 +4,8 @@ URL configuration for laser_erp project.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+
+from core.health import healthz
 from django.contrib.admin.sites import AdminSite
 from django.urls import include, path, reverse
 
@@ -141,6 +143,7 @@ def _get_app_list_with_production_grouped(request, app_label=None):
 admin.site.get_app_list = _get_app_list_with_production_grouped
 
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("admin/", admin.site.urls),
     path("", include("core.urls")),
     path("production/", include(("production.urls", "production"))),

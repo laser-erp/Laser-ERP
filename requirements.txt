@@ -3,5 +3,6 @@ Pillow>=10.0.0
 pypdf>=6.11.0
 pypdfium2>=4.30.0
 qrcode
+Django>=6.0.3,<6.1
 gunicorn>=22.0.0
 psycopg2-binary>=2.9.9
