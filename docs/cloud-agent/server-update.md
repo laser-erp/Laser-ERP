@@ -2,7 +2,37 @@
 
 Краткая инструкция для владельца и локального агента. Секреты (пароли, токены) **не хранятся в GitHub**.
 
-## Штатный способ (после настройки git)
+## Выкладчик (автодеплой) — основной способ
+
+На сервере работает свой выкладчик `deploy/autodeploy.sh` (systemd-таймер, раз в 2 минуты).
+Он **не зависит от GitHub Actions** и его лимита минут: сервер сам забирает `main`.
+
+Что он делает при новом коммите в `main`:
+
+1. **Блокирует** миграции, удаляющие данные (`DeleteModel`, `RemoveField`, `DROP`). Такие выкатывать только вручную:
+   `sudo ALLOW_DESTRUCTIVE=1 bash /var/www/laser-erp/deploy/autodeploy.sh`.
+2. **Гоняет все тесты** на чистой копии коммита (SQLite, боевая база не трогается). Красные — не выкатывает
+   и не повторяет этот коммит, пока не придёт новый.
+3. Если есть новые миграции — **бэкап базы** (`tools/backup_server.py`), без бэкапа выкладки нет.
+4. `deploy/update_ubuntu.sh` (pull, pip, migrate, collectstatic, restart).
+5. Проверяет `/healthz/`. Если сайт не поднялся и миграций не было — **откат на прошлый коммит**.
+
+Итог виден всем, без входа: `https://laser-erp.armada.sx/healthz/` → `commit` и `last_deploy.state`
+(`ok`, `testing`, `tests_failed`, `blocked`, `rolled_back`, `failed`).
+Журналы: `logs/autodeploy.log`, `logs/autodeploy-tests.log`.
+
+### Установка (один раз, под root)
+
+```bash
+cd /var/www/laser-erp && sudo bash deploy/update_ubuntu.sh
+cp deploy/systemd/laser-erp-autodeploy.service deploy/systemd/laser-erp-autodeploy.timer /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now laser-erp-autodeploy.timer
+systemctl list-timers laser-erp-autodeploy.timer
+```
+
+Выключить: `systemctl disable --now laser-erp-autodeploy.timer`.
+
+## Ручной способ
 
 1. Локально: сохранить изменения в истории проекта и **выложить на GitHub** в ветку **main**.
 2. На сервере (SSH под `root`):

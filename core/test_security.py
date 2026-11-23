@@ -80,3 +80,13 @@ class LocalDevAutoLoginTests(TestCase):
     @override_settings(DEBUG=False, LOCAL_DEV_AUTO_LOGIN=True)
     def test_disabled_without_debug(self):
         self.assertFalse(self._run(REMOTE_ADDR="127.0.0.1"))
+
+
+class HealthzTests(TestCase):
+    def test_healthz_is_public_and_reports_db(self):
+        response = self.client.get("/healthz/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertIn("commit", data)
+        self.assertNotIn("SECRET", response.content.decode().upper())

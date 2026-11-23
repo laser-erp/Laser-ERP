@@ -1,9 +1,9 @@
 name: tests
 
+# Основная проверка — на сервере (deploy/autodeploy.sh гоняет тесты перед выкладкой),
+# чтобы не зависеть от лимита минут GitHub Actions. Здесь — только ручной запуск.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
